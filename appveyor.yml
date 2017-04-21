@@ -93,6 +93,9 @@ environment:
     - TOOLCHAIN: "msys"
       CONFIG: Debug
 
+cache:
+  - hunter
+
 install:
   # Python 3
   - cmd: set PATH=C:\Python34-x64;C:\Python34-x64\Scripts;%PATH%
@@ -132,6 +135,8 @@ install:
 
   # MSYS2 location
   - cmd: set MSYS_PATH=C:\msys64\usr\bin
+
+  - cmd: set HUNTER_ROOT=%cd%\hunter
 
 build_script:
   - cmd: python %POLLY_ROOT%\bin\build.py --toolchain "%TOOLCHAIN%" --config "%CONFIG%" --verbose --test
