@@ -55,7 +55,7 @@ find_package(OpenSSL REQUIRED)
 hunter_add_package(Boost)
 find_package(Boost CONFIG REQUIRED)
 
-set(LIBS ${LIBS} glog::glog GTest::main OpenSSL::SSL OpenSSL::Crypto Boost::Boost)
+set(LIBS ${LIBS} glog::glog GTest::main OpenSSL::SSL OpenSSL::Crypto Boost::boost)
 target_link_libraries(nekit ${LIBS})
 
 enable_testing()
