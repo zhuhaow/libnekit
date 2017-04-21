@@ -71,7 +71,6 @@ script:
     build.py
     --toolchain ${TOOLCHAIN}
     --config ${CONFIG}
-    --verbose
     --test
 
 after_success:
