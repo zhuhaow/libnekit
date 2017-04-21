@@ -37,6 +37,12 @@ if(CMAKE_BUILD_TYPE STREQUAL "COVERAGE")
   set(CMAKE_LINK_LIBRARY_FLAG "${CMAKE_LINK_LIBRARY_FLAG} --coverage")
 endif()
 
+if(APPLE)
+  execute_process(COMMAND scripts/find_include_path.sh WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE INCLUDE_DIRS)
+  string(REPLACE "\n" ";" INCLUDE_DIRS ${INCLUDE_DIRS})
+  include_directories(${INCLUDE_DIRS})
+endif()
+
 set(SOURCES
   src/main.cpp
   )
