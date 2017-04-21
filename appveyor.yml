@@ -14,12 +14,6 @@ environment:
     - TOOLCHAIN: "vs-14-2015"
       CONFIG: Debug
 
-    - TOOLCHAIN: "mingw"
-      CONFIG: Debug
-
-    - TOOLCHAIN: "msys"
-      CONFIG: Debug
-
 cache:
   - hunter
 
