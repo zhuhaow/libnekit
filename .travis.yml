@@ -34,9 +34,9 @@ matrix:
     - os: osx
       env: CONFIG=Debug TOOLCHAIN=clang-libstdcxx
     - os: osx
-      env: CONFIG=Debug TOOLCHAIN=osx-10-11
+      env: CONFIG=Debug TOOLCHAIN=osx-10-12
     - os: osx
-      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-9-3
+      env: CONFIG=Debug TOOLCHAIN=ios-10-3
 
 install:
   # Info about OS
