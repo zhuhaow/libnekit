@@ -15,7 +15,8 @@ HunterGate(
 
 project(libnekit CXX)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+option(CMAKE_EXPORT_COMPILE_COMMANDS "Generate compile command file" OFF)
+# set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(CheckCXXCompilerFlag)
 
@@ -41,7 +42,7 @@ endif()
 
 include_directories("include")
 
-if(APPLE)
+if(APPLE AND CMAKE_EXPORT_COMPILE_COMMANDS)
   execute_process(COMMAND scripts/find_include_path.sh WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE INCLUDE_DIRS)
   string(REPLACE "\n" ";" INCLUDE_DIRS ${INCLUDE_DIRS})
   include_directories(${INCLUDE_DIRS})
