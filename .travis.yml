@@ -36,9 +36,9 @@ matrix:
     - os: osx
       env: CONFIG=Debug TOOLCHAIN=osx-10-12
     - os: osx
-      env: CONFIG=Debug TOOLCHAIN=ios-10-3
+      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-10-0
     - os: osx
-      env: CONFIG=Debug TOOLCHAIN=ios-9-0
+      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-9-3
 
 install:
   # Info about OS
