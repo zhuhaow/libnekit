@@ -24,6 +24,7 @@
 #define NEKIT_STREAM_CODER_DETAIL_STREAM_CODER_MANAGER
 
 #include <list>
+#include <memory>
 
 #include <boost/core/noncopyable.hpp>
 
