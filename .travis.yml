@@ -37,6 +37,8 @@ matrix:
       env: CONFIG=Debug TOOLCHAIN=osx-10-12
     - os: osx
       env: CONFIG=Debug TOOLCHAIN=ios-10-3
+    - os: osx
+      env: CONFIG=Debug TOOLCHAIN=ios-9-0
 
 install:
   # Info about OS
