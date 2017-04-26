@@ -53,7 +53,7 @@ set(SOURCES
 
 add_library(nekit ${SOURCES})
 target_compile_features(nekit PUBLIC cxx_lambdas)
-target_compile_features(nekit PUBLIC cxx_decltype_auto)
+target_compile_features(nekit PUBLIC cxx_decltype)
 
 hunter_add_package(glog)
 find_package(glog CONFIG REQUIRED)
