@@ -37,6 +37,8 @@ if(CMAKE_BUILD_TYPE STREQUAL "COVERAGE")
   set(CMAKE_LINK_LIBRARY_FLAG "${CMAKE_LINK_LIBRARY_FLAG} --coverage")
 endif()
 
+include_directories("include")
+
 if(APPLE)
   execute_process(COMMAND scripts/find_include_path.sh WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE INCLUDE_DIRS)
   string(REPLACE "\n" ";" INCLUDE_DIRS ${INCLUDE_DIRS})
@@ -44,11 +46,13 @@ if(APPLE)
 endif()
 
 set(SOURCES
-  src/main.cpp
+  src/stream_coder/stream_coder_manager.cc
+  src/stream_coder/detail/stream_coder_manager.cc
   )
 
 add_library(nekit ${SOURCES})
 target_compile_features(nekit PUBLIC cxx_lambdas)
+target_compile_features(nekit PUBLIC cxx_decltype_auto)
 
 hunter_add_package(glog)
 find_package(glog CONFIG REQUIRED)
