@@ -5,6 +5,7 @@ if (CMAKE_VERSION VERSION_LESS "3.7.1")
   message(WARNING "To support Android, you should use at least 3.7.1")
 endif()
 
+option(HUNTER_STATUS_PRINT "Print build information in hunter" OFF)
 include("cmake/HunterGate.cmake")
 HunterGate(
     URL "https://github.com/ruslo/hunter/archive/v0.18.44.tar.gz"
