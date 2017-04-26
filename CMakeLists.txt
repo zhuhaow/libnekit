@@ -5,10 +5,11 @@ if (CMAKE_VERSION VERSION_LESS "3.7.1")
   message(WARNING "To support Android, you should use at least 3.7.1")
 endif()
 
-include("hunter/HunterGate.cmake")
+include("cmake/HunterGate.cmake")
 HunterGate(
-    URL "https://github.com/ruslo/hunter/archive/v0.18.43.tar.gz"
-    SHA1 "d2c8c42cd07f7cefe18fd9a9b9c13114b1a15a27"
+    URL "https://github.com/ruslo/hunter/archive/v0.18.44.tar.gz"
+    SHA1 "a78f0b377b8e53c038f12fc18b0c02564c4534c8"
+    LOCAL
 )
 
 project(libnekit CXX)
