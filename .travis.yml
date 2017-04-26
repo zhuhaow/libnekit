@@ -20,6 +20,8 @@ addons:
       - libc6-dev
       - libc++-dev
 
+osx_image: xcode8.3
+
 matrix:
   include:
     # Linux {
