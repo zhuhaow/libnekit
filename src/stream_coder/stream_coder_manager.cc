@@ -1,4 +1,4 @@
-#include <glog/logging.h>
+#include <nekit/deps/easylogging++.h>
 #include <nekit/stream_coder/detail/stream_coder_manager.h>
 #include <nekit/stream_coder/stream_coder_manager.h>
 

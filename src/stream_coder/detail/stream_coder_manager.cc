@@ -1,4 +1,4 @@
-#include <glog/logging.h>
+#include <nekit/deps/easylogging++.h>
 
 #include <nekit/stream_coder/detail/stream_coder_manager.h>
 #include <nekit/stream_coder/stream_coder_manager.h>
@@ -122,6 +122,8 @@ ActionRequest StreamCoderManager::Input(utils::Buffer& buffer) {
     default:
       CHECK(false);  // not reachable
   }
+
+  return kErrorHappened; // not reachable
 }
 
 ActionRequest StreamCoderManager::InputForNegotiation(utils::Buffer& buffer) {
@@ -165,6 +167,8 @@ ActionRequest StreamCoderManager::InputForNegotiation(utils::Buffer& buffer) {
     case kContinue:
       CHECK(false);  // not reachable
   }
+
+  return kErrorHappened;
 }
 
 ActionRequest StreamCoderManager::InputForForward(utils::Buffer& buffer) {
@@ -214,6 +218,8 @@ ActionRequest StreamCoderManager::Output(utils::Buffer& buffer) {
     default:
       CHECK(false);  // not reachable
   }
+
+  return kErrorHappened; // not reachable
 }
 
 ActionRequest StreamCoderManager::OutputForNegotiation(utils::Buffer& buffer) {
