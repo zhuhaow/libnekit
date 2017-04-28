@@ -48,6 +48,10 @@ if(APPLE)
   message(STATUS "Added more include dirs for apple clang")
 endif()
 
+if(WIN32)
+  add_definitions(-DELPP_WINSOCK2)
+endif()
+
 hunter_add_package(Boost)
 find_package(Boost CONFIG REQUIRED)
 
