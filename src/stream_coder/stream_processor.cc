@@ -6,6 +6,16 @@ namespace nekit {
 namespace stream_coder {
 
 template <class T>
+StreamProcessor<T>::StreamProcessor() {
+  impl_ = new T();
+}
+
+template <class T>
+StreamProcessor<T>::~StreamProcessor() {
+  delete impl_;
+}
+
+template <class T>
 ActionRequest StreamProcessor<T>::Negotiate() {
   return impl_->Negotiate();
 }
