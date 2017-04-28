@@ -90,7 +90,6 @@ script:
     --toolchain ${TOOLCHAIN}
     --config ${CONFIG}
     --test
-    --verbose
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
