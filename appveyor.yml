@@ -6,6 +6,10 @@ environment:
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
       CONFIG: Debug
 
+    - TOOLCHAIN: "vs-12-2013-xp"
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
+      CONFIG: Debug
+
     - TOOLCHAIN: "vs-12-2013"
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
       CONFIG: Debug
