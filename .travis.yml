@@ -24,28 +24,28 @@ matrix:
   include:
     # Linux {
     - os: linux
-      env: CONFIG=Debug TOOLCHAIN=clang-libstdcxx
+      env: CONFIG=Coverage TOOLCHAIN=clang-libstdcxx
     - os: linux
-      env: CONFIG=Debug TOOLCHAIN=gcc
+      env: CONFIG=Coverage TOOLCHAIN=gcc
 
     # OSX {
     - os: osx
-      env: CONFIG=Debug TOOLCHAIN=clang-libstdcxx
+      env: CONFIG=Coverage TOOLCHAIN=clang-libstdcxx
     - os: osx
       osx_image: xcode8.2
-      env: CONFIG=Debug TOOLCHAIN=osx-10-12
+      env: CONFIG=Coverage TOOLCHAIN=osx-10-12
     - os: osx
       osx_image: xcode7.3
-      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-9-3
+      env: CONFIG=Coverage TOOLCHAIN=ios-nocodesign-9-3
     - os: osx
       osx_image: xcode8
-      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-10-0
+      env: CONFIG=Coverage TOOLCHAIN=ios-nocodesign-10-0
     - os: osx
       osx_image: xcode8.1
-      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-10-1
+      env: CONFIG=Coverage TOOLCHAIN=ios-nocodesign-10-1
     - os: osx
       osx_image: xcode8.2
-      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-10-2
+      env: CONFIG=Coverage TOOLCHAIN=ios-nocodesign-10-2
 
 install:
   # Info about OS
