@@ -60,16 +60,13 @@ target_compile_features(nekit PUBLIC cxx_auto_type)
 hunter_add_package(glog)
 find_package(glog CONFIG REQUIRED)
 
-hunter_add_package(GTest)
-find_package(GTest CONFIG REQUIRED)
-
 hunter_add_package(OpenSSL)
 find_package(OpenSSL REQUIRED)
 
 hunter_add_package(Boost)
 find_package(Boost CONFIG REQUIRED)
 
-set(LIBS ${LIBS} glog::glog GTest::main OpenSSL::SSL OpenSSL::Crypto Boost::boost)
+set(LIBS ${LIBS} glog::glog OpenSSL::SSL OpenSSL::Crypto Boost::boost)
 target_link_libraries(nekit ${LIBS})
 
 enable_testing()
