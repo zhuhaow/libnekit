@@ -41,7 +41,7 @@ class StreamCoderManager final : public boost::noncopyable {
  public:
   enum ErrorCode { kNoCoder = 0 };
   class ErrorCategory : public std::error_category {
-    virtual const char* name() const noexcept override;
+    virtual const char* name() const BOOST_NOEXCEPT override;
     virtual std::string message(int error_code) const override;
   };
   static const ErrorCategory& error_category();

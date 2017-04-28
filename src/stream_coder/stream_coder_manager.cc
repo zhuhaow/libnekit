@@ -17,7 +17,7 @@ error_code make_error_code(
 namespace nekit {
 namespace stream_coder {
 
-const char* StreamCoderManager::ErrorCategory::name() const noexcept {
+const char* StreamCoderManager::ErrorCategory::name() const BOOST_NOEXCEPT {
   return "NEKit::StreamCoderManager";
 }
 
