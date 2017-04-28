@@ -15,8 +15,7 @@ HunterGate(
 
 project(libnekit CXX)
 
-option(CMAKE_EXPORT_COMPILE_COMMANDS "Generate compile command file" OFF)
-# set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(CheckCXXCompilerFlag)
 
@@ -42,7 +41,7 @@ endif()
 
 include_directories("include")
 
-if(APPLE AND CMAKE_EXPORT_COMPILE_COMMANDS)
+if(APPLE)
   execute_process(COMMAND scripts/find_include_path.sh WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE INCLUDE_DIRS)
   string(REPLACE "\n" ";" INCLUDE_DIRS ${INCLUDE_DIRS})
   include_directories(${INCLUDE_DIRS})
@@ -56,6 +55,7 @@ set(SOURCES
 add_library(nekit ${SOURCES})
 target_compile_features(nekit PUBLIC cxx_lambdas)
 target_compile_features(nekit PUBLIC cxx_decltype)
+target_compile_features(nekit PUBLIC cxx_auto_type)
 
 hunter_add_package(glog)
 find_package(glog CONFIG REQUIRED)
