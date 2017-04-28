@@ -20,46 +20,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef NEKIT_STREAM_PROCESSOR
-#define NEKIT_STREAM_PROCESSOR
-
-#include <functional>
-#include <list>
-#include <memory>
-
-#include <nekit/stream_coder/action_request.h>
-#include <nekit/stream_coder/error.h>
-#include <nekit/stream_coder/stream_coder.h>
+#ifndef NEKIT_STREAM_CODER_STREAM_CODER_MANAGER
+#define NEKIT_STREAM_CODER_STREAM_CODER_MANAGER
 
 namespace nekit {
 namespace stream_coder {
-
-template <class Processor>
-class StreamProcessor final : public boost::noncopyable {
- public:
-  typedef Processor ProcessorType;
-
-  StreamProcessor();
-  ~StreamProcessor();
-
-  ActionRequest Negotiate();
-
-  BufferReserveSize InputReserve();
-  ActionRequest Input(utils::Buffer& buffer);
-
-  BufferReserveSize OutputReserve();
-  ActionRequest Output(utils::Buffer& buffer);
-
-  utils::Error GetLatestError() const;
-
-  bool forwarding() const;
-
-  Processor* implemention();
-
- private:
-  Processor* impl_;
-};
+namespace detail {
+class StreamCoderManager;
+}
 }  // namespace stream_coder
 }  // namespace nekit
 
-#endif /* NEKIT_STREAM_PROCESSOR */
+#endif /* NEKIT_STREAM_CODER_STREAM_CODER_MANAGER */
