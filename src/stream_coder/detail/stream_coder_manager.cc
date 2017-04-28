@@ -1,19 +1,7 @@
 #include <nekit/deps/easylogging++.h>
 
 #include <nekit/stream_coder/detail/stream_coder_manager.h>
-#include <nekit/stream_coder/stream_coder_manager.h>
-
-namespace std {
-template <>
-struct is_error_code_enum<nekit::stream_coder::StreamCoderManager::ErrorCode>
-    : public std::true_type {};
-
-error_code make_error_code(
-    nekit::stream_coder::StreamCoderManager::ErrorCode errc) {
-  return error_code(static_cast<int>(errc),
-                    nekit::stream_coder::StreamCoderManager::error_category());
-}
-}  // namespace std
+#include <nekit/stream_coder/error.h>
 
 namespace nekit {
 namespace stream_coder {
@@ -60,7 +48,7 @@ bool StreamCoderManager::VerifyNonEmpty() {
   if (!list_.empty()) return true;
 
   last_error_ =
-      std::make_error_code(stream_coder::StreamCoderManager::kNoCoder);
+      std::make_error_code(stream_coder::kNoCoder);
   return false;
 }
 
@@ -123,7 +111,7 @@ ActionRequest StreamCoderManager::Input(utils::Buffer& buffer) {
       CHECK(false);  // not reachable
   }
 
-  return kErrorHappened; // not reachable
+  return kErrorHappened;  // not reachable
 }
 
 ActionRequest StreamCoderManager::InputForNegotiation(utils::Buffer& buffer) {
@@ -219,7 +207,7 @@ ActionRequest StreamCoderManager::Output(utils::Buffer& buffer) {
       CHECK(false);  // not reachable
   }
 
-  return kErrorHappened; // not reachable
+  return kErrorHappened;  // not reachable
 }
 
 ActionRequest StreamCoderManager::OutputForNegotiation(utils::Buffer& buffer) {

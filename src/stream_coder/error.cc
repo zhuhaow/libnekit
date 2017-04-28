@@ -20,53 +20,25 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef NEKIT_STREAM_CODER_MANAGER
-#define NEKIT_STREAM_CODER_MANAGER
-
-#include <nekit/stream_coder/action_request.h>
-#include <nekit/stream_coder/stream_coder.h>
-#include <nekit/utils/error.h>
-#include <boost/asio.hpp>
-#include <functional>
-#include <list>
-#include <memory>
+#include <nekit/stream_coder/error.h>
 
 namespace nekit {
 namespace stream_coder {
-namespace detail {
-class StreamCoderManager;
+
+const char* ErrorCategory::name() const BOOST_NOEXCEPT {
+  return "NEKit::StreamCoderManager";
 }
 
-class StreamCoderManager final : public boost::noncopyable {
- public:
-  enum ErrorCode { kNoCoder = 0 };
-  class ErrorCategory : public std::error_category {
-    virtual const char* name() const BOOST_NOEXCEPT override;
-    virtual std::string message(int error_code) const override;
-  };
-  static const ErrorCategory& error_category();
+std::string ErrorCategory::message(int error_code) const {
+  switch (ErrorCode(error_code)) {
+    case ErrorCode::kNoCoder:
+      return "No StreamCoder set.";
+  }
+}
 
-  StreamCoderManager();
-  ~StreamCoderManager();
-
-  void PrependStreamCoder(std::unique_ptr<StreamCoder>&& coder);
-
-  ActionRequest Negotiate();
-
-  BufferReserveSize InputReserve();
-  ActionRequest Input(utils::Buffer& buffer);
-
-  BufferReserveSize OutputReserve();
-  ActionRequest Output(utils::Buffer& buffer);
-
-  utils::Error GetLatestError() const;
-
-  bool forwarding() const;
-
- private:
-  detail::StreamCoderManager* impl_;
-};
+const ErrorCategory& error_category() {
+  static ErrorCategory category_;
+  return category_;
+}
 }  // namespace stream_coder
 }  // namespace nekit
-
-#endif /* NEKIT_STREAM_CODER_MANAGER */
