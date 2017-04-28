@@ -49,7 +49,7 @@ if(APPLE)
 endif()
 
 if(WIN32)
-  add_definitions(-DELPP_WINSOCK2)
+  add_definitions(-DELPP_WINSOCK2 -DWIN32_LEAN_AND_MEAN)
 endif()
 
 hunter_add_package(Boost)
