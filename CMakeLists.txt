@@ -45,6 +45,7 @@ if(APPLE)
   execute_process(COMMAND scripts/find_include_path.sh WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE INCLUDE_DIRS)
   string(REPLACE "\n" ";" INCLUDE_DIRS ${INCLUDE_DIRS})
   include_directories(${INCLUDE_DIRS})
+  message(STATUS "Added more include dirs for apple clang")
 endif()
 
 set(SOURCES
