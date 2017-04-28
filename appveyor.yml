@@ -14,6 +14,9 @@ environment:
     - TOOLCHAIN: "vs-14-2015"
       CONFIG: Debug
 
+    - TOOLCHAIN: "vs-15-2017"
+      CONFIG: Debug
+
 cache:
   - hunter
 
