@@ -48,6 +48,12 @@ if(APPLE)
   message(STATUS "Added more include dirs for apple clang")
 endif()
 
+hunter_add_package(glog)
+find_package(glog CONFIG REQUIRED)
+
+hunter_add_package(Boost)
+find_package(Boost CONFIG REQUIRED)
+
 set(SOURCES
   src/stream_coder/stream_coder_manager.cc
   src/stream_coder/detail/stream_coder_manager.cc
@@ -58,16 +64,7 @@ target_compile_features(nekit PUBLIC cxx_lambdas)
 target_compile_features(nekit PUBLIC cxx_decltype)
 target_compile_features(nekit PUBLIC cxx_auto_type)
 
-hunter_add_package(glog)
-find_package(glog CONFIG REQUIRED)
-
-hunter_add_package(OpenSSL)
-find_package(OpenSSL REQUIRED)
-
-hunter_add_package(Boost)
-find_package(Boost CONFIG REQUIRED)
-
-set(LIBS ${LIBS} glog::glog OpenSSL::SSL OpenSSL::Crypto Boost::boost)
+set(LIBS ${LIBS} glog::glog Boost::boost)
 target_link_libraries(nekit ${LIBS})
 
 enable_testing()
