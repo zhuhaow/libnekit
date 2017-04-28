@@ -389,6 +389,8 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #elif ELPP_OS_WINDOWS
+#include <direct.h>
+#include <windows.h>
 #if defined(WIN32_LEAN_AND_MEAN)
 #if defined(ELPP_WINSOCK2)
 #include <winsock2.h>
@@ -396,8 +398,6 @@
 #include <winsock.h>
 #endif  // defined(ELPP_WINSOCK2)
 #endif  // defined(WIN32_LEAN_AND_MEAN)
-#include <direct.h>
-#include <windows.h>
 #endif  // ELPP_OS_UNIX
 #include <algorithm>
 #include <fstream>
