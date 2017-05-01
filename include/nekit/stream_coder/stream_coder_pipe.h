@@ -24,6 +24,7 @@
 #define NEKIT_STREAM_CODER_STREAM_CODER_PIPE
 
 #include <memory>
+#include <system_error>
 
 #include <nekit/stream_coder/stream_coder_interface.h>
 
@@ -31,7 +32,16 @@ namespace nekit {
 namespace stream_coder {
 
 class StreamCoderPipe final : public StreamCoderInterface {
-public:
+ public:
+  enum ErrorCode { kNoCoder = 0 };
+
+  class ErrorCategory final : public std::error_category {
+    const char* name() const BOOST_NOEXCEPT override;
+    std::string message(int error_code) const override;
+  };
+
+  const static ErrorCategory& error_category();
+
   void AppendStreamCoder(std::unique_ptr<StreamCoderInterface>&& stream_coder);
 
   ActionRequest Negotiate();
@@ -54,4 +64,15 @@ public:
 }  // namespace stream_coder
 }  // namespace nekit
 
+namespace std {
+template <>
+struct is_error_code_enum<nekit::stream_coder::StreamCoderPipe::ErrorCode>
+    : public std::true_type {};
+
+error_code make_error_code(
+    nekit::stream_coder::StreamCoderPipe::ErrorCode errc) {
+  return error_code(static_cast<int>(errc),
+                    nekit::stream_coder::StreamCoderPipe::error_category());
+}
+}  // namespace std
 #endif /* NEKIT_STREAM_CODER_STREAM_CODER_PIPE */

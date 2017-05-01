@@ -56,7 +56,6 @@ hunter_add_package(Boost)
 find_package(Boost CONFIG REQUIRED)
 
 set(SOURCES
-  src/stream_coder/error.cc
   src/stream_coder/stream_coder_pipe.cc
   src/deps/easylogging++.cc
   )

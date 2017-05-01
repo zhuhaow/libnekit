@@ -130,7 +130,7 @@ class StreamCoderPipe::StreamCoderPipeImplementation {
   bool VerifyNonEmpty() {
     if (!list_.empty()) return true;
 
-    last_error_ = std::make_error_code(stream_coder::kNoCoder);
+    last_error_ = std::make_error_code(kNoCoder);
     return false;
   }
 
@@ -308,6 +308,22 @@ class StreamCoderPipe::StreamCoderPipeImplementation {
   utils::Error last_error_;
   Phase status_;
 };
+
+const char* StreamCoderPipe::ErrorCategory::name() const BOOST_NOEXCEPT {
+  return "NEKit::StreamCoder::StreamCoderPipe";
+}
+
+std::string StreamCoderPipe::ErrorCategory::message(int error_code) const {
+  switch (ErrorCode(error_code)) {
+    case ErrorCode::kNoCoder:
+      return "No StreamCoder set.";
+  }
+}
+
+const StreamCoderPipe::ErrorCategory& StreamCoderPipe::error_category() {
+  static ErrorCategory category_;
+  return category_;
+}
 
 void StreamCoderPipe::AppendStreamCoder(
     std::unique_ptr<StreamCoderInterface>&& stream_coder) {

@@ -27,8 +27,8 @@
 
 #include <nekit/stream_coder/action_request.h>
 #include <nekit/stream_coder/buffer_reserve_size.h>
-#include <nekit/stream_coder/error.h>
 #include <nekit/utils/buffer.h>
+#include <nekit/utils/error.h>
 
 namespace nekit {
 namespace stream_coder {
