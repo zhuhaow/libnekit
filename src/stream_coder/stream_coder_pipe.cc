@@ -11,6 +11,8 @@ class StreamCoderPipe::StreamCoderPipeImplementation {
  public:
   typedef std::list<std::unique_ptr<StreamCoderInterface>>::iterator
       StreamCoderIterator;
+  typedef std::list<std::unique_ptr<StreamCoderInterface>>::const_iterator
+      StreamCoderConstIterator;
 
   void AppendStreamCoder(std::unique_ptr<StreamCoderInterface>&& stream_coder) {
     CHECK_EQ(status_, kInvalid);
@@ -34,7 +36,7 @@ class StreamCoderPipe::StreamCoderPipeImplementation {
     return NegotiateNextCoder();
   }
 
-  BufferReserveSize InputReserve() {
+  BufferReserveSize InputReserve() const {
     BufferReserveSize reserve{0, 0};
 
     auto tail = FindTailIterator();
@@ -63,7 +65,7 @@ class StreamCoderPipe::StreamCoderPipeImplementation {
     return kErrorHappened;  // not reachable
   }
 
-  BufferReserveSize OutputReserve() {
+  BufferReserveSize OutputReserve() const {
     BufferReserveSize reserve{0, 0};
 
     auto tail = FindTailIterator();
@@ -132,8 +134,8 @@ class StreamCoderPipe::StreamCoderPipeImplementation {
     return false;
   }
 
-  StreamCoderIterator FindTailIterator() {
-    StreamCoderIterator tail;
+  StreamCoderConstIterator FindTailIterator() const {
+    StreamCoderConstIterator tail;
     switch (status_) {
       case Phase::kNegotiating:
         CHECK(active_coder_ != list_.end());
@@ -141,7 +143,7 @@ class StreamCoderPipe::StreamCoderPipeImplementation {
         tail++;
         break;
       case Phase::kForwarding:
-        tail = list_.end();
+        tail = list_.cend();
         break;
       case Phase::kClosed:
       case Phase::kInvalid:
@@ -149,6 +151,12 @@ class StreamCoderPipe::StreamCoderPipeImplementation {
     }
 
     return tail;
+  }
+
+  StreamCoderIterator FindTailIterator() {
+    const auto iter = static_cast<const StreamCoderPipeImplementation*>(this)
+                          ->FindTailIterator();
+    return list_.erase(iter, iter);
   }
 
   ActionRequest InputForNegotiation(utils::Buffer& buffer) {
@@ -312,7 +320,7 @@ utils::Error StreamCoderPipe::GetLatestError() const {
 
 ActionRequest StreamCoderPipe::Negotiate() { return impl_->Negotiate(); }
 
-BufferReserveSize StreamCoderPipe::InputReserve() {
+BufferReserveSize StreamCoderPipe::InputReserve() const {
   return impl_->InputReserve();
 }
 
@@ -320,7 +328,7 @@ ActionRequest StreamCoderPipe::Input(utils::Buffer& buffer) {
   return impl_->Input(buffer);
 }
 
-BufferReserveSize StreamCoderPipe::OutputReserve() {
+BufferReserveSize StreamCoderPipe::OutputReserve() const {
   return impl_->OutputReserve();
 }
 

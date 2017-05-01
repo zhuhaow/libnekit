@@ -36,10 +36,10 @@ public:
 
   ActionRequest Negotiate();
 
-  BufferReserveSize InputReserve();
+  BufferReserveSize InputReserve() const;
   ActionRequest Input(utils::Buffer& buffer);
 
-  BufferReserveSize OutputReserve();
+  BufferReserveSize OutputReserve() const;
   ActionRequest Output(utils::Buffer& buffer);
 
   utils::Error GetLatestError() const;
