@@ -20,46 +20,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef NEKIT_STREAM_PROCESSOR
-#define NEKIT_STREAM_PROCESSOR
+#ifndef NEKIT_STREAM_CODER_STREAM_CODER_INTERFACE
+#define NEKIT_STREAM_CODER_STREAM_CODER_INTERFACE
 
-#include <functional>
-#include <list>
-#include <memory>
+#include <boost/noncopyable.hpp>
 
 #include <nekit/stream_coder/action_request.h>
+#include <nekit/stream_coder/buffer_reserve_size.h>
 #include <nekit/stream_coder/error.h>
-#include <nekit/stream_coder/stream_coder.h>
+#include <nekit/utils/buffer.h>
 
 namespace nekit {
 namespace stream_coder {
 
-template <class Processor>
-class StreamProcessor final : public boost::noncopyable {
+class StreamCoderInterface : boost::noncopyable {
  public:
-  typedef Processor ProcessorType;
+  virtual ~StreamCoderInterface() {}
 
-  StreamProcessor();
-  ~StreamProcessor();
+  virtual ActionRequest Negotiate() = 0;
 
-  ActionRequest Negotiate();
+  virtual BufferReserveSize InputReserve() = 0;
+  virtual ActionRequest Input(utils::Buffer& buffer) = 0;
 
-  BufferReserveSize InputReserve();
-  ActionRequest Input(utils::Buffer& buffer);
+  virtual BufferReserveSize OutputReserve() = 0;
+  virtual ActionRequest Output(utils::Buffer& buffer) = 0;
 
-  BufferReserveSize OutputReserve();
-  ActionRequest Output(utils::Buffer& buffer);
+  virtual utils::Error GetLatestError() const = 0;
 
-  utils::Error GetLatestError() const;
-
-  bool forwarding() const;
-
-  Processor* implemention();
-
- private:
-  Processor* impl_;
+  virtual bool forwarding() const = 0;
 };
+
 }  // namespace stream_coder
 }  // namespace nekit
 
-#endif /* NEKIT_STREAM_PROCESSOR */
+#endif /* NEKIT_STREAM_CODER_STREAM_CODER_INTERFACE */

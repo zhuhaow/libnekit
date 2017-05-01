@@ -20,34 +20,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef NEKIT_CODER_STREAM_CODER
-#define NEKIT_CODER_STREAM_CODER
+#ifndef NEKIT_STREAM_CODER_STREAM_CODER_PIPE
+#define NEKIT_STREAM_CODER_STREAM_CODER_PIPE
 
-#include <nekit/stream_coder/action_request.h>
-#include <nekit/stream_coder/buffer_reserve_size.h>
-#include <nekit/utils/buffer.h>
-#include <nekit/utils/error.h>
-#include <boost/noncopyable.hpp>
-#include <cstddef>
+#include <memory>
+
+#include <nekit/stream_coder/stream_coder_interface.h>
 
 namespace nekit {
 namespace stream_coder {
 
-class StreamCoder : public boost::noncopyable {
- public:
-  virtual ActionRequest Negotiate() = 0;
+class StreamCoderPipe final : public StreamCoderInterface {
+public:
+  void AppendStreamCoder(std::unique_ptr<StreamCoderInterface>&& stream_coder);
 
-  virtual BufferReserveSize InputReserve() = 0;
-  virtual ActionRequest Input(utils::Buffer& buffer) = 0;
+  ActionRequest Negotiate();
 
-  virtual BufferReserveSize OutputReserve() = 0;
-  virtual ActionRequest Output(utils::Buffer& buffer) = 0;
+  BufferReserveSize InputReserve();
+  ActionRequest Input(utils::Buffer& buffer);
 
-  virtual utils::Error GetLatestError() = 0;
+  BufferReserveSize OutputReserve();
+  ActionRequest Output(utils::Buffer& buffer);
 
-  virtual bool forwarding() = 0;
+  utils::Error GetLatestError() const;
+
+  bool forwarding() const;
+
+ private:
+  class StreamCoderPipeImplementation;
+  std::unique_ptr<StreamCoderPipeImplementation> impl_;
 };
 
 }  // namespace stream_coder
 }  // namespace nekit
-#endif /* NEKIT_CODER_STREAM_CODER */
+
+#endif /* NEKIT_STREAM_CODER_STREAM_CODER_PIPE */

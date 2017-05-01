@@ -57,8 +57,7 @@ find_package(Boost CONFIG REQUIRED)
 
 set(SOURCES
   src/stream_coder/error.cc
-  src/stream_coder/stream_processor.cc
-  src/stream_coder/detail/stream_coder_manager.cc
+  src/stream_coder/stream_coder_pipe.cc
   src/deps/easylogging++.cc
   )
 
