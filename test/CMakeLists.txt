@@ -3,3 +3,18 @@ find_package(GMock CONFIG REQUIRED)
 
 include(../cmake/Sugar)
 include(sugar_add_gtest)
+
+option(NE_ENABLE_MEMCHECK "Enable valgrind when running tests." ON)
+find_program(CTEST_MEMORYCHECK_COMMAND valgrind)
+set(CTEST_MEMORYCHECK_COMMAND_OPTIONS --trace-children=yes --leak-check=full)
+
+function(add_mem_test name)
+  if (CTEST_MEMORYCHECK_COMMAND AND NE_ENABLE_MEMCHECK AND NOT APPLE AND NOT ANDROID)
+    message(STATUS "Adding valgrind test for ${name}.")
+    set(MEMCHECK_PARAMS ${CTEST_MEMORYCHECK_COMMAND} ${CTEST_MEMORYCHECK_COMMAND_OPTIONS} $<TARGET_FILE:${name}>)
+    add_test(NAME ${name} COMMAND ${MEMCHECK_PARAMS})
+  else()
+    message(STATUS "Adding test for ${name}.")
+    sugar_add_test(${name} ${name})
+  endif()
+endfunction()
