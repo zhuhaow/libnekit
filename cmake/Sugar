@@ -1,0 +1,24 @@
+# Copyright (c) 2013, Ruslan Baratov
+# All rights reserved.
+
+option(SUGAR_STATUS_PRINT "Print process messages" ON)
+option(SUGAR_STATUS_DEBUG "Print all process messages" OFF)
+
+get_filename_component(SUGAR_ROOT "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+
+# test self
+if(NOT EXISTS "${SUGAR_ROOT}/cmake/Sugar")
+  message(FATAL_ERROR "Can't find Sugar components in: ${SUGAR_ROOT}")
+endif()
+
+# add cmake modules to search path
+list(APPEND CMAKE_MODULE_PATH "${SUGAR_ROOT}/cmake/collecting")
+list(APPEND CMAKE_MODULE_PATH "${SUGAR_ROOT}/cmake/core")
+list(APPEND CMAKE_MODULE_PATH "${SUGAR_ROOT}/cmake/print")
+list(APPEND CMAKE_MODULE_PATH "${SUGAR_ROOT}/cmake/utility")
+
+include(sugar_add_this_to_sourcelist)
+sugar_add_this_to_sourcelist()
+
+include(sugar_status_print)
+sugar_status_print("SUGAR_ROOT: ${SUGAR_ROOT}")
