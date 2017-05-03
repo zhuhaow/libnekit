@@ -26,7 +26,7 @@
 #include <memory>
 #include <system_error>
 
-#include <boost/config/suffix.hpp>
+#include <boost/config.hpp>
 
 #include <nekit/stream_coder/stream_coder_interface.h>
 
