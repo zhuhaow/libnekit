@@ -15,6 +15,12 @@ function(add_mem_test name)
     add_test(NAME ${name} COMMAND ${MEMCHECK_PARAMS})
   else()
     message(STATUS "Adding test for ${name}.")
-    sugar_add_test(${name} ${name})
+    sugar_add_gtest(${name} ${name})
   endif()
 endfunction()
+
+include_directories(.)
+
+add_executable(stream_coder_pipe_test stream_coder_pipe_test.cc)
+target_link_libraries(stream_coder_pipe_test nekit GMock::main)
+add_mem_test(stream_coder_pipe_test)
