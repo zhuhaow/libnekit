@@ -154,7 +154,7 @@ struct StreamCoderPipe::Impl {
   }
 
   StreamCoderIterator FindTailIterator() {
-    const auto iter = static_cast<const Impl*>(this)->FindTailIterator();
+    auto iter = static_cast<const Impl*>(this)->FindTailIterator();
     return list_.erase(iter, iter);
   }
 
