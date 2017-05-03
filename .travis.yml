@@ -24,38 +24,38 @@ matrix:
   include:
     # Linux {
     - os: linux
-      env: CONFIG=Coverage TOOLCHAIN=clang-libstdcxx
+      env: CONFIG=Debug TOOLCHAIN=clang-libstdcxx COVERAGE=ON
     - os: linux
-      env: CONFIG=Coverage TOOLCHAIN=gcc
+      env: CONFIG=Debug TOOLCHAIN=gcc  COVERAGE=ON
     - os: linux
-      env: CONFIG=Coverage TOOLCHAIN=android-ndk-r10e-api-19-armeabi-v7a-neon
+      env: CONFIG=Debug TOOLCHAIN=android-ndk-r10e-api-19-armeabi-v7a-neon COVERAGE=ON
     - os: linux
-      env: CONFIG=Coverage TOOLCHAIN=android-ndk-r11c-api-19-armeabi-v7a-neon
+      env: CONFIG=Debug TOOLCHAIN=android-ndk-r11c-api-19-armeabi-v7a-neon COVERAGE=ON
     # - os: linux
-    #   env: CONFIG=Coverage TOOLCHAIN=android-ndk-r12b-api-19-armeabi-v7a-neon
+    #   env: CONFIG=Debug TOOLCHAIN=android-ndk-r12b-api-19-armeabi-v7a-neon
     # - os: linux
-    #   env: CONFIG=Coverage TOOLCHAIN=android-ndk-r13b-api-19-armeabi-v7a-neon
+    #   env: CONFIG=Debug TOOLCHAIN=android-ndk-r13b-api-19-armeabi-v7a-neon
     # - os: linux
-    #   env: CONFIG=Coverage TOOLCHAIN=android-ndk-r14-api-19-armeabi-v7a-neon-c11
+    #   env: CONFIG=Debug TOOLCHAIN=android-ndk-r14-api-19-armeabi-v7a-neon-c11
 
     # OSX {
     - os: osx
-      env: CONFIG=Coverage TOOLCHAIN=clang-libstdcxx
+      env: CONFIG=Debug TOOLCHAIN=clang-libstdcxx COVERAGE=ON
     - os: osx
       osx_image: xcode8.2
-      env: CONFIG=Coverage TOOLCHAIN=osx-10-12
+      env: CONFIG=Debug TOOLCHAIN=osx-10-12 COVERAGE=ON
     - os: osx
       osx_image: xcode7.3
-      env: CONFIG=Coverage TOOLCHAIN=ios-nocodesign-9-3
+      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-9-3 COVERAGE=ON
     - os: osx
       osx_image: xcode8
-      env: CONFIG=Coverage TOOLCHAIN=ios-nocodesign-10-0
+      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-10-0 COVERAGE=ON
     - os: osx
       osx_image: xcode8.1
-      env: CONFIG=Coverage TOOLCHAIN=ios-nocodesign-10-1
+      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-10-1 COVERAGE=ON
     - os: osx
       osx_image: xcode8.2
-      env: CONFIG=Coverage TOOLCHAIN=ios-nocodesign-10-2
+      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-10-2 COVERAGE=ON
 
 install:
   # Info about OS
@@ -95,7 +95,7 @@ install:
   - export HUNTER_ROOT="`pwd`/.hunter"
 
 script:
-  - build.py --toolchain ${TOOLCHAIN} --config ${CONFIG} --test --verbose
+  - build.py --toolchain ${TOOLCHAIN} --config ${CONFIG} --fwd COVERAGE=${COVERAGE} --test --verbose
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
