@@ -26,6 +26,8 @@
 #include <memory>
 #include <system_error>
 
+#include <boost/config/suffix.hpp>
+
 #include <nekit/stream_coder/stream_coder_interface.h>
 
 namespace nekit {
@@ -42,6 +44,9 @@ class StreamCoderPipe final : public StreamCoderInterface {
 
   const static ErrorCategory& error_category();
 
+  StreamCoderPipe();
+  ~StreamCoderPipe();
+
   void AppendStreamCoder(std::unique_ptr<StreamCoderInterface>&& stream_coder);
 
   ActionRequest Negotiate();
@@ -57,8 +62,8 @@ class StreamCoderPipe final : public StreamCoderInterface {
   bool forwarding() const;
 
  private:
-  class StreamCoderPipeImplementation;
-  std::unique_ptr<StreamCoderPipeImplementation> impl_;
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
 };
 
 }  // namespace stream_coder
@@ -70,9 +75,6 @@ struct is_error_code_enum<nekit::stream_coder::StreamCoderPipe::ErrorCode>
     : public std::true_type {};
 
 error_code make_error_code(
-    nekit::stream_coder::StreamCoderPipe::ErrorCode errc) {
-  return error_code(static_cast<int>(errc),
-                    nekit::stream_coder::StreamCoderPipe::error_category());
-}
+    nekit::stream_coder::StreamCoderPipe::ErrorCode errc);
 }  // namespace std
 #endif /* NEKIT_STREAM_CODER_STREAM_CODER_PIPE */

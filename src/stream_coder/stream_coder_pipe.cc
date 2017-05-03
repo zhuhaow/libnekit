@@ -7,7 +7,7 @@
 namespace nekit {
 namespace stream_coder {
 
-class StreamCoderPipe::StreamCoderPipeImplementation {
+struct StreamCoderPipe::Impl {
  public:
   typedef std::list<std::unique_ptr<StreamCoderInterface>>::iterator
       StreamCoderIterator;
@@ -154,8 +154,7 @@ class StreamCoderPipe::StreamCoderPipeImplementation {
   }
 
   StreamCoderIterator FindTailIterator() {
-    const auto iter = static_cast<const StreamCoderPipeImplementation*>(this)
-                          ->FindTailIterator();
+    const auto iter = static_cast<const Impl*>(this)->FindTailIterator();
     return list_.erase(iter, iter);
   }
 
@@ -325,6 +324,10 @@ const StreamCoderPipe::ErrorCategory& StreamCoderPipe::error_category() {
   return category_;
 }
 
+StreamCoderPipe::StreamCoderPipe() : impl_{new Impl()} {};
+
+StreamCoderPipe::~StreamCoderPipe(){};
+
 void StreamCoderPipe::AppendStreamCoder(
     std::unique_ptr<StreamCoderInterface>&& stream_coder) {
   impl_->AppendStreamCoder(std::move(stream_coder));
@@ -356,3 +359,11 @@ bool StreamCoderPipe::forwarding() const { return impl_->forwarding(); }
 
 }  // namespace stream_coder
 }  // namespace nekit
+
+namespace std {
+error_code make_error_code(
+    nekit::stream_coder::StreamCoderPipe::ErrorCode errc) {
+  return error_code(static_cast<int>(errc),
+                    nekit::stream_coder::StreamCoderPipe::error_category());
+}
+}  // namespace std
