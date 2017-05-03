@@ -62,7 +62,7 @@ install:
   - uname -a
 
   # Install Python 3
-  - if [[ "`uname`" == "Darwin" ]]; then travis_retry brew install python3; fi
+  - if [[ "`uname`" == "Darwin" ]]; then travis_retry brew install python3 ios-sim; fi
 
   # Install Python package 'requests'
   # 'easy_install3' is not installed by 'brew install python3' on OS X 10.9 Maverick
@@ -95,7 +95,7 @@ install:
   - export HUNTER_ROOT="`pwd`/.hunter"
 
 script:
-  - build.py --toolchain ${TOOLCHAIN} --config ${CONFIG} --test 
+  - build.py --toolchain ${TOOLCHAIN} --config ${CONFIG} --test --verbose
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
