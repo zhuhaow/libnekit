@@ -14,6 +14,8 @@ struct StreamCoderPipe::Impl {
   typedef std::list<std::unique_ptr<StreamCoderInterface>>::const_iterator
       StreamCoderConstIterator;
 
+  Impl() : status_{kInvalid} {}
+
   void AppendStreamCoder(std::unique_ptr<StreamCoderInterface>&& stream_coder) {
     CHECK_EQ(status_, kInvalid);
 
