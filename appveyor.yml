@@ -68,5 +68,5 @@ install:
   - cmd: set HUNTER_ROOT=%cd%\hunter
 
 build_script:
-  - cmd: python %POLLY_ROOT%\bin\build.py --toolchain "%TOOLCHAIN%" --config "%CONFIG%" --test
+  - cmd: python %POLLY_ROOT%\bin\build.py --toolchain "%TOOLCHAIN%" --config "%CONFIG%" --test --verbose
 
