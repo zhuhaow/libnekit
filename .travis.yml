@@ -95,8 +95,7 @@ install:
   - export HUNTER_ROOT="`pwd`/.hunter"
 
 script:
-  - |-
-    set -e && build.py --toolchain ${TOOLCHAIN} --config ${CONFIG} --test --verbose | grep '^--\|^=='
+  - build.py --toolchain ${TOOLCHAIN} --config ${CONFIG} --test 
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
