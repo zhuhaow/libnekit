@@ -25,11 +25,11 @@ matrix:
     - os: linux
       env: CONFIG=Debug TOOLCHAIN=clang-libstdcxx COVERAGE=ON
     - os: linux
-      env: CONFIG=Debug TOOLCHAIN=gcc  COVERAGE=ON
+      env: CONFIG=Debug TOOLCHAIN=gcc COVERAGE=ON
     - os: linux
-      env: CONFIG=Debug TOOLCHAIN=android-ndk-r10e-api-19-armeabi-v7a-neon COVERAGE=ON
+      env: CONFIG=Debug TOOLCHAIN=android-ndk-r10e-api-19-armeabi-v7a-neon 
     - os: linux
-      env: CONFIG=Debug TOOLCHAIN=android-ndk-r11c-api-19-armeabi-v7a-neon COVERAGE=ON
+      env: CONFIG=Debug TOOLCHAIN=android-ndk-r11c-api-19-armeabi-v7a-neon
 
     - os: osx
       osx_image: xcode8.2
@@ -91,4 +91,4 @@ script:
   - build.py --toolchain ${TOOLCHAIN} --config ${CONFIG} --fwd COVERAGE=${COVERAGE} --test --verbose
 
 after_success:
-  - bash <(curl -s https://codecov.io/bash)
+  - if [ -z $CONVERAGE ]; then bash <(curl -s https://codecov.io/bash); fi
