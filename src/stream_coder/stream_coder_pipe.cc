@@ -156,8 +156,22 @@ struct StreamCoderPipe::Impl {
   }
 
   StreamCoderIterator FindTailIterator() {
-    auto iter = static_cast<const Impl*>(this)->FindTailIterator();
-    return list_.erase(iter, iter);
+    StreamCoderIterator tail;
+    switch (status_) {
+    case Phase::kNegotiating:
+      CHECK(active_coder_ != list_.end());
+      tail = active_coder_;
+      tail++;
+      break;
+    case Phase::kForwarding:
+      tail = list_.end();
+      break;
+    case Phase::kClosed:
+    case Phase::kInvalid:
+      CHECK(false);  // not reachable
+    }
+
+    return tail;
   }
 
   ActionRequest InputForNegotiation(utils::Buffer& buffer) {
