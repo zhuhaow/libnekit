@@ -1,7 +1,8 @@
 hunter_add_package(GTest)
 find_package(GMock CONFIG REQUIRED)
 
-include(../cmake/Sugar)
+hunter_add_package(Sugar)
+include(${SUGAR_ROOT}/cmake/Sugar)
 include(sugar_add_gtest)
 
 option(NE_ENABLE_MEMCHECK "Enable valgrind when running tests." ON)
