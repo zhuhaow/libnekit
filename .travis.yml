@@ -91,4 +91,4 @@ script:
   - build.py --toolchain ${TOOLCHAIN} --config ${CONFIG} --fwd COVERAGE=${COVERAGE} --test --verbose
 
 after_success:
-  - if [ -z $CONVERAGE ]; then bash <(curl -s https://codecov.io/bash); fi
+  - if [ -n $COVERAGE ]; then bash <(curl -s https://codecov.io/bash); fi
