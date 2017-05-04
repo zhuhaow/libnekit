@@ -34,6 +34,15 @@ using namespace nekit::stream_coder;
 using ::testing::Return;
 using ::testing::_;
 
+TEST(StreamCoderPipeUnitTest, ReturnErrorOnNegotiationWhenEmpty) {
+  StreamCoderPipe pipe;
+  EXPECT_EQ(pipe.Negotiate(), kErrorHappened);
+  EXPECT_EQ(pipe.GetLatestError().category(),
+            StreamCoderPipe::error_category());
+  EXPECT_EQ(pipe.GetLatestError().value(),
+            static_cast<int>(StreamCoderPipe::kNoCoder));
+}
+
 TEST(StreamCoderPipeUnitTest, ComputesReserveSize) {
   std::unique_ptr<MockStreamCoder> coder1(new MockStreamCoder());
   std::unique_ptr<MockStreamCoder> coder2(new MockStreamCoder());
