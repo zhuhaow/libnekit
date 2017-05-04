@@ -22,7 +22,6 @@ addons:
 
 matrix:
   include:
-    # Linux {
     - os: linux
       env: CONFIG=Debug TOOLCHAIN=clang-libstdcxx COVERAGE=ON
     - os: linux
@@ -31,16 +30,7 @@ matrix:
       env: CONFIG=Debug TOOLCHAIN=android-ndk-r10e-api-19-armeabi-v7a-neon COVERAGE=ON
     - os: linux
       env: CONFIG=Debug TOOLCHAIN=android-ndk-r11c-api-19-armeabi-v7a-neon COVERAGE=ON
-    # - os: linux
-    #   env: CONFIG=Debug TOOLCHAIN=android-ndk-r12b-api-19-armeabi-v7a-neon
-    # - os: linux
-    #   env: CONFIG=Debug TOOLCHAIN=android-ndk-r13b-api-19-armeabi-v7a-neon
-    # - os: linux
-    #   env: CONFIG=Debug TOOLCHAIN=android-ndk-r14-api-19-armeabi-v7a-neon-c11
 
-    # OSX {
-    - os: osx
-      env: CONFIG=Debug TOOLCHAIN=clang-libstdcxx COVERAGE=ON
     - os: osx
       osx_image: xcode8.2
       env: CONFIG=Debug TOOLCHAIN=osx-10-12 COVERAGE=ON
