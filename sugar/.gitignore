@@ -1,0 +1,22 @@
+# temp builds directories
+examples/*/*/install
+examples/*/*/_builds
+examples/*/_builds
+
+# python cache
+*/*/__pycache__
+
+# temp
+*/*/Install
+*/*/*.tar.gz
+
+# temp download
+examples/third_party/_install/*
+examples/third_party/gtest-1.7.0-hunter-6/*
+
+# temp macos
+.DS_Store
+
+# temp build scripts
+*/*/build.sh
+*/*/*/build.sh

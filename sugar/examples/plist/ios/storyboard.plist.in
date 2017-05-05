@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE
+    plist
+    PUBLIC
+    "-//Apple//DTD PLIST 1.0//EN"
+    "http://www.apple.com/DTDs/PropertyList-1.0.dtd"
+>
+<plist version="1.0">
+<dict>
+  <!--
+  String below icon (XCODE_ATTRIBUTE_PRODUCT_NAME)
+  -->
+  <key>CFBundleDisplayName</key>
+  <string>$(PRODUCT_NAME)</string>
+
+  <!--
+  Internal name of executable file
+  e.g.: ProductName.app/ExecutableName
+  NOTE: This key is required (!)
+  Initialized automatically by Xcode (no need to modify cmake target property)
+  (XCODE_ATTRIBUTE_EXECUTABLE_NAME)
+  -->
+  <key>CFBundleExecutable</key>
+  <string>$(EXECUTABLE_NAME)</string>
+
+  <!--
+  Bundle identifier. Unique id, usually reverse DNS:
+  e.g.: com.example.johndoe.awesomeproject
+  (XCODE_ATTRIBUTE_BUNDLE_IDENTIFIER)
+  -->
+  <key>CFBundleIdentifier</key>
+  <string>$(BUNDLE_IDENTIFIER)</string>
+
+  <!--
+  Icons for iPhone:
+  -->
+  <key>CFBundleIcons</key>
+  <dict>
+    <key>CFBundlePrimaryIcon</key>
+    <dict>
+      <key>CFBundleIconFiles</key>
+      <array>
+        <string>Icon_iPhone_Retina_120x120</string>
+        <string>Icon_iPhone_iPad_Retina_80x80</string>
+        <string>Icon_iPhone_iPad_Retina_58x58</string>
+        <string>Icon</string>
+      </array>
+    </dict>
+  </dict>
+
+  <!--
+  Icons for iPad:
+  -->
+  <key>CFBundleIcons~ipad</key>
+  <dict>
+    <key>CFBundlePrimaryIcon</key>
+    <dict>
+      <key>CFBundleIconFiles</key>
+      <array>
+        <string>Icon_iPad_Non-Retina_76x76</string>
+        <string>Icon_iPad_Retina_152x152</string>
+        <string>Icon_iPad_Non-Retina_40x40</string>
+        <string>Icon_iPhone_iPad_Retina_80x80</string>
+        <string>Icon_iPad_Non-Retina_29x29</string>
+        <string>Icon_iPhone_iPad_Retina_58x58</string>
+        <string>Icon</string>
+      </array>
+    </dict>
+  </dict>
+
+  <!--
+  Storyboards
+  -->
+  <key>UIMainStoryboardFile</key>
+  <string>MainStoryboard_iPhone</string>
+  <key>UIMainStoryboardFile~ipad</key>
+  <string>MainStoryboard_iPad</string>
+
+  <!--
+  Device supported orientations
+  -->
+  <key>UISupportedInterfaceOrientations</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+    <string>UIInterfaceOrientationLandscapeLeft</string>
+    <string>UIInterfaceOrientationLandscapeRight</string>
+  </array>
+  <key>UISupportedInterfaceOrientations~ipad</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+    <string>UIInterfaceOrientationPortraitUpsideDown</string>
+    <string>UIInterfaceOrientationLandscapeLeft</string>
+    <string>UIInterfaceOrientationLandscapeRight</string>
+  </array>
+
+  <!--
+  iPhone launch images
+  -->
+  <key>UILaunchImages</key>
+  <array>
+    <dict>
+      <key>UILaunchImageMinimumOSVersion</key>
+      <string>7.0</string>
+      <key>UILaunchImageName</key>
+      <string>Launch_Portrait</string>
+      <key>UILaunchImageOrientation</key>
+      <string>Portrait</string>
+      <key>UILaunchImageSize</key>
+      <string>{320, 480}</string>
+    </dict>
+    <dict>
+      <key>UILaunchImageMinimumOSVersion</key>
+      <string>7.0</string>
+      <key>UILaunchImageName</key>
+      <!--
+      NOTE: Can't change launch image name because of Xcode warning (bug?)
+      -->
+      <string>Default</string>
+      <key>UILaunchImageOrientation</key>
+      <string>Portrait</string>
+      <key>UILaunchImageSize</key>
+      <string>{320, 568}</string>
+    </dict>
+  </array>
+
+  <!--
+  iPad launch images
+  -->
+  <key>UILaunchImages~ipad</key>
+  <array>
+    <dict>
+      <key>UILaunchImageMinimumOSVersion</key>
+      <string>7.0</string>
+      <key>UILaunchImageName</key>
+      <string>Launch_Portrait</string>
+      <key>UILaunchImageOrientation</key>
+      <string>Portrait</string>
+      <key>UILaunchImageSize</key>
+      <string>{768, 1024}</string>
+    </dict>
+    <dict>
+      <key>UILaunchImageMinimumOSVersion</key>
+      <string>7.0</string>
+      <key>UILaunchImageName</key>
+      <string>Launch_Landscape</string>
+      <key>UILaunchImageOrientation</key>
+      <string>Landscape</string>
+      <key>UILaunchImageSize</key>
+      <string>{768, 1024}</string>
+    </dict>
+  </array>
+
+  <!--
+  Other
+  -->
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>CFBundleName</key>
+  <string>$(PRODUCT_NAME)</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>1.0</string>
+  <key>CFBundleSignature</key>
+  <string>????</string>
+  <key>CFBundleVersion</key>
+  <string>1.0</string>
+  <key>LSRequiresIPhoneOS</key>
+  <true/>
+  <key>UIRequiredDeviceCapabilities</key>
+  <array>
+    <string>armv7</string>
+  </array>
+</dict>
+</plist>

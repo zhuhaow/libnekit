@@ -1,0 +1,32 @@
+language:
+    - python
+
+python:
+    - "3.3"
+
+before_install:
+    - sudo apt-get update
+
+install:
+    - sudo apt-get install doxygen
+    - sudo apt-get install cmake
+    - sudo apt-get install libcurl3-dev
+    # install patched cmake version
+    - wget https://github.com/ruslo/CMake/archive/ios.universal.2.tar.gz
+    - tar xf ios.universal.2.tar.gz
+    - cmake -HCMake-ios.universal.2 -B_builds/cmake -DCMAKE_USE_SYSTEM_CURL=YES -DCMAKE_BUILD_TYPE=Release
+    - cmake --build _builds/cmake
+    - sudo cmake --build _builds/cmake --target install
+    - export PATH=/usr/local/bin:${PATH}
+    # --end
+
+before_script:
+    - which cmake
+    - cmake --version
+    - export SUGAR_ROOT=`pwd`
+
+script:
+    - cd ./examples
+    - chmod +x ./test.py
+    - ./test.py
+    - make -C 08-doxygen/_builds/make-default/ public-doc # test installed doxygen

@@ -1,7 +1,7 @@
 hunter_add_package(GTest)
 find_package(GMock CONFIG REQUIRED)
 
-hunter_add_package(Sugar)
+set(SUGAR_ROOT ../sugar)
 include(${SUGAR_ROOT}/cmake/Sugar)
 include(sugar_add_gtest)
 
