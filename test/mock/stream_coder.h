@@ -32,6 +32,9 @@ namespace stream_coder {
 
 class MockStreamCoder : public StreamCoderInterface {
  public:
+  MOCK_METHOD0(Die, void());
+  ~MockStreamCoder() { Die(); }
+
   MOCK_METHOD0(Negotiate, ActionRequest());
   MOCK_CONST_METHOD0(InputReserve, BufferReserveSize());
   MOCK_METHOD1(Input, ActionRequest(utils::Buffer& buffer));
