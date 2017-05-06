@@ -40,10 +40,10 @@ class StreamCoderInterface : boost::noncopyable {
   virtual ActionRequest Negotiate() = 0;
 
   virtual BufferReserveSize InputReserve() const = 0;
-  virtual ActionRequest Input(utils::Buffer& buffer) = 0;
+  virtual ActionRequest Input(utils::Buffer* buffer) = 0;
 
   virtual BufferReserveSize OutputReserve() const = 0;
-  virtual ActionRequest Output(utils::Buffer& buffer) = 0;
+  virtual ActionRequest Output(utils::Buffer* buffer) = 0;
 
   virtual utils::Error GetLatestError() const = 0;
 

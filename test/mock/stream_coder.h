@@ -48,9 +48,9 @@ class MockStreamCoder : public StreamCoderInterface {
 
   MOCK_METHOD0(Negotiate, ActionRequest());
   MOCK_CONST_METHOD0(InputReserve, BufferReserveSize());
-  MOCK_METHOD1(Input, ActionRequest(utils::Buffer& buffer));
+  MOCK_METHOD1(Input, ActionRequest(utils::Buffer* buffer));
   MOCK_CONST_METHOD0(OutputReserve, BufferReserveSize());
-  MOCK_METHOD1(Output, ActionRequest(utils::Buffer& buffer));
+  MOCK_METHOD1(Output, ActionRequest(utils::Buffer* buffer));
   MOCK_CONST_METHOD0(GetLatestError, utils::Error());
   MOCK_CONST_METHOD0(forwarding, bool());
 };

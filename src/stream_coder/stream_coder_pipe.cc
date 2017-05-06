@@ -50,7 +50,7 @@ struct StreamCoderPipe::Impl {
     return reserve;
   }
 
-  ActionRequest Input(utils::Buffer& buffer) {
+  ActionRequest Input(utils::Buffer* buffer) {
     if (!VerifyNonEmpty()) {
       return kErrorHappened;
     }
@@ -79,7 +79,7 @@ struct StreamCoderPipe::Impl {
     return reserve;
   }
 
-  ActionRequest Output(utils::Buffer& buffer) {
+  ActionRequest Output(utils::Buffer* buffer) {
     if (!VerifyNonEmpty()) {
       return kErrorHappened;
     }
@@ -179,7 +179,7 @@ struct StreamCoderPipe::Impl {
     return tail;
   }
 
-  ActionRequest InputForNegotiation(utils::Buffer& buffer) {
+  ActionRequest InputForNegotiation(utils::Buffer* buffer) {
     CHECK(active_coder_ != list_.end());
 
     auto iter = list_.begin();
@@ -224,7 +224,7 @@ struct StreamCoderPipe::Impl {
     return kErrorHappened;
   }
 
-  ActionRequest InputForForward(utils::Buffer& buffer) {
+  ActionRequest InputForForward(utils::Buffer* buffer) {
     auto iter = list_.begin();
     while (iter != list_.end()) {
       switch ((*iter)->Input(buffer)) {
@@ -246,7 +246,7 @@ struct StreamCoderPipe::Impl {
     return kContinue;
   }
 
-  ActionRequest OutputForNegotiation(utils::Buffer& buffer) {
+  ActionRequest OutputForNegotiation(utils::Buffer* buffer) {
     CHECK(active_coder_ != list_.end());
 
     auto iter = active_coder_;
@@ -300,7 +300,7 @@ struct StreamCoderPipe::Impl {
     return action;
   }
 
-  ActionRequest OutputForForward(utils::Buffer& buffer) {
+  ActionRequest OutputForForward(utils::Buffer* buffer) {
     auto iter = list_.end();
 
     do {
@@ -364,7 +364,7 @@ BufferReserveSize StreamCoderPipe::InputReserve() const {
   return impl_->InputReserve();
 }
 
-ActionRequest StreamCoderPipe::Input(utils::Buffer& buffer) {
+ActionRequest StreamCoderPipe::Input(utils::Buffer* buffer) {
   return impl_->Input(buffer);
 }
 
@@ -372,7 +372,7 @@ BufferReserveSize StreamCoderPipe::OutputReserve() const {
   return impl_->OutputReserve();
 }
 
-ActionRequest StreamCoderPipe::Output(utils::Buffer& buffer) {
+ActionRequest StreamCoderPipe::Output(utils::Buffer* buffer) {
   return impl_->Output(buffer);
 }
 
