@@ -33,7 +33,18 @@ namespace stream_coder {
 class MockStreamCoder : public StreamCoderInterface {
  public:
   MOCK_METHOD0(Die, void());
-  ~MockStreamCoder() { Die(); }
+
+  MockStreamCoder() {
+    // Clearly, expecting the calling times of `Die` makes no sense since it
+    // will only be called when the dtor is called, which is guaranteed to be no
+    // more than once. However, if using with `NiceMock`, the test will warn
+    // about the uninterested call since `NiceMock<T>` is a subclass of `T` and
+    // by the time of calling `Die` the dtor of `NiceMock<T>` is already called
+    // and the instance is not "nice" anymore.
+    EXPECT_CALL(*this, Die()).Times(::testing::AnyNumber());
+  }
+
+  virtual ~MockStreamCoder() { Die(); }
 
   MOCK_METHOD0(Negotiate, ActionRequest());
   MOCK_CONST_METHOD0(InputReserve, BufferReserveSize());
