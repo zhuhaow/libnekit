@@ -125,6 +125,11 @@ struct StreamCoderPipe::Impl {
       }
     }
 
+    if (list_.empty()) {
+      last_error_ = std::make_error_code(kNoCoder);
+      return kErrorHappened;
+    }
+
     status_ = kForwarding;
     return kReady;
   }
