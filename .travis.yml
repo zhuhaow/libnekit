@@ -39,16 +39,16 @@ matrix:
       env: CONFIG=Debug TOOLCHAIN=osx-10-12 COVERAGE=ON
     - os: osx
       osx_image: xcode7.3
-      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-9-3 COVERAGE=ON
+      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-9-3 
     - os: osx
       osx_image: xcode8
-      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-10-0 COVERAGE=ON
+      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-10-0
     - os: osx
       osx_image: xcode8.1
-      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-10-1 COVERAGE=ON
+      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-10-1
     - os: osx
       osx_image: xcode8.2
-      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-10-2 COVERAGE=ON
+      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-10-2
 
 install:
   # Info about OS
