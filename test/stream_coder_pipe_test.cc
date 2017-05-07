@@ -33,6 +33,72 @@ using namespace nekit::stream_coder;
 
 using ::testing::Return;
 using ::testing::_;
+using ::testing::AnyNumber;
+using ::testing::Sequence;
+using ::testing::InSequence;
+using ::testing::Mock;
+using ::testing::NiceMock;
+
+constexpr int c1_ip = 1;  // ip: input prefix
+constexpr int c1_is = 2;  // is: input suffix
+constexpr int c1_op = 4;  // op: output prefix
+constexpr int c1_os = 8;  // os: output suffix
+
+constexpr int c2_ip = 16;   // ip: input prefix
+constexpr int c2_is = 32;   // is: input suffix
+constexpr int c2_op = 64;   // op: output prefix
+constexpr int c2_os = 128;  // os: output suffix
+
+constexpr int c3_ip = 256;   // ip: input prefix
+constexpr int c3_is = 512;   // is: input suffix
+constexpr int c3_op = 1024;  // op: output prefix
+constexpr int c3_os = 2048;  // os: output suffix
+
+class StreamCoderPipeDefaultFixture : public ::testing::Test {
+ protected:
+  virtual void SetUp() override {
+    coder1_.reset(new MockStreamCoder());
+    coder2_.reset(new MockStreamCoder());
+    coder3_.reset(new MockStreamCoder());
+
+    ON_CALL(*coder1_, InputReserve())
+        .WillByDefault(Return(BufferReserveSize(c1_ip, c1_is)));
+    ON_CALL(*coder1_, OutputReserve())
+        .WillByDefault(Return(BufferReserveSize(c1_op, c1_os)));
+    ON_CALL(*coder1_, Negotiate()).WillByDefault(Return(kReady));
+
+    ON_CALL(*coder2_, InputReserve())
+        .WillByDefault(Return(BufferReserveSize(c2_ip, c2_is)));
+    ON_CALL(*coder2_, OutputReserve())
+        .WillByDefault(Return(BufferReserveSize(c2_op, c2_os)));
+    ON_CALL(*coder2_, Negotiate()).WillByDefault(Return(kReady));
+
+    ON_CALL(*coder3_, InputReserve())
+        .WillByDefault(Return(BufferReserveSize(c3_ip, c3_is)));
+    ON_CALL(*coder3_, OutputReserve())
+        .WillByDefault(Return(BufferReserveSize(c3_op, c3_os)));
+    ON_CALL(*coder3_, Negotiate()).WillByDefault(Return(kReady));
+
+    // We do not test these methods since they are const and the result is
+    // already checked. So there it doesn't matter how they are called.
+    EXPECT_CALL(*coder1_, InputReserve()).Times(AnyNumber());
+    EXPECT_CALL(*coder1_, OutputReserve()).Times(AnyNumber());
+    EXPECT_CALL(*coder2_, InputReserve()).Times(AnyNumber());
+    EXPECT_CALL(*coder2_, OutputReserve()).Times(AnyNumber());
+    EXPECT_CALL(*coder3_, InputReserve()).Times(AnyNumber());
+    EXPECT_CALL(*coder3_, OutputReserve()).Times(AnyNumber());
+  }
+
+  void RegisterAllCoders() {
+    pipe_.AppendStreamCoder(std::move(coder1_));
+    pipe_.AppendStreamCoder(std::move(coder2_));
+    pipe_.AppendStreamCoder(std::move(coder3_));
+  }
+
+  std::unique_ptr<MockStreamCoder> coder1_, coder2_, coder3_;
+
+  StreamCoderPipe pipe_;
+};
 
 TEST(StreamCoderPipeUnitTest, ReturnErrorOnNegotiationWhenEmpty) {
   StreamCoderPipe pipe;
@@ -43,365 +109,431 @@ TEST(StreamCoderPipeUnitTest, ReturnErrorOnNegotiationWhenEmpty) {
             static_cast<int>(StreamCoderPipe::kNoCoder));
 }
 
-TEST(StreamCoderPipeUnitTest, ComputesReserveSize) {
-  std::unique_ptr<MockStreamCoder> coder1(new MockStreamCoder());
-  std::unique_ptr<MockStreamCoder> coder2(new MockStreamCoder());
-  std::unique_ptr<MockStreamCoder> coder3(new MockStreamCoder());
+TEST_F(StreamCoderPipeDefaultFixture, ComputesReserveSize) {
+  EXPECT_CALL(*coder1_, Negotiate());
+  EXPECT_CALL(*coder2_, Negotiate());
+  EXPECT_CALL(*coder3_, Negotiate());
 
-  EXPECT_CALL(*coder1, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(8, 8)));
-  EXPECT_CALL(*coder1, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(8, 8)));
-  EXPECT_CALL(*coder1, Negotiate()).WillOnce(Return(kReady));
+  RegisterAllCoders();
 
-  EXPECT_CALL(*coder2, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(4, 4)));
-  EXPECT_CALL(*coder2, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(4, 4)));
-  EXPECT_CALL(*coder2, Negotiate()).WillOnce(Return(kReady));
+  EXPECT_EQ(pipe_.Negotiate(), kReady);
+  BufferReserveSize rsize = pipe_.InputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_ip + c2_ip + c3_ip);
+  EXPECT_EQ(rsize.suffix(), c1_is + c2_is + c3_is);
 
-  EXPECT_CALL(*coder3, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(2, 2)));
-  EXPECT_CALL(*coder3, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(2, 2)));
-  EXPECT_CALL(*coder3, Negotiate()).WillOnce(Return(kReady));
-
-  StreamCoderPipe pipe;
-  pipe.AppendStreamCoder(std::move(coder1));
-  pipe.AppendStreamCoder(std::move(coder2));
-  pipe.AppendStreamCoder(std::move(coder3));
-
-  EXPECT_EQ(pipe.Negotiate(), kReady);
-  BufferReserveSize rsize = pipe.InputReserve();
-  EXPECT_EQ(rsize.prefix(), 14);
-  EXPECT_EQ(rsize.suffix(), 14);
-
-  rsize = pipe.OutputReserve();
-  EXPECT_EQ(rsize.prefix(), 14);
-  EXPECT_EQ(rsize.suffix(), 14);
+  rsize = pipe_.OutputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_op + c2_op + c3_op);
+  EXPECT_EQ(rsize.suffix(), c1_os + c2_os + c3_os);
 }
 
-TEST(StreamCoderPipeNegotationTest, RemoveFirstCoder) {
-  std::unique_ptr<MockStreamCoder> coder1(new MockStreamCoder());
-  std::unique_ptr<MockStreamCoder> coder2(new MockStreamCoder());
-  std::unique_ptr<MockStreamCoder> coder3(new MockStreamCoder());
+TEST_F(StreamCoderPipeDefaultFixture, RemoveFirstWhenNegotiating) {
+  EXPECT_CALL(*coder1_, Negotiate()).WillOnce(Return(kRemoveSelf));
+  EXPECT_CALL(*coder2_, Negotiate());
+  EXPECT_CALL(*coder3_, Negotiate());
 
-  EXPECT_CALL(*coder1, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(8, 8)));
-  EXPECT_CALL(*coder1, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(8, 8)));
-  EXPECT_CALL(*coder1, Negotiate()).WillOnce(Return(kRemoveSelf));
+  Sequence s1, s2;
+  EXPECT_CALL(*coder1_, Die()).InSequence(s1, s2);
+  EXPECT_CALL(*coder2_, Die()).InSequence(s1);
+  EXPECT_CALL(*coder3_, Die()).InSequence(s2);
 
-  EXPECT_CALL(*coder2, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(4, 4)));
-  EXPECT_CALL(*coder2, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(4, 4)));
-  EXPECT_CALL(*coder2, Negotiate()).WillOnce(Return(kReady));
+  RegisterAllCoders();
 
-  EXPECT_CALL(*coder3, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(2, 2)));
-  EXPECT_CALL(*coder3, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(2, 2)));
-  EXPECT_CALL(*coder3, Negotiate()).WillOnce(Return(kReady));
+  EXPECT_EQ(pipe_.Negotiate(), kReady);
 
-  StreamCoderPipe pipe;
-  pipe.AppendStreamCoder(std::move(coder1));
-  pipe.AppendStreamCoder(std::move(coder2));
-  pipe.AppendStreamCoder(std::move(coder3));
+  BufferReserveSize rsize = pipe_.InputReserve();
+  EXPECT_EQ(rsize.prefix(), c2_ip + c3_ip);
+  EXPECT_EQ(rsize.suffix(), c2_is + c3_is);
 
-  EXPECT_EQ(pipe.Negotiate(), kReady);
-
-  BufferReserveSize rsize = pipe.InputReserve();
-  EXPECT_EQ(rsize.prefix(), 6);
-  EXPECT_EQ(rsize.suffix(), 6);
-
-  rsize = pipe.OutputReserve();
-  EXPECT_EQ(rsize.prefix(), 6);
-  EXPECT_EQ(rsize.suffix(), 6);
+  rsize = pipe_.OutputReserve();
+  EXPECT_EQ(rsize.prefix(), c2_op + c3_op);
+  EXPECT_EQ(rsize.suffix(), c2_os + c3_os);
 }
 
-TEST(StreamCoderPipeNegotationTest, RemoveMiddleCoder) {
-  std::unique_ptr<MockStreamCoder> coder1(new MockStreamCoder());
-  std::unique_ptr<MockStreamCoder> coder2(new MockStreamCoder());
-  std::unique_ptr<MockStreamCoder> coder3(new MockStreamCoder());
+TEST_F(StreamCoderPipeDefaultFixture, RemoveMiddleWhenNegotiating) {
+  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(kRemoveSelf));
+  EXPECT_CALL(*coder1_, Negotiate());
+  EXPECT_CALL(*coder3_, Negotiate());
 
-  EXPECT_CALL(*coder1, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(8, 8)));
-  EXPECT_CALL(*coder1, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(8, 8)));
-  EXPECT_CALL(*coder1, Negotiate()).WillOnce(Return(kReady));
+  Sequence s1, s2;
+  EXPECT_CALL(*coder2_, Die()).InSequence(s1, s2);
+  EXPECT_CALL(*coder1_, Die()).InSequence(s1);
+  EXPECT_CALL(*coder3_, Die()).InSequence(s2);
 
-  EXPECT_CALL(*coder2, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(4, 4)));
-  EXPECT_CALL(*coder2, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(4, 4)));
-  EXPECT_CALL(*coder2, Negotiate()).WillOnce(Return(kRemoveSelf));
+  RegisterAllCoders();
 
-  EXPECT_CALL(*coder3, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(2, 2)));
-  EXPECT_CALL(*coder3, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(2, 2)));
-  EXPECT_CALL(*coder3, Negotiate()).WillOnce(Return(kReady));
+  EXPECT_EQ(pipe_.Negotiate(), kReady);
 
-  StreamCoderPipe pipe;
-  pipe.AppendStreamCoder(std::move(coder1));
-  pipe.AppendStreamCoder(std::move(coder2));
-  pipe.AppendStreamCoder(std::move(coder3));
+  BufferReserveSize rsize = pipe_.InputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_ip + c3_ip);
+  EXPECT_EQ(rsize.suffix(), c1_is + c3_is);
 
-  EXPECT_EQ(pipe.Negotiate(), kReady);
-
-  BufferReserveSize rsize = pipe.InputReserve();
-  EXPECT_EQ(rsize.prefix(), 10);
-  EXPECT_EQ(rsize.suffix(), 10);
-
-  rsize = pipe.OutputReserve();
-  EXPECT_EQ(rsize.prefix(), 10);
-  EXPECT_EQ(rsize.suffix(), 10);
+  rsize = pipe_.OutputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_op + c3_op);
+  EXPECT_EQ(rsize.suffix(), c1_os + c3_os);
 }
 
-TEST(StreamCoderPipeNegotationTest, RemoveLastCoder) {
-  std::unique_ptr<MockStreamCoder> coder1(new MockStreamCoder());
-  std::unique_ptr<MockStreamCoder> coder2(new MockStreamCoder());
-  std::unique_ptr<MockStreamCoder> coder3(new MockStreamCoder());
+TEST_F(StreamCoderPipeDefaultFixture, RemoveLastWhenNegotiating) {
+  EXPECT_CALL(*coder3_, Negotiate()).WillOnce(Return(kRemoveSelf));
+  EXPECT_CALL(*coder1_, Negotiate());
+  EXPECT_CALL(*coder2_, Negotiate());
 
-  EXPECT_CALL(*coder1, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(8, 8)));
-  EXPECT_CALL(*coder1, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(8, 8)));
-  EXPECT_CALL(*coder1, Negotiate()).WillOnce(Return(kReady));
+  Sequence s1, s2;
+  EXPECT_CALL(*coder3_, Die()).InSequence(s1, s2);
+  EXPECT_CALL(*coder1_, Die()).InSequence(s1);
+  EXPECT_CALL(*coder2_, Die()).InSequence(s2);
 
-  EXPECT_CALL(*coder2, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(4, 4)));
-  EXPECT_CALL(*coder2, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(4, 4)));
-  EXPECT_CALL(*coder2, Negotiate()).WillOnce(Return(kReady));
+  RegisterAllCoders();
 
-  EXPECT_CALL(*coder3, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(2, 2)));
-  EXPECT_CALL(*coder3, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(2, 2)));
-  EXPECT_CALL(*coder3, Negotiate()).WillOnce(Return(kRemoveSelf));
+  EXPECT_EQ(pipe_.Negotiate(), kReady);
 
-  StreamCoderPipe pipe;
-  pipe.AppendStreamCoder(std::move(coder1));
-  pipe.AppendStreamCoder(std::move(coder2));
-  pipe.AppendStreamCoder(std::move(coder3));
+  BufferReserveSize rsize = pipe_.InputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_ip + c2_ip);
+  EXPECT_EQ(rsize.suffix(), c1_is + c2_is);
 
-  EXPECT_EQ(pipe.Negotiate(), kReady);
-
-  BufferReserveSize rsize = pipe.InputReserve();
-  EXPECT_EQ(rsize.prefix(), 12);
-  EXPECT_EQ(rsize.suffix(), 12);
-
-  rsize = pipe.OutputReserve();
-  EXPECT_EQ(rsize.prefix(), 12);
-  EXPECT_EQ(rsize.suffix(), 12);
+  rsize = pipe_.OutputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_op + c2_op);
+  EXPECT_EQ(rsize.suffix(), c1_os + c2_os);
 }
 
-TEST(StreamCoderPipeNegotationTest, FirstWantToRead) {
-  std::unique_ptr<MockStreamCoder> coder1(new MockStreamCoder());
-  std::unique_ptr<MockStreamCoder> coder2(new MockStreamCoder());
-  std::unique_ptr<MockStreamCoder> coder3(new MockStreamCoder());
+TEST_F(StreamCoderPipeDefaultFixture, RemoveAllWhenNegotiating) {
+  EXPECT_CALL(*coder1_, Negotiate()).WillOnce(Return(kRemoveSelf));
+  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(kRemoveSelf));
+  EXPECT_CALL(*coder3_, Negotiate()).WillOnce(Return(kRemoveSelf));
 
-  EXPECT_CALL(*coder1, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(8, 8)));
-  EXPECT_CALL(*coder1, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(8, 8)));
-  EXPECT_CALL(*coder1, Input(_)).WillOnce(Return(kReady));
-  EXPECT_CALL(*coder1, Negotiate()).WillOnce(Return(kWantRead));
+  RegisterAllCoders();
 
-  EXPECT_CALL(*coder2, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(4, 4)));
-  EXPECT_CALL(*coder2, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(4, 4)));
-  EXPECT_CALL(*coder2, Negotiate()).WillOnce(Return(kReady));
+  EXPECT_EQ(pipe_.Negotiate(), kErrorHappened);
 
-  EXPECT_CALL(*coder3, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(2, 2)));
-  EXPECT_CALL(*coder3, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(2, 2)));
-  EXPECT_CALL(*coder3, Negotiate()).WillOnce(Return(kReady));
+  EXPECT_EQ(pipe_.GetLatestError().category(),
+            StreamCoderPipe::error_category());
+  EXPECT_EQ(pipe_.GetLatestError().value(),
+            static_cast<int>(StreamCoderPipe::kNoCoder));
+}
 
-  StreamCoderPipe pipe;
-  pipe.AppendStreamCoder(std::move(coder1));
-  pipe.AppendStreamCoder(std::move(coder2));
-  pipe.AppendStreamCoder(std::move(coder3));
+TEST_F(StreamCoderPipeDefaultFixture, FirstWantToReadWhenNegotiating) {
+  EXPECT_CALL(*coder1_, Negotiate()).WillOnce(Return(kWantRead));
+  EXPECT_CALL(*coder1_, Input(_)).WillOnce(Return(kReady));
+  EXPECT_CALL(*coder2_, Negotiate());
+  EXPECT_CALL(*coder3_, Negotiate());
 
-  EXPECT_EQ(pipe.Negotiate(), kWantRead);
+  RegisterAllCoders();
 
-  BufferReserveSize rsize = pipe.InputReserve();
-  EXPECT_EQ(rsize.prefix(), 8);
-  EXPECT_EQ(rsize.suffix(), 8);
+  EXPECT_EQ(pipe_.Negotiate(), kWantRead);
 
-  rsize = pipe.OutputReserve();
-  EXPECT_EQ(rsize.prefix(), 8);
-  EXPECT_EQ(rsize.suffix(), 8);
+  BufferReserveSize rsize = pipe_.InputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_ip);
+  EXPECT_EQ(rsize.suffix(), c1_is);
 
   nekit::utils::Buffer buffer(nullptr, 0);
-  EXPECT_EQ(pipe.Input(buffer), kReady);
+  EXPECT_EQ(pipe_.Input(&buffer), kReady);
 
-  rsize = pipe.InputReserve();
-  EXPECT_EQ(rsize.prefix(), 14);
-  EXPECT_EQ(rsize.suffix(), 14);
+  rsize = pipe_.InputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_ip + c2_ip + c3_ip);
+  EXPECT_EQ(rsize.suffix(), c1_is + c2_is + c3_is);
 
-  rsize = pipe.OutputReserve();
-  EXPECT_EQ(rsize.prefix(), 14);
-  EXPECT_EQ(rsize.suffix(), 14);
+  rsize = pipe_.OutputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_op + c2_op + c3_op);
+  EXPECT_EQ(rsize.suffix(), c1_os + c2_os + c3_os);
 }
 
-TEST(StreamCoderPipeNegotationTest, MiddleWantToRead) {
-  std::unique_ptr<MockStreamCoder> coder1(new MockStreamCoder());
-  std::unique_ptr<MockStreamCoder> coder2(new MockStreamCoder());
-  std::unique_ptr<MockStreamCoder> coder3(new MockStreamCoder());
+TEST_F(StreamCoderPipeDefaultFixture, MiddleWantToReadWhenNegotiating) {
+  EXPECT_CALL(*coder1_, Negotiate());
+  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(kWantRead));
+  EXPECT_CALL(*coder3_, Negotiate());
 
-  EXPECT_CALL(*coder1, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(8, 8)));
-  EXPECT_CALL(*coder1, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(8, 8)));
-  EXPECT_CALL(*coder1, Input(_)).WillOnce(Return(kContinue));
-  EXPECT_CALL(*coder1, Negotiate()).WillOnce(Return(kReady));
+  {
+    InSequence s;
 
-  EXPECT_CALL(*coder2, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(4, 4)));
-  EXPECT_CALL(*coder2, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(4, 4)));
-  EXPECT_CALL(*coder2, Input(_)).WillOnce(Return(kReady));
-  EXPECT_CALL(*coder2, Negotiate()).WillOnce(Return(kWantRead));
+    EXPECT_CALL(*coder1_, Input(_)).WillOnce(Return(kContinue));
+    EXPECT_CALL(*coder2_, Input(_)).WillOnce(Return(kReady));
+  }
 
-  EXPECT_CALL(*coder3, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(2, 2)));
-  EXPECT_CALL(*coder3, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(2, 2)));
-  EXPECT_CALL(*coder3, Negotiate()).WillOnce(Return(kReady));
+  RegisterAllCoders();
 
-  StreamCoderPipe pipe;
-  pipe.AppendStreamCoder(std::move(coder1));
-  pipe.AppendStreamCoder(std::move(coder2));
-  pipe.AppendStreamCoder(std::move(coder3));
+  EXPECT_EQ(pipe_.Negotiate(), kWantRead);
 
-  EXPECT_EQ(pipe.Negotiate(), kWantRead);
-
-  BufferReserveSize rsize = pipe.InputReserve();
-  EXPECT_EQ(rsize.prefix(), 12);
-  EXPECT_EQ(rsize.suffix(), 12);
-
-  rsize = pipe.OutputReserve();
-  EXPECT_EQ(rsize.prefix(), 12);
-  EXPECT_EQ(rsize.suffix(), 12);
+  BufferReserveSize rsize = pipe_.InputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_ip + c2_ip);
+  EXPECT_EQ(rsize.suffix(), c1_is + c2_is);
 
   nekit::utils::Buffer buffer(nullptr, 0);
-  EXPECT_EQ(pipe.Input(buffer), kReady);
+  EXPECT_EQ(pipe_.Input(&buffer), kReady);
 
-  rsize = pipe.InputReserve();
-  EXPECT_EQ(rsize.prefix(), 14);
-  EXPECT_EQ(rsize.suffix(), 14);
+  rsize = pipe_.InputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_ip + c2_ip + c3_ip);
+  EXPECT_EQ(rsize.suffix(), c1_is + c2_is + c3_is);
 
-  rsize = pipe.OutputReserve();
-  EXPECT_EQ(rsize.prefix(), 14);
-  EXPECT_EQ(rsize.suffix(), 14);
+  rsize = pipe_.OutputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_op + c2_op + c3_op);
+  EXPECT_EQ(rsize.suffix(), c1_os + c2_os + c3_os);
 }
 
-TEST(StreamCoderPipeNegotationTest, MiddleWantToReadThenFirstRemove) {
-  std::unique_ptr<MockStreamCoder> coder1(new MockStreamCoder());
-  std::unique_ptr<MockStreamCoder> coder2(new MockStreamCoder());
-  std::unique_ptr<MockStreamCoder> coder3(new MockStreamCoder());
+TEST_F(StreamCoderPipeDefaultFixture, LastWantToReadWhenNegotiating) {
+  EXPECT_CALL(*coder1_, Negotiate());
+  EXPECT_CALL(*coder2_, Negotiate());
+  EXPECT_CALL(*coder3_, Negotiate()).WillOnce(Return(kWantRead));
 
-  EXPECT_CALL(*coder1, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(8, 8)));
-  EXPECT_CALL(*coder1, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(8, 8)));
-  EXPECT_CALL(*coder1, Input(_)).WillOnce(Return(kRemoveSelf));
-  EXPECT_CALL(*coder1, Negotiate()).WillOnce(Return(kReady));
+  {
+    InSequence s;
 
-  EXPECT_CALL(*coder2, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(4, 4)));
-  EXPECT_CALL(*coder2, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(4, 4)));
-  EXPECT_CALL(*coder2, Input(_)).WillOnce(Return(kReady));
-  EXPECT_CALL(*coder2, Negotiate()).WillOnce(Return(kWantRead));
+    EXPECT_CALL(*coder1_, Input(_)).WillOnce(Return(kContinue));
+    EXPECT_CALL(*coder2_, Input(_)).WillOnce(Return(kContinue));
+    EXPECT_CALL(*coder3_, Input(_)).WillOnce(Return(kReady));
+  }
 
-  EXPECT_CALL(*coder3, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(2, 2)));
-  EXPECT_CALL(*coder3, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(2, 2)));
-  EXPECT_CALL(*coder3, Negotiate()).WillOnce(Return(kReady));
+  RegisterAllCoders();
 
-  StreamCoderPipe pipe;
-  pipe.AppendStreamCoder(std::move(coder1));
-  pipe.AppendStreamCoder(std::move(coder2));
-  pipe.AppendStreamCoder(std::move(coder3));
+  EXPECT_EQ(pipe_.Negotiate(), kWantRead);
 
-  EXPECT_EQ(pipe.Negotiate(), kWantRead);
-
-  BufferReserveSize rsize = pipe.InputReserve();
-  EXPECT_EQ(rsize.prefix(), 12);
-  EXPECT_EQ(rsize.suffix(), 12);
-
-  rsize = pipe.OutputReserve();
-  EXPECT_EQ(rsize.prefix(), 12);
-  EXPECT_EQ(rsize.suffix(), 12);
+  BufferReserveSize rsize = pipe_.InputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_ip + c2_ip + c3_ip);
+  EXPECT_EQ(rsize.suffix(), c1_is + c2_is + c3_is);
 
   nekit::utils::Buffer buffer(nullptr, 0);
-  EXPECT_EQ(pipe.Input(buffer), kReady);
+  EXPECT_EQ(pipe_.Input(&buffer), kReady);
 
-  rsize = pipe.InputReserve();
-  EXPECT_EQ(rsize.prefix(), 6);
-  EXPECT_EQ(rsize.suffix(), 6);
+  rsize = pipe_.InputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_ip + c2_ip + c3_ip);
+  EXPECT_EQ(rsize.suffix(), c1_is + c2_is + c3_is);
 
-  rsize = pipe.OutputReserve();
-  EXPECT_EQ(rsize.prefix(), 6);
-  EXPECT_EQ(rsize.suffix(), 6);
+  rsize = pipe_.OutputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_op + c2_op + c3_op);
+  EXPECT_EQ(rsize.suffix(), c1_os + c2_os + c3_os);
 }
 
-TEST(StreamCoderPipeNegotationTest, LastWantToRead) {
-  std::unique_ptr<MockStreamCoder> coder1(new MockStreamCoder());
-  std::unique_ptr<MockStreamCoder> coder2(new MockStreamCoder());
-  std::unique_ptr<MockStreamCoder> coder3(new MockStreamCoder());
+TEST_F(StreamCoderPipeDefaultFixture,
+       MiddleWantToReadThenFirstRemoveWhenNegotiating) {
+  EXPECT_CALL(*coder1_, Negotiate());
+  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(kWantRead));
+  EXPECT_CALL(*coder3_, Negotiate());
 
-  EXPECT_CALL(*coder1, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(8, 8)));
-  EXPECT_CALL(*coder1, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(8, 8)));
-  EXPECT_CALL(*coder1, Input(_)).WillOnce(Return(kContinue));
-  EXPECT_CALL(*coder1, Negotiate()).WillOnce(Return(kReady));
+  {
+    InSequence s;
 
-  EXPECT_CALL(*coder2, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(4, 4)));
-  EXPECT_CALL(*coder2, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(4, 4)));
-  EXPECT_CALL(*coder2, Input(_)).WillOnce(Return(kContinue));
-  EXPECT_CALL(*coder2, Negotiate()).WillOnce(Return(kReady));
+    EXPECT_CALL(*coder1_, Input(_)).WillOnce(Return(kRemoveSelf));
+    EXPECT_CALL(*coder2_, Input(_)).WillOnce(Return(kReady));
+  }
 
-  EXPECT_CALL(*coder3, OutputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(2, 2)));
-  EXPECT_CALL(*coder3, InputReserve())
-      .WillRepeatedly(Return(BufferReserveSize(2, 2)));
-  EXPECT_CALL(*coder3, Input(_)).WillOnce(Return(kReady));
-  EXPECT_CALL(*coder3, Negotiate()).WillOnce(Return(kWantRead));
+  RegisterAllCoders();
 
-  StreamCoderPipe pipe;
-  pipe.AppendStreamCoder(std::move(coder1));
-  pipe.AppendStreamCoder(std::move(coder2));
-  pipe.AppendStreamCoder(std::move(coder3));
+  EXPECT_EQ(pipe_.Negotiate(), kWantRead);
 
-  EXPECT_EQ(pipe.Negotiate(), kWantRead);
-
-  BufferReserveSize rsize = pipe.InputReserve();
-  EXPECT_EQ(rsize.prefix(), 14);
-  EXPECT_EQ(rsize.suffix(), 14);
-
-  rsize = pipe.OutputReserve();
-  EXPECT_EQ(rsize.prefix(), 14);
-  EXPECT_EQ(rsize.suffix(), 14);
+  BufferReserveSize rsize = pipe_.InputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_ip + c2_ip);
+  EXPECT_EQ(rsize.suffix(), c1_is + c2_is);
 
   nekit::utils::Buffer buffer(nullptr, 0);
-  EXPECT_EQ(pipe.Input(buffer), kReady);
+  EXPECT_EQ(pipe_.Input(&buffer), kReady);
 
-  rsize = pipe.InputReserve();
-  EXPECT_EQ(rsize.prefix(), 14);
-  EXPECT_EQ(rsize.suffix(), 14);
+  rsize = pipe_.InputReserve();
+  EXPECT_EQ(rsize.prefix(), c2_ip + c3_ip);
+  EXPECT_EQ(rsize.suffix(), c2_is + c3_is);
 
-  rsize = pipe.OutputReserve();
-  EXPECT_EQ(rsize.prefix(), 14);
-  EXPECT_EQ(rsize.suffix(), 14);
+  rsize = pipe_.OutputReserve();
+  EXPECT_EQ(rsize.prefix(), c2_op + c3_op);
+  EXPECT_EQ(rsize.suffix(), c2_os + c3_os);
+}
+
+TEST_F(StreamCoderPipeDefaultFixture, MultipleWantToReadWhenNegotiating) {
+  EXPECT_CALL(*coder1_, Negotiate()).WillOnce(Return(kWantRead));
+  EXPECT_CALL(*coder2_, Negotiate());
+  EXPECT_CALL(*coder3_, Negotiate()).WillOnce(Return(kWantRead));
+
+  {
+    InSequence s;
+
+    EXPECT_CALL(*coder1_, Input(_)).WillOnce(Return(kReady));
+    EXPECT_CALL(*coder1_, Input(_)).WillOnce(Return(kContinue));
+    EXPECT_CALL(*coder2_, Input(_)).WillOnce(Return(kContinue));
+    EXPECT_CALL(*coder3_, Input(_)).WillOnce(Return(kReady));
+  }
+
+  RegisterAllCoders();
+
+  EXPECT_EQ(pipe_.Negotiate(), kWantRead);
+
+  BufferReserveSize rsize = pipe_.InputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_ip);
+  EXPECT_EQ(rsize.suffix(), c1_is);
+
+  nekit::utils::Buffer buffer(nullptr, 0);
+  EXPECT_EQ(pipe_.Input(&buffer), kWantRead);
+
+  rsize = pipe_.InputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_ip + c2_ip + c3_ip);
+  EXPECT_EQ(rsize.suffix(), c1_is + c2_is + c3_is);
+
+  EXPECT_EQ(pipe_.Input(&buffer), kReady);
+
+  rsize = pipe_.InputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_ip + c2_ip + c3_ip);
+  EXPECT_EQ(rsize.suffix(), c1_is + c2_is + c3_is);
+
+  rsize = pipe_.OutputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_op + c2_op + c3_op);
+  EXPECT_EQ(rsize.suffix(), c1_os + c2_os + c3_os);
+}
+
+TEST_F(StreamCoderPipeDefaultFixture, FirstWantToWriteWhenNegotiating) {
+  EXPECT_CALL(*coder1_, Negotiate()).WillOnce(Return(kWantWrite));
+  EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(kReady));
+  EXPECT_CALL(*coder2_, Negotiate());
+  EXPECT_CALL(*coder3_, Negotiate());
+
+  RegisterAllCoders();
+
+  EXPECT_EQ(pipe_.Negotiate(), kWantWrite);
+
+  BufferReserveSize rsize = pipe_.OutputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_op);
+  EXPECT_EQ(rsize.suffix(), c1_os);
+
+  nekit::utils::Buffer buffer(nullptr, 0);
+  EXPECT_EQ(pipe_.Output(&buffer), kReady);
+
+  rsize = pipe_.InputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_ip + c2_ip + c3_ip);
+  EXPECT_EQ(rsize.suffix(), c1_is + c2_is + c3_is);
+
+  rsize = pipe_.OutputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_op + c2_op + c3_op);
+  EXPECT_EQ(rsize.suffix(), c1_os + c2_os + c3_os);
+}
+
+TEST_F(StreamCoderPipeDefaultFixture, MiddleWantToWriteWhenNegotiating) {
+  EXPECT_CALL(*coder1_, Negotiate());
+  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(kWantWrite));
+  EXPECT_CALL(*coder3_, Negotiate());
+
+  {
+    InSequence s;
+
+    EXPECT_CALL(*coder2_, Output(_)).WillOnce(Return(kReady));
+    EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(kContinue));
+  }
+
+  RegisterAllCoders();
+
+  EXPECT_EQ(pipe_.Negotiate(), kWantWrite);
+
+  BufferReserveSize rsize = pipe_.OutputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_op + c2_op);
+  EXPECT_EQ(rsize.suffix(), c1_os + c2_os);
+
+  nekit::utils::Buffer buffer(nullptr, 0);
+  EXPECT_EQ(pipe_.Output(&buffer), kReady);
+
+  rsize = pipe_.InputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_ip + c2_ip + c3_ip);
+  EXPECT_EQ(rsize.suffix(), c1_is + c2_is + c3_is);
+
+  rsize = pipe_.OutputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_op + c2_op + c3_op);
+  EXPECT_EQ(rsize.suffix(), c1_os + c2_os + c3_os);
+}
+
+TEST_F(StreamCoderPipeDefaultFixture, LastWantToWriteWhenNegotiating) {
+  EXPECT_CALL(*coder1_, Negotiate());
+  EXPECT_CALL(*coder2_, Negotiate());
+  EXPECT_CALL(*coder3_, Negotiate()).WillOnce(Return(kWantWrite));
+
+  {
+    InSequence s;
+
+    EXPECT_CALL(*coder3_, Output(_)).WillOnce(Return(kReady));
+    EXPECT_CALL(*coder2_, Output(_)).WillOnce(Return(kContinue));
+    EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(kContinue));
+  }
+
+  RegisterAllCoders();
+
+  EXPECT_EQ(pipe_.Negotiate(), kWantWrite);
+
+  BufferReserveSize rsize = pipe_.OutputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_op + c2_op + c3_op);
+  EXPECT_EQ(rsize.suffix(), c1_os + c2_os + c3_os);
+
+  nekit::utils::Buffer buffer(nullptr, 0);
+  EXPECT_EQ(pipe_.Output(&buffer), kReady);
+
+  rsize = pipe_.InputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_ip + c2_ip + c3_ip);
+  EXPECT_EQ(rsize.suffix(), c1_is + c2_is + c3_is);
+
+  rsize = pipe_.OutputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_op + c2_op + c3_op);
+  EXPECT_EQ(rsize.suffix(), c1_os + c2_os + c3_os);
+}
+
+TEST_F(StreamCoderPipeDefaultFixture,
+       MiddleWantToWriteThenFirstRemoveWhenNegotiating) {
+  EXPECT_CALL(*coder1_, Negotiate());
+  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(kWantWrite));
+  EXPECT_CALL(*coder3_, Negotiate());
+
+  {
+    InSequence s;
+
+    EXPECT_CALL(*coder2_, Output(_)).WillOnce(Return(kReady));
+    EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(kRemoveSelf));
+  }
+
+  RegisterAllCoders();
+
+  EXPECT_EQ(pipe_.Negotiate(), kWantWrite);
+
+  BufferReserveSize rsize = pipe_.OutputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_op + c2_op);
+  EXPECT_EQ(rsize.suffix(), c1_os + c2_os);
+
+  nekit::utils::Buffer buffer(nullptr, 0);
+  EXPECT_EQ(pipe_.Output(&buffer), kReady);
+
+  rsize = pipe_.InputReserve();
+  EXPECT_EQ(rsize.prefix(), c2_ip + c3_ip);
+  EXPECT_EQ(rsize.suffix(), c2_is + c3_is);
+
+  rsize = pipe_.OutputReserve();
+  EXPECT_EQ(rsize.prefix(), c2_op + c3_op);
+  EXPECT_EQ(rsize.suffix(), c2_os + c3_os);
+}
+
+TEST_F(StreamCoderPipeDefaultFixture, MultipleWantToWriteWhenNegotiating) {
+  EXPECT_CALL(*coder1_, Negotiate()).WillOnce(Return(kWantWrite));
+  EXPECT_CALL(*coder2_, Negotiate());
+  EXPECT_CALL(*coder3_, Negotiate()).WillOnce(Return(kWantWrite));
+
+  {
+    InSequence s;
+
+    EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(kReady));
+    EXPECT_CALL(*coder3_, Output(_)).WillOnce(Return(kReady));
+    EXPECT_CALL(*coder2_, Output(_)).WillOnce(Return(kContinue));
+    EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(kContinue));
+  }
+
+  RegisterAllCoders();
+
+  EXPECT_EQ(pipe_.Negotiate(), kWantWrite);
+
+  BufferReserveSize rsize = pipe_.OutputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_op);
+  EXPECT_EQ(rsize.suffix(), c1_os);
+
+  nekit::utils::Buffer buffer(nullptr, 0);
+  EXPECT_EQ(pipe_.Output(&buffer), kWantWrite);
+
+  rsize = pipe_.OutputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_op + c2_op + c3_op);
+  EXPECT_EQ(rsize.suffix(), c1_os + c2_os + c3_os);
+
+  EXPECT_EQ(pipe_.Output(&buffer), kReady);
+
+  rsize = pipe_.InputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_ip + c2_ip + c3_ip);
+  EXPECT_EQ(rsize.suffix(), c1_is + c2_is + c3_is);
+
+  rsize = pipe_.OutputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_op + c2_op + c3_op);
+  EXPECT_EQ(rsize.suffix(), c1_os + c2_os + c3_os);
 }
