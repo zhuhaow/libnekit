@@ -54,6 +54,26 @@ const int c3_is = 512;   // is: input suffix
 const int c3_op = 1024;  // op: output prefix
 const int c3_os = 2048;  // os: output suffix
 
+enum MockError { kError = 0 };
+
+class MockErrorCategory final : public std::error_category {
+  const char* name() const BOOST_NOEXCEPT override { return ""; }
+
+  std::string message(int error_code) const override {
+    (void)error_code;
+    return "";
+  }
+};
+
+const MockErrorCategory mock_error_category{};
+
+template <>
+struct std::is_error_code_enum<MockError> : public std::true_type {};
+
+std::error_code make_error_code(MockError errc) {
+  return std::error_code(static_cast<int>(errc), mock_error_category);
+}
+
 class StreamCoderPipeDefaultFixture : public ::testing::Test {
  protected:
   virtual void SetUp() override {
@@ -616,4 +636,22 @@ TEST_F(StreamCoderPipeDefaultFixture, MultipleWantToWriteWhenNegotiating) {
   rsize = pipe_.OutputReserve();
   EXPECT_EQ(rsize.prefix(), c1_op + c2_op + c3_op);
   EXPECT_EQ(rsize.suffix(), c1_os + c2_os + c3_os);
+}
+
+TEST_F(StreamCoderPipeDefaultFixture, ReturnErrorWhenInternalCoderReturnError) {
+  EXPECT_CALL(*coder1_, Negotiate());
+  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(kErrorHappened));
+  EXPECT_CALL(*coder2_, GetLatestError())
+      .WillOnce(Return(make_error_code(kError)));
+
+  RegisterAllCoders();
+
+  EXPECT_FALSE(pipe_.forwarding());
+
+  EXPECT_EQ(pipe_.Negotiate(), kErrorHappened);
+
+  EXPECT_FALSE(pipe_.forwarding());
+
+  EXPECT_EQ(pipe_.GetLatestError().category(), mock_error_category);
+  EXPECT_EQ(pipe_.GetLatestError().value(), static_cast<int>(kError));
 }
