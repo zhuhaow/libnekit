@@ -252,7 +252,7 @@ struct StreamCoderPipe::Impl {
     auto iter = active_coder_;
 
     // processing active_coder_ first
-    auto action = (*iter)->Input(buffer);
+    auto action = (*iter)->Output(buffer);
     switch (action) {
       case kErrorHappened:
         last_error_ = (*iter)->GetLatestError();
