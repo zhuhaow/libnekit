@@ -67,12 +67,14 @@ class MockErrorCategory final : public std::error_category {
 
 const MockErrorCategory mock_error_category{};
 
+namespace std {
 template <>
-struct std::is_error_code_enum<MockError> : public std::true_type {};
+struct is_error_code_enum<MockError> : public true_type {};
 
-std::error_code make_error_code(MockError errc) {
-  return std::error_code(static_cast<int>(errc), mock_error_category);
+error_code make_error_code(MockError errc) {
+  return error_code(static_cast<int>(errc), mock_error_category);
 }
+}  // namespace std
 
 class StreamCoderPipeDefaultFixture : public ::testing::Test {
  protected:
@@ -642,7 +644,7 @@ TEST_F(StreamCoderPipeDefaultFixture, ReturnErrorWhenInternalCoderReturnError) {
   EXPECT_CALL(*coder1_, Negotiate());
   EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(kErrorHappened));
   EXPECT_CALL(*coder2_, GetLatestError())
-      .WillOnce(Return(make_error_code(kError)));
+      .WillOnce(Return(std::make_error_code(kError)));
 
   RegisterAllCoders();
 
