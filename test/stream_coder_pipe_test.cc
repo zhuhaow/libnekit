@@ -39,20 +39,20 @@ using ::testing::InSequence;
 using ::testing::Mock;
 using ::testing::NiceMock;
 
-constexpr int c1_ip = 1;  // ip: input prefix
-constexpr int c1_is = 2;  // is: input suffix
-constexpr int c1_op = 4;  // op: output prefix
-constexpr int c1_os = 8;  // os: output suffix
+const int c1_ip = 1;  // ip: input prefix
+const int c1_is = 2;  // is: input suffix
+const int c1_op = 4;  // op: output prefix
+const int c1_os = 8;  // os: output suffix
 
-constexpr int c2_ip = 16;   // ip: input prefix
-constexpr int c2_is = 32;   // is: input suffix
-constexpr int c2_op = 64;   // op: output prefix
-constexpr int c2_os = 128;  // os: output suffix
+const int c2_ip = 16;   // ip: input prefix
+const int c2_is = 32;   // is: input suffix
+const int c2_op = 64;   // op: output prefix
+const int c2_os = 128;  // os: output suffix
 
-constexpr int c3_ip = 256;   // ip: input prefix
-constexpr int c3_is = 512;   // is: input suffix
-constexpr int c3_op = 1024;  // op: output prefix
-constexpr int c3_os = 2048;  // os: output suffix
+const int c3_ip = 256;   // ip: input prefix
+const int c3_is = 512;   // is: input suffix
+const int c3_op = 1024;  // op: output prefix
+const int c3_os = 2048;  // os: output suffix
 
 class StreamCoderPipeDefaultFixture : public ::testing::Test {
  protected:
