@@ -345,9 +345,9 @@ const StreamCoderPipe::ErrorCategory& StreamCoderPipe::error_category() {
   return category_;
 }
 
-StreamCoderPipe::StreamCoderPipe() : impl_{new Impl()} {};
+StreamCoderPipe::StreamCoderPipe() : impl_{new Impl()} {}
 
-StreamCoderPipe::~StreamCoderPipe(){};
+StreamCoderPipe::~StreamCoderPipe() {}
 
 void StreamCoderPipe::AppendStreamCoder(
     std::unique_ptr<StreamCoderInterface>&& stream_coder) {
