@@ -49,17 +49,17 @@ class StreamCoderPipe final : public StreamCoderInterface {
 
   void AppendStreamCoder(std::unique_ptr<StreamCoderInterface>&& stream_coder);
 
-  ActionRequest Negotiate();
+  ActionRequest Negotiate() override;
 
-  BufferReserveSize InputReserve() const;
-  ActionRequest Input(utils::Buffer* buffer);
+  BufferReserveSize InputReserve() const override;
+  ActionRequest Input(utils::Buffer* buffer) override;
 
-  BufferReserveSize OutputReserve() const;
-  ActionRequest Output(utils::Buffer* buffer);
+  BufferReserveSize OutputReserve() const override;
+  ActionRequest Output(utils::Buffer* buffer) override;
 
-  utils::Error GetLatestError() const;
+  utils::Error GetLatestError() const override;
 
-  bool forwarding() const;
+  bool forwarding() const override;
 
  private:
   struct Impl;
