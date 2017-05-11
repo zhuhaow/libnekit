@@ -657,3 +657,45 @@ TEST_F(StreamCoderPipeDefaultFixture, ReturnErrorWhenInternalCoderReturnError) {
   EXPECT_EQ(pipe_.GetLatestError().category(), mock_error_category);
   EXPECT_EQ(pipe_.GetLatestError().value(), static_cast<int>(kError));
 }
+
+TEST_F(StreamCoderPipeDefaultFixture, Forwarding) {
+  EXPECT_CALL(*coder1_, Negotiate());
+  EXPECT_CALL(*coder2_, Negotiate());
+  EXPECT_CALL(*coder3_, Negotiate());
+
+  {
+    InSequence s;
+
+    EXPECT_CALL(*coder3_, Output(_)).WillOnce(Return(kContinue));
+    EXPECT_CALL(*coder2_, Output(_)).WillOnce(Return(kContinue));
+    EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(kContinue));
+  }
+
+  {
+    InSequence s;
+
+    EXPECT_CALL(*coder1_, Input(_)).WillOnce(Return(kContinue));
+    EXPECT_CALL(*coder2_, Input(_)).WillOnce(Return(kContinue));
+    EXPECT_CALL(*coder3_, Input(_)).WillOnce(Return(kContinue));
+  }
+
+  RegisterAllCoders();
+
+  EXPECT_FALSE(pipe_.forwarding());
+
+  EXPECT_EQ(pipe_.Negotiate(), kReady);
+
+  EXPECT_TRUE(pipe_.forwarding());
+
+  BufferReserveSize rsize = pipe_.InputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_ip + c2_ip + c3_ip);
+  EXPECT_EQ(rsize.suffix(), c1_is + c2_is + c3_is);
+
+  rsize = pipe_.OutputReserve();
+  EXPECT_EQ(rsize.prefix(), c1_op + c2_op + c3_op);
+  EXPECT_EQ(rsize.suffix(), c1_os + c2_os + c3_os);
+
+  nekit::utils::Buffer buffer(nullptr, 0);
+  EXPECT_EQ(pipe_.Input(&buffer), kContinue);
+  EXPECT_EQ(pipe_.Output(&buffer), kContinue);
+}
