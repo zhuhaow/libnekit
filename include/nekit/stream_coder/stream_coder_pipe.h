@@ -35,7 +35,7 @@ namespace stream_coder {
 
 class StreamCoderPipe final : public StreamCoderInterface {
  public:
-  enum ErrorCode { kNoCoder = 0 };
+  enum ErrorCode { kNoCoder = 1 };
 
   class ErrorCategory final : public std::error_category {
     const char* name() const BOOST_NOEXCEPT override;
