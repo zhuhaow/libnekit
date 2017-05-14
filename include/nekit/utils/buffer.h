@@ -25,14 +25,36 @@
 
 #include <cstddef>
 
+#include <boost/noncopyable.hpp>
+
 namespace nekit {
 namespace utils {
-struct Buffer {
+struct Buffer : public boost::noncopyable {
  public:
-  Buffer(void *data, std::size_t len) : data(data), len(len) {}
+  Buffer(std::size_t size);
+  ~Buffer();
 
-  void *data;
-  std::size_t len;
+  // Return the underlying buffer.
+  void *data();
+  const void *data() const;
+  std::size_t size() const;
+
+  bool ReserveFront(std::size_t size);
+  bool ReleaseFront(std::size_t size);
+
+  bool ReserveBack(std::size_t size);
+  bool ReleaseBack(std::size_t size);
+
+  std::size_t capacity() const;
+  void *buffer();
+  const void *buffer() const;
+
+ private:
+  const std::size_t size_;
+  void *const data_;
+
+  std::size_t front_;
+  std::size_t back_;
 };
 }  // namespace utils
 }  // namespace nekit

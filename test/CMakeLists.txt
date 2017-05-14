@@ -25,3 +25,7 @@ include_directories(.)
 add_executable(stream_coder_pipe_test stream_coder_pipe_test.cc)
 target_link_libraries(stream_coder_pipe_test nekit GMock::main)
 add_mem_test(stream_coder_pipe_test)
+
+add_executable(buffer_test buffer_test.cc)
+target_link_libraries(buffer_test nekit GMock::main)
+add_mem_test(buffer_test)

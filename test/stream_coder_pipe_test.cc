@@ -272,7 +272,7 @@ TEST_F(StreamCoderPipeDefaultFixture, FirstWantToReadWhenNegotiating) {
   EXPECT_EQ(rsize.prefix(), c1_ip);
   EXPECT_EQ(rsize.suffix(), c1_is);
 
-  nekit::utils::Buffer buffer(nullptr, 0);
+  nekit::utils::Buffer buffer(10);
   EXPECT_EQ(pipe_.Input(&buffer), kReady);
 
   EXPECT_TRUE(pipe_.forwarding());
@@ -310,7 +310,7 @@ TEST_F(StreamCoderPipeDefaultFixture, MiddleWantToReadWhenNegotiating) {
   EXPECT_EQ(rsize.prefix(), c1_ip + c2_ip);
   EXPECT_EQ(rsize.suffix(), c1_is + c2_is);
 
-  nekit::utils::Buffer buffer(nullptr, 0);
+  nekit::utils::Buffer buffer(10);
   EXPECT_EQ(pipe_.Input(&buffer), kReady);
 
   EXPECT_TRUE(pipe_.forwarding());
@@ -349,7 +349,7 @@ TEST_F(StreamCoderPipeDefaultFixture, LastWantToReadWhenNegotiating) {
   EXPECT_EQ(rsize.prefix(), c1_ip + c2_ip + c3_ip);
   EXPECT_EQ(rsize.suffix(), c1_is + c2_is + c3_is);
 
-  nekit::utils::Buffer buffer(nullptr, 0);
+  nekit::utils::Buffer buffer(10);
   EXPECT_EQ(pipe_.Input(&buffer), kReady);
 
   EXPECT_TRUE(pipe_.forwarding());
@@ -384,7 +384,7 @@ TEST_F(StreamCoderPipeDefaultFixture,
   EXPECT_EQ(rsize.prefix(), c1_ip + c2_ip);
   EXPECT_EQ(rsize.suffix(), c1_is + c2_is);
 
-  nekit::utils::Buffer buffer(nullptr, 0);
+  nekit::utils::Buffer buffer(10);
   EXPECT_EQ(pipe_.Input(&buffer), kReady);
 
   rsize = pipe_.InputReserve();
@@ -422,7 +422,7 @@ TEST_F(StreamCoderPipeDefaultFixture, MultipleWantToReadWhenNegotiating) {
   EXPECT_EQ(rsize.prefix(), c1_ip);
   EXPECT_EQ(rsize.suffix(), c1_is);
 
-  nekit::utils::Buffer buffer(nullptr, 0);
+  nekit::utils::Buffer buffer(10);
   EXPECT_EQ(pipe_.Input(&buffer), kWantRead);
 
   EXPECT_FALSE(pipe_.forwarding());
@@ -462,7 +462,7 @@ TEST_F(StreamCoderPipeDefaultFixture, FirstWantToWriteWhenNegotiating) {
   EXPECT_EQ(rsize.prefix(), c1_op);
   EXPECT_EQ(rsize.suffix(), c1_os);
 
-  nekit::utils::Buffer buffer(nullptr, 0);
+  nekit::utils::Buffer buffer(10);
   EXPECT_EQ(pipe_.Output(&buffer), kReady);
 
   EXPECT_TRUE(pipe_.forwarding());
@@ -500,7 +500,7 @@ TEST_F(StreamCoderPipeDefaultFixture, MiddleWantToWriteWhenNegotiating) {
   EXPECT_EQ(rsize.prefix(), c1_op + c2_op);
   EXPECT_EQ(rsize.suffix(), c1_os + c2_os);
 
-  nekit::utils::Buffer buffer(nullptr, 0);
+  nekit::utils::Buffer buffer(10);
   EXPECT_EQ(pipe_.Output(&buffer), kReady);
 
   EXPECT_TRUE(pipe_.forwarding());
@@ -539,7 +539,7 @@ TEST_F(StreamCoderPipeDefaultFixture, LastWantToWriteWhenNegotiating) {
   EXPECT_EQ(rsize.prefix(), c1_op + c2_op + c3_op);
   EXPECT_EQ(rsize.suffix(), c1_os + c2_os + c3_os);
 
-  nekit::utils::Buffer buffer(nullptr, 0);
+  nekit::utils::Buffer buffer(10);
   EXPECT_EQ(pipe_.Output(&buffer), kReady);
 
   EXPECT_TRUE(pipe_.forwarding());
@@ -578,7 +578,7 @@ TEST_F(StreamCoderPipeDefaultFixture,
   EXPECT_EQ(rsize.prefix(), c1_op + c2_op);
   EXPECT_EQ(rsize.suffix(), c1_os + c2_os);
 
-  nekit::utils::Buffer buffer(nullptr, 0);
+  nekit::utils::Buffer buffer(10);
   EXPECT_EQ(pipe_.Output(&buffer), kReady);
 
   EXPECT_TRUE(pipe_.forwarding());
@@ -618,7 +618,7 @@ TEST_F(StreamCoderPipeDefaultFixture, MultipleWantToWriteWhenNegotiating) {
   EXPECT_EQ(rsize.prefix(), c1_op);
   EXPECT_EQ(rsize.suffix(), c1_os);
 
-  nekit::utils::Buffer buffer(nullptr, 0);
+  nekit::utils::Buffer buffer(10);
   EXPECT_EQ(pipe_.Output(&buffer), kWantWrite);
 
   EXPECT_FALSE(pipe_.forwarding());
@@ -695,7 +695,7 @@ TEST_F(StreamCoderPipeDefaultFixture, Forwarding) {
   EXPECT_EQ(rsize.prefix(), c1_op + c2_op + c3_op);
   EXPECT_EQ(rsize.suffix(), c1_os + c2_os + c3_os);
 
-  nekit::utils::Buffer buffer(nullptr, 0);
+  nekit::utils::Buffer buffer(10);
   EXPECT_EQ(pipe_.Input(&buffer), kContinue);
   EXPECT_EQ(pipe_.Output(&buffer), kContinue);
 }

@@ -59,6 +59,7 @@ find_package(Boost CONFIG REQUIRED)
 set(SOURCES
   src/stream_coder/stream_coder_pipe.cc
   src/deps/easylogging++.cc
+  src/utils/buffer.cc
   )
 
 add_library(nekit ${SOURCES})
