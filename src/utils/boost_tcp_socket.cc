@@ -20,13 +20,15 @@ BoostTcpSocket::Pointer BoostTcpSocket::CreateSocket(
   // Not using `make_shared` since the ctor is private. This class if final thus
   // it is not able to workaround it. Anyway, considering this is a heavy class,
   // the overhead is negligible.
-  return std::shared_ptr<BoostTcpSocket>(new BoostTcpSocket(service));
+  return std::static_pointer_cast<TcpSocketInterface>(
+      std::shared_ptr<BoostTcpSocket>(new BoostTcpSocket(service)));
 }
 
 BoostTcpSocket::Pointer BoostTcpSocket::CreateSocket(
     boost::asio::io_service &service, DelegatePointer delegate) {
-  return std::shared_ptr<BoostTcpSocket>(new BoostTcpSocket(service, delegate));
-}
+  return std::static_pointer_cast<TcpSocketInterface>(
+      std::shared_ptr<BoostTcpSocket>(new BoostTcpSocket(service, delegate)));
+}  // namespace utils
 
 void BoostTcpSocket::set_delegate(DelegatePointer delegate) {
   delegate_ = delegate;
