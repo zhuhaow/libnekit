@@ -2,17 +2,18 @@
 
 environment:
   matrix:
-    - TOOLCHAIN: "vs-12-2013-win64"
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
-      CONFIG: Debug
+    # VS 2013 complains "typename cannot be used outside a template declaration"
+    # - TOOLCHAIN: "vs-12-2013-win64"
+    #   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
+    #   CONFIG: Debug
 
-    - TOOLCHAIN: "vs-12-2013-xp"
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
-      CONFIG: Debug
+    # - TOOLCHAIN: "vs-12-2013-xp"
+    #   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
+    #   CONFIG: Debug
 
-    - TOOLCHAIN: "vs-12-2013"
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
-      CONFIG: Debug
+    # - TOOLCHAIN: "vs-12-2013"
+    #   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
+    #   CONFIG: Debug
 
     - TOOLCHAIN: "vs-14-2015"
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
