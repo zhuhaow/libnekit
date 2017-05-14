@@ -60,6 +60,8 @@ set(SOURCES
   src/stream_coder/stream_coder_pipe.cc
   src/deps/easylogging++.cc
   src/utils/buffer.cc
+  src/utils/boost_tcp_socket.cc
+  src/utils/tcp_socket_interface.cc
   )
 
 add_library(nekit ${SOURCES})
