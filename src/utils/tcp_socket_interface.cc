@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <nekit/utils/tcp_socket_interface.h>
+#include "nekit/utils/tcp_socket_interface.h"
 
 namespace nekit {
 namespace utils {

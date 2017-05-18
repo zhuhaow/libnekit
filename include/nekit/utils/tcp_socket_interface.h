@@ -27,8 +27,8 @@
 
 #include <boost/asio.hpp>
 
-#include <nekit/utils/buffer.h>
-#include <nekit/utils/error.h>
+#include "buffer.h"
+#include "error.h"
 
 namespace nekit {
 namespace utils {

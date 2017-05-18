@@ -14,7 +14,7 @@
 //  http://muflihun.com
 //
 
-#include <nekit/deps/easylogging++.h>
+#include "nekit/deps/easylogging++.h"
 
 #if defined(AUTO_INITIALIZE_EASYLOGGINGPP)
 INITIALIZE_EASYLOGGINGPP

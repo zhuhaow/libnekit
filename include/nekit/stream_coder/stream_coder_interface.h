@@ -25,10 +25,10 @@
 
 #include <boost/noncopyable.hpp>
 
-#include <nekit/stream_coder/action_request.h>
-#include <nekit/stream_coder/buffer_reserve_size.h>
-#include <nekit/utils/buffer.h>
-#include <nekit/utils/error.h>
+#include "../utils/buffer.h"
+#include "../utils/error.h"
+#include "action_request.h"
+#include "buffer_reserve_size.h"
 
 namespace nekit {
 namespace stream_coder {

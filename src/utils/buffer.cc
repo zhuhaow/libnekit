@@ -22,7 +22,7 @@
 
 #include <cstdint>
 
-#include <nekit/utils/buffer.h>
+#include "nekit/utils/buffer.h"
 
 namespace nekit {
 namespace utils {

@@ -23,7 +23,7 @@
 #ifndef NEKIT_UTILS_BOOST_TCP_SOCKET
 #define NEKIT_UTILS_BOOST_TCP_SOCKET
 
-#include <nekit/utils/tcp_socket_interface.h>
+#include "tcp_socket_interface.h"
 
 namespace nekit {
 namespace utils {
