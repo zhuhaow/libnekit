@@ -1,6 +1,6 @@
+#include <cassert>
+#include <string>
 #include <list>
-
-#include "nekit/deps/easylogging++.h"
 
 #include "nekit/stream_coder/stream_coder_pipe.h"
 
@@ -17,7 +17,7 @@ struct StreamCoderPipe::Impl {
   Impl() : status_{kInvalid} {}
 
   void AppendStreamCoder(std::unique_ptr<StreamCoderInterface>&& stream_coder) {
-    CHECK_EQ(status_, kInvalid);
+    assert(status_ == kInvalid);
 
     list_.push_back(std::move(stream_coder));
   }
@@ -25,8 +25,7 @@ struct StreamCoderPipe::Impl {
   utils::Error GetLatestError() const { return last_error_; }
 
   ActionRequest Negotiate() {
-    CHECK_EQ(status_, kInvalid)
-        << ": Cannot start new negotiation on opened StreamCodeManager.";
+    assert(status_ == kInvalid);
 
     if (!VerifyNonEmpty()) {
       return kErrorHappened;
@@ -61,10 +60,8 @@ struct StreamCoderPipe::Impl {
       case kNegotiating:
         return InputForNegotiation(buffer);
       default:
-        CHECK(false);  // not reachable
+        assert(false);  // not reachable
     }
-
-    return kErrorHappened;  // not reachable
   }
 
   BufferReserveSize OutputReserve() const {
@@ -90,10 +87,8 @@ struct StreamCoderPipe::Impl {
       case kNegotiating:
         return OutputForNegotiation(buffer);
       default:
-        CHECK(false);  // not reachable
+        assert(false);  // not reachable
     }
-
-    return kErrorHappened;  // not reachable
   }
 
   bool forwarding() const { return status_ == kForwarding; }
@@ -102,7 +97,7 @@ struct StreamCoderPipe::Impl {
   enum Phase { kInvalid, kNegotiating, kForwarding, kClosed };
 
   ActionRequest NegotiateNextCoder() {
-    CHECK_EQ(status_, kNegotiating);
+    assert(status_ == kNegotiating);
 
     while (active_coder_ != list_.end()) {
       auto request = (*active_coder_)->Negotiate();
@@ -121,7 +116,7 @@ struct StreamCoderPipe::Impl {
         case kWantWrite:
           return request;
         case kContinue:
-          CHECK(false);  // unreachable
+          assert(false);  // unreachable
       }
     }
 
@@ -145,7 +140,7 @@ struct StreamCoderPipe::Impl {
     StreamCoderConstIterator tail;
     switch (status_) {
       case Phase::kNegotiating:
-        CHECK(active_coder_ != list_.end());
+        assert(active_coder_ != list_.end());
         tail = active_coder_;
         tail++;
         break;
@@ -154,7 +149,7 @@ struct StreamCoderPipe::Impl {
         break;
       case Phase::kClosed:
       case Phase::kInvalid:
-        CHECK(false);  // not reachable
+        assert(false);  // not reachable
     }
 
     return tail;
@@ -164,7 +159,7 @@ struct StreamCoderPipe::Impl {
     StreamCoderIterator tail;
     switch (status_) {
       case Phase::kNegotiating:
-        CHECK(active_coder_ != list_.end());
+        assert(active_coder_ != list_.end());
         tail = active_coder_;
         tail++;
         break;
@@ -173,14 +168,14 @@ struct StreamCoderPipe::Impl {
         break;
       case Phase::kClosed:
       case Phase::kInvalid:
-        CHECK(false);  // not reachable
+        assert(false);  // not reachable
     }
 
     return tail;
   }
 
   ActionRequest InputForNegotiation(utils::Buffer* buffer) {
-    CHECK(active_coder_ != list_.end());
+    assert(active_coder_ != list_.end());
 
     auto iter = list_.begin();
     while (iter != active_coder_) {
@@ -196,7 +191,7 @@ struct StreamCoderPipe::Impl {
           iter = list_.erase(iter);
           break;
         default:
-          CHECK(false);  // not reachable
+          assert(false);  // not reachable
       }
     }
 
@@ -218,10 +213,8 @@ struct StreamCoderPipe::Impl {
       case kWantWrite:
         return action;
       case kContinue:
-        CHECK(false);  // not reachable
+        assert(false);  // not reachable
     }
-
-    return kErrorHappened;
   }
 
   ActionRequest InputForForward(utils::Buffer* buffer) {
@@ -239,7 +232,7 @@ struct StreamCoderPipe::Impl {
           iter = list_.erase(iter);
           break;
         default:
-          CHECK(false);
+          assert(false);
       }
     }
 
@@ -247,7 +240,7 @@ struct StreamCoderPipe::Impl {
   }
 
   ActionRequest OutputForNegotiation(utils::Buffer* buffer) {
-    CHECK(active_coder_ != list_.end());
+    assert(active_coder_ != list_.end());
 
     auto iter = active_coder_;
 
@@ -273,7 +266,7 @@ struct StreamCoderPipe::Impl {
       case kWantWrite:
         break;
       case kContinue:
-        CHECK(false);  // not reachable
+        assert(false);  // not reachable
     }
 
     if (iter == list_.begin()) {
@@ -293,7 +286,7 @@ struct StreamCoderPipe::Impl {
           iter = list_.erase(iter);
           break;
         default:
-          CHECK(false);  // not reachable
+          assert(false);  // not reachable
       }
     } while (iter != list_.begin());
 
@@ -316,7 +309,7 @@ struct StreamCoderPipe::Impl {
           iter = list_.erase(iter);
           break;
         default:
-          CHECK(false);  // not reachable
+          assert(false);  // not reachable
       }
     } while (iter != list_.begin());
 
