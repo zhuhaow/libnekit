@@ -1,6 +1,6 @@
 #include <cassert>
-#include <string>
 #include <list>
+#include <string>
 
 #include "nekit/stream_coder/stream_coder_pipe.h"
 
@@ -116,6 +116,7 @@ struct StreamCoderPipe::Impl {
         case kWantWrite:
           return request;
         case kContinue:
+        case kEvent:
           assert(false);  // unreachable
       }
     }
@@ -213,6 +214,7 @@ struct StreamCoderPipe::Impl {
       case kWantWrite:
         return action;
       case kContinue:
+      case kEvent:
         assert(false);  // not reachable
     }
   }
@@ -266,6 +268,7 @@ struct StreamCoderPipe::Impl {
       case kWantWrite:
         break;
       case kContinue:
+      case kEvent:
         assert(false);  // not reachable
     }
 

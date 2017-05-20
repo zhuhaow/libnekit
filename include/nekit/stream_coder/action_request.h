@@ -34,7 +34,10 @@ enum ActionRequest {
   // The following is only used in negotiating phase.
   kWantRead,   // The coder wants to read data to decode.
   kWantWrite,  // The coder wants to write data.
-  kReady       // Negotiating finished, ready to forward data.
+  kReady,      // Negotiating finished, ready to forward data.
+
+  // This is used to extend ActionRequest to indicate some event happened.
+  kEvent
 };
 }
 }  // namespace nekit
