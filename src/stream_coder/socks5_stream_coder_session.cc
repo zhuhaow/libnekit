@@ -26,13 +26,37 @@
 
 namespace nekit {
 namespace stream_coder {
+const char *SOCKS5StreamCoderSession::ErrorCategory::name() const
+    BOOST_NOEXCEPT {
+  return "SOCKS5 error.";
+}
+
+std::string SOCKS5StreamCoderSession::ErrorCategory::message(
+    int error_code) const {
+  switch (ErrorCode(error_code)) {
+    case kNoError:
+      return "No error.";
+    case kRequestIncomplete:
+      return "Client send incomplete request.";
+    case kUnsupportedAuthenticationMethod:
+      return "All client requested authentication methods are not "
+             "supported.";
+    case kUnsupportedCommand:
+      return "Unknown command.";
+    case kUnsupportedAddressType:
+      return "Unknown address type.";
+    case kUnsupportedVersion:
+      return "SOCKS version is not supported.";
+  }
+}
+
 SOCKS5StreamCoderSession::SOCKS5StreamCoderSession(
     std::shared_ptr<utils::Session> session)
     : status_(kReadingVersion), session_(session) {}
 
 ActionRequest SOCKS5StreamCoderSession::Negotiate() { return kWantRead; }
 
-BufferReserveSize SOCKS5StreamCoderSession::InputReserve() const {
+utils::BufferReserveSize SOCKS5StreamCoderSession::InputReserve() const {
   switch (status_) {
     case kForwarding:
     case kReadingVersion:
@@ -111,7 +135,7 @@ ActionRequest SOCKS5StreamCoderSession::Input(utils::Buffer *buffer) {
 
           auto bytes = boost::asio::ip::address_v4::bytes_type();
           std::memcpy(bytes.data(), data, bytes.size());
-          session_->host.address = boost::asio::ip::address_v4(bytes);
+          session_->address = boost::asio::ip::address_v4(bytes);
           session_->type = utils::Session::kAddress;
           data += 4;
         } break;
@@ -123,8 +147,7 @@ ActionRequest SOCKS5StreamCoderSession::Input(utils::Buffer *buffer) {
             return kErrorHappened;
           }
 
-          session_->host.domain =
-              std::string(reinterpret_cast<char *>(data), len);
+          session_->domain = std::string(reinterpret_cast<char *>(data), len);
           session_->type = utils::Session::kDomain;
           data += len;
         } break;
@@ -136,7 +159,7 @@ ActionRequest SOCKS5StreamCoderSession::Input(utils::Buffer *buffer) {
 
           auto bytes = boost::asio::ip::address_v6::bytes_type();
           std::memcpy(bytes.data(), data, bytes.size());
-          session_->host.address = boost::asio::ip::address_v6(bytes);
+          session_->address = boost::asio::ip::address_v6(bytes);
           session_->type = utils::Session::kAddress;
           data += 16;
         } break;
@@ -152,7 +175,7 @@ ActionRequest SOCKS5StreamCoderSession::Input(utils::Buffer *buffer) {
   }
 }
 
-BufferReserveSize SOCKS5StreamCoderSession::OutputReserve() const {
+utils::BufferReserveSize SOCKS5StreamCoderSession::OutputReserve() const {
   switch (status_) {
     case kForwarding:
       return {0, 0};
@@ -163,7 +186,7 @@ BufferReserveSize SOCKS5StreamCoderSession::OutputReserve() const {
         case utils::Session::kDomain:
           return {0, 10};
         case utils::Session::kAddress:
-          if (session_->host.address.is_v4()) {
+          if (session_->address.is_v4()) {
             return {0, 10};
           } else {
             return {0, 22};
@@ -194,7 +217,7 @@ ActionRequest SOCKS5StreamCoderSession::Output(utils::Buffer *buffer) {
           type = 1;
           break;
         case utils::Session::kAddress:
-          if (session_->host.address.is_v4()) {
+          if (session_->address.is_v4()) {
             len = 10;
             type = 1;
           } else {
