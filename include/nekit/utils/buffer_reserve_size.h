@@ -20,13 +20,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef NEKIT_STREAM_CODER_BUFFER_RESERVE_SIZE
-#define NEKIT_STREAM_CODER_BUFFER_RESERVE_SIZE
+#ifndef NEKIT_UTILS_BUFFER_RESERVE_SIZE
+#define NEKIT_UTILS_BUFFER_RESERVE_SIZE
 
 #include <cstddef>
 
 namespace nekit {
-namespace stream_coder {
+namespace utils {
 
 struct BufferReserveSize {
  public:
@@ -51,7 +51,7 @@ struct BufferReserveSize {
   std::size_t prefix_;
   std::size_t suffix_;
 };
-}  // namespace stream_coder
+}  // namespace utils
 }  // namespace nekit
 
-#endif /* NEKIT_STREAM_CODER_BUFFER_RESERVE_SIZE */
+#endif /* NEKIT_UTILS_BUFFER_RESERVE_SIZE */
