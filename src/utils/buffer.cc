@@ -30,6 +30,14 @@ namespace utils {
 Buffer::Buffer(std::size_t size)
     : size_(size), data_(::operator new(size)), front_(0), back_(0) {}
 
+Buffer::Buffer(BufferReserveSize size) : Buffer(size, 0) {}
+
+Buffer::Buffer(BufferReserveSize size, std::size_t content)
+    : Buffer(size.prefix() + size.suffix() + content) {
+  ReserveFront(size.prefix());
+  ReserveBack(size.suffix());
+}
+
 Buffer::~Buffer() { ::operator delete(data_); }
 
 void *Buffer::data() { return data_; }
