@@ -27,11 +27,15 @@
 
 #include <boost/noncopyable.hpp>
 
+#include "buffer_reserve_size.h"
+
 namespace nekit {
 namespace utils {
 struct Buffer : public boost::noncopyable {
  public:
   Buffer(std::size_t size);
+  Buffer(BufferReserveSize size);
+  Buffer(BufferReserveSize size, std::size_t content);
   ~Buffer();
 
   // Return the underlying buffer.
