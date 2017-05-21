@@ -50,6 +50,11 @@ std::string SOCKS5StreamCoderSession::ErrorCategory::message(
   }
 }
 
+const std::error_category &SOCKS5StreamCoderSession::error_category() {
+  static ErrorCategory category_;
+  return category_;
+}
+
 SOCKS5StreamCoderSession::SOCKS5StreamCoderSession(
     std::shared_ptr<utils::Session> session)
     : status_(kReadingVersion), session_(session) {}
@@ -258,3 +263,13 @@ ActionRequest SOCKS5StreamCoderSession::Continue(utils::Error error) {
 
 }  // namespace stream_coder
 }  // namespace nekit
+
+namespace std {
+
+error_code make_error_code(
+    nekit::stream_coder::SOCKS5StreamCoderSession::ErrorCode errc) {
+  return error_code(
+      static_cast<int>(errc),
+      nekit::stream_coder::SOCKS5StreamCoderSession::error_category());
+}
+}  // namespace std
