@@ -53,10 +53,10 @@ class SOCKS5StreamCoderSession final : public StreamCoderSessionInterface {
 
   ActionRequest Negotiate();
 
-  BufferReserveSize InputReserve() const;
+  utils::BufferReserveSize InputReserve() const;
   ActionRequest Input(utils::Buffer* buffer);
 
-  BufferReserveSize OutputReserve() const;
+  utils::BufferReserveSize OutputReserve() const;
   ActionRequest Output(utils::Buffer* buffer);
 
   utils::Error GetLatestError() const;

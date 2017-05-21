@@ -30,6 +30,7 @@
 INITIALIZE_EASYLOGGINGPP
 
 using namespace nekit::stream_coder;
+using namespace nekit::utils;
 
 using ::testing::Return;
 using ::testing::_;

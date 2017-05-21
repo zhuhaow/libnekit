@@ -37,8 +37,8 @@ struct StreamCoderPipe::Impl {
     return NegotiateNextCoder();
   }
 
-  BufferReserveSize InputReserve() const {
-    BufferReserveSize reserve{0, 0};
+  utils::BufferReserveSize InputReserve() const {
+    utils::BufferReserveSize reserve{0, 0};
 
     auto tail = FindTailIterator();
 
@@ -64,8 +64,8 @@ struct StreamCoderPipe::Impl {
     }
   }
 
-  BufferReserveSize OutputReserve() const {
-    BufferReserveSize reserve{0, 0};
+  utils::BufferReserveSize OutputReserve() const {
+    utils::BufferReserveSize reserve{0, 0};
 
     auto tail = FindTailIterator();
 
@@ -356,7 +356,7 @@ utils::Error StreamCoderPipe::GetLatestError() const {
 
 ActionRequest StreamCoderPipe::Negotiate() { return impl_->Negotiate(); }
 
-BufferReserveSize StreamCoderPipe::InputReserve() const {
+utils::BufferReserveSize StreamCoderPipe::InputReserve() const {
   return impl_->InputReserve();
 }
 
@@ -364,7 +364,7 @@ ActionRequest StreamCoderPipe::Input(utils::Buffer* buffer) {
   return impl_->Input(buffer);
 }
 
-BufferReserveSize StreamCoderPipe::OutputReserve() const {
+utils::BufferReserveSize StreamCoderPipe::OutputReserve() const {
   return impl_->OutputReserve();
 }
 

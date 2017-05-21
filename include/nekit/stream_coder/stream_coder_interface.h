@@ -26,9 +26,9 @@
 #include <boost/noncopyable.hpp>
 
 #include "../utils/buffer.h"
+#include "../utils/buffer_reserve_size.h"
 #include "../utils/error.h"
 #include "action_request.h"
-#include "buffer_reserve_size.h"
 
 namespace nekit {
 namespace stream_coder {
@@ -39,10 +39,10 @@ class StreamCoderInterface : boost::noncopyable {
 
   virtual ActionRequest Negotiate() = 0;
 
-  virtual BufferReserveSize InputReserve() const = 0;
+  virtual utils::BufferReserveSize InputReserve() const = 0;
   virtual ActionRequest Input(utils::Buffer* buffer) = 0;
 
-  virtual BufferReserveSize OutputReserve() const = 0;
+  virtual utils::BufferReserveSize OutputReserve() const = 0;
   virtual ActionRequest Output(utils::Buffer* buffer) = 0;
 
   virtual utils::Error GetLatestError() const = 0;

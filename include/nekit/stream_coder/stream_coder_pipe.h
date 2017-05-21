@@ -51,10 +51,10 @@ class StreamCoderPipe final : public StreamCoderInterface {
 
   ActionRequest Negotiate() override;
 
-  BufferReserveSize InputReserve() const override;
+  utils::BufferReserveSize InputReserve() const override;
   ActionRequest Input(utils::Buffer* buffer) override;
 
-  BufferReserveSize OutputReserve() const override;
+  utils::BufferReserveSize OutputReserve() const override;
   ActionRequest Output(utils::Buffer* buffer) override;
 
   utils::Error GetLatestError() const override;
