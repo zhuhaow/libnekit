@@ -53,8 +53,8 @@ if(WIN32)
   add_definitions(-DELPP_WINSOCK2 -DWIN32_LEAN_AND_MEAN)
 endif()
 
-hunter_add_package(Boost)
-find_package(Boost CONFIG REQUIRED)
+hunter_add_package(Boost COMPONENTS system)
+find_package(Boost CONFIG REQUIRED system)
 
 set(SOURCES
   src/stream_coder/stream_coder_pipe.cc
@@ -70,7 +70,7 @@ target_compile_features(nekit PUBLIC cxx_lambdas)
 target_compile_features(nekit PUBLIC cxx_decltype)
 target_compile_features(nekit PUBLIC cxx_auto_type)
 
-set(LIBS ${LIBS} Boost::boost)
+set(LIBS ${LIBS} Boost::boost Boost::system)
 target_link_libraries(nekit ${LIBS})
 
 enable_testing()
