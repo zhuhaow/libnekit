@@ -32,11 +32,10 @@ namespace utils {
 struct Session {
  public:
   enum Type { kDomain, kAddress };
+
   Type type;
-  union {
-    std::string domain;
-    boost::asio::ip::address address;
-  } host;
+  std::string domain;
+  boost::asio::ip::address address;
   uint16_t port;
 };
 }  // namespace utils
