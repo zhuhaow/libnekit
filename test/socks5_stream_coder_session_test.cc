@@ -37,7 +37,7 @@ TEST(SOCKS5StreamCoderSessionNegotiation, CorrectIPv4Request) {
   EXPECT_EQ(coder.Negotiate(), kWantRead);
 
   Buffer buffer1(coder.InputReserve(), 3);
-  auto data = static_cast<uint8_t *>(buffer1.data());
+  auto data = static_cast<uint8_t *>(buffer1.buffer());
   *data++ = 5;
   *data++ = 1;
   *data++ = 0;
@@ -46,12 +46,12 @@ TEST(SOCKS5StreamCoderSessionNegotiation, CorrectIPv4Request) {
   Buffer buffer2(coder.OutputReserve());
   EXPECT_EQ(coder.Output(&buffer2), kWantRead);
   EXPECT_EQ(buffer2.capacity(), 2);
-  data = static_cast<uint8_t *>(buffer2.data());
+  data = static_cast<uint8_t *>(buffer2.buffer());
   EXPECT_EQ(*data++, 5);
   EXPECT_EQ(*data, 0);
 
   Buffer buffer3(coder.InputReserve(), 10);
-  data = static_cast<uint8_t *>(buffer3.data());
+  data = static_cast<uint8_t *>(buffer3.buffer());
   *data++ = 5;
   *data++ = 1;  // CONNECT
   *data++ = 0;
@@ -74,7 +74,7 @@ TEST(SOCKS5StreamCoderSessionNegotiation, CorrectIPv4Request) {
   Buffer buffer4(coder.OutputReserve());
   EXPECT_EQ(coder.Output(&buffer4), kReady);
   EXPECT_EQ(buffer4.capacity(), 10);
-  data = static_cast<uint8_t *>(buffer3.data());
+  data = static_cast<uint8_t *>(buffer3.buffer());
   *data++ = 5;
   *data++ = 0;  // SUCCESS
   *data++ = 0;
@@ -87,7 +87,7 @@ TEST(SOCKS5StreamCoderSessionNegotiation, CorrectIPv6Request) {
   EXPECT_EQ(coder.Negotiate(), kWantRead);
 
   Buffer buffer1(coder.InputReserve(), 3);
-  auto data = static_cast<uint8_t *>(buffer1.data());
+  auto data = static_cast<uint8_t *>(buffer1.buffer());
   *data++ = 5;
   *data++ = 1;
   *data++ = 0;
@@ -96,12 +96,12 @@ TEST(SOCKS5StreamCoderSessionNegotiation, CorrectIPv6Request) {
   Buffer buffer2(coder.OutputReserve());
   EXPECT_EQ(coder.Output(&buffer2), kWantRead);
   EXPECT_EQ(buffer2.capacity(), 2);
-  data = static_cast<uint8_t *>(buffer2.data());
+  data = static_cast<uint8_t *>(buffer2.buffer());
   EXPECT_EQ(*data++, 5);
   EXPECT_EQ(*data, 0);
 
   Buffer buffer3(coder.InputReserve(), 22);
-  data = static_cast<uint8_t *>(buffer3.data());
+  data = static_cast<uint8_t *>(buffer3.buffer());
   *data++ = 5;
   *data++ = 1;  // CONNECT
   *data++ = 0;
@@ -124,7 +124,7 @@ TEST(SOCKS5StreamCoderSessionNegotiation, CorrectIPv6Request) {
   Buffer buffer4(coder.OutputReserve());
   EXPECT_EQ(coder.Output(&buffer4), kReady);
   EXPECT_EQ(buffer4.capacity(), 22);
-  data = static_cast<uint8_t *>(buffer3.data());
+  data = static_cast<uint8_t *>(buffer3.buffer());
   *data++ = 5;
   *data++ = 0;  // SUCCESS
   *data++ = 0;
@@ -137,7 +137,7 @@ TEST(SOCKS5StreamCoderSessionNegotiation, CorrectDomainRequest) {
   EXPECT_EQ(coder.Negotiate(), kWantRead);
 
   Buffer buffer1(coder.InputReserve(), 3);
-  auto data = static_cast<uint8_t *>(buffer1.data());
+  auto data = static_cast<uint8_t *>(buffer1.buffer());
   *data++ = 5;
   *data++ = 1;
   *data++ = 0;
@@ -146,12 +146,12 @@ TEST(SOCKS5StreamCoderSessionNegotiation, CorrectDomainRequest) {
   Buffer buffer2(coder.OutputReserve());
   EXPECT_EQ(coder.Output(&buffer2), kWantRead);
   EXPECT_EQ(buffer2.capacity(), 2);
-  data = static_cast<uint8_t *>(buffer2.data());
+  data = static_cast<uint8_t *>(buffer2.buffer());
   EXPECT_EQ(*data++, 5);
   EXPECT_EQ(*data, 0);
 
   Buffer buffer3(coder.InputReserve(), 4 + 1 + 11 + 2);
-  data = static_cast<uint8_t *>(buffer3.data());
+  data = static_cast<uint8_t *>(buffer3.buffer());
   *data++ = 5;
   *data++ = 1;  // CONNECT
   *data++ = 0;
@@ -173,7 +173,7 @@ TEST(SOCKS5StreamCoderSessionNegotiation, CorrectDomainRequest) {
   Buffer buffer4(coder.OutputReserve());
   EXPECT_EQ(coder.Output(&buffer4), kReady);
   EXPECT_EQ(buffer4.capacity(), 10);
-  data = static_cast<uint8_t *>(buffer3.data());
+  data = static_cast<uint8_t *>(buffer3.buffer());
   *data++ = 5;
   *data++ = 0;  // SUCCESS
   *data++ = 0;
