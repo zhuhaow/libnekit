@@ -29,3 +29,7 @@ add_mem_test(stream_coder_pipe_test)
 add_executable(buffer_test buffer_test.cc)
 target_link_libraries(buffer_test nekit GMock::main)
 add_mem_test(buffer_test)
+
+add_executable(socks5_stream_coder_session_test socks5_stream_coder_session_test.cc)
+target_link_libraries(socks5_stream_coder_session_test nekit GMock::main)
+add_mem_test(socks5_stream_coder_session_test)
