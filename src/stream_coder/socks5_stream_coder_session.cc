@@ -104,7 +104,7 @@ ActionRequest SOCKS5StreamCoderSession::Input(utils::Buffer *buffer) {
         }
       }
 
-      if (!supported) {
+      if (not supported) {
         last_error_ = std::make_error_code(kUnsupportedAuthenticationMethod);
         return kErrorHappened;
       }

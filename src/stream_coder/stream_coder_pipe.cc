@@ -27,7 +27,7 @@ struct StreamCoderPipe::Impl {
   ActionRequest Negotiate() {
     assert(status_ == kInvalid);
 
-    if (!VerifyNonEmpty()) {
+    if (not VerifyNonEmpty()) {
       return kErrorHappened;
     }
 
@@ -50,7 +50,7 @@ struct StreamCoderPipe::Impl {
   }
 
   ActionRequest Input(utils::Buffer* buffer) {
-    if (!VerifyNonEmpty()) {
+    if (not VerifyNonEmpty()) {
       return kErrorHappened;
     }
 
@@ -77,7 +77,7 @@ struct StreamCoderPipe::Impl {
   }
 
   ActionRequest Output(utils::Buffer* buffer) {
-    if (!VerifyNonEmpty()) {
+    if (not VerifyNonEmpty()) {
       return kErrorHappened;
     }
 
@@ -131,7 +131,9 @@ struct StreamCoderPipe::Impl {
   }
 
   bool VerifyNonEmpty() {
-    if (!list_.empty()) return true;
+    if (not list_.empty()) {
+      return true;
+    }
 
     last_error_ = std::make_error_code(kNoCoder);
     return false;

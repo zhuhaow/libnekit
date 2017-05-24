@@ -40,8 +40,10 @@ void BoostTcpSocket::Connect(const boost::asio::ip::tcp::endpoint endpoint) {
                             HandleError(ec);
                             return;
                           }
-                          if (delegate_)
+
+                          if (delegate_) {
                             delegate_->DidConnect(this->shared_from_this());
+                          }
                         });
 }
 
@@ -127,7 +129,7 @@ Error BoostTcpSocket::ConvertBoostError(const boost::system::error_code &ec) {
 }
 
 void BoostTcpSocket::CheckClose() {
-  if (!closed_ && connected_ && eof_ && shutdown_) {
+  if (not closed_ && connected_ && eof_ && shutdown_) {
     closed_ = true;
     auto self(this->shared_from_this());
     socket_.get_io_service().post([this, self]() {
