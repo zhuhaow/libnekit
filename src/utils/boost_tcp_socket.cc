@@ -32,19 +32,58 @@ void BoostTcpSocket::set_delegate(DelegatePointer delegate) {
   delegate_ = delegate;
 }
 
-void BoostTcpSocket::Connect(const boost::asio::ip::tcp::endpoint endpoint) {
+void BoostTcpSocket::Connect(const ConnectRequest request) {
   auto self(this->shared_from_this());
-  socket_.async_connect(endpoint,
-                        [this, self](const boost::system::error_code &ec) {
-                          if (ec) {
-                            HandleError(ec);
-                            return;
-                          }
+  switch (request.type()) {
+    case ConnectRequest::kEndpointIterator:
+      boost::asio::async_connect(
+          socket_, request.endpoint_iterator(),
+          [self, this](const boost::system::error_code &ec,
+                       boost::asio::ip::tcp::resolver::iterator iterator) {
+            (void)iterator;
 
-                          if (delegate_) {
-                            delegate_->DidConnect(this->shared_from_this());
-                          }
-                        });
+            if (ec) {
+              HandleError(ec);
+              return;
+
+              if (delegate_) {
+                delegate_->DidConnect(self);
+              }
+            }
+          });
+      break;
+    case ConnectRequest::kEndpoint:
+      socket_.async_connect(request.endpoint(),
+                            [self, this](const boost::system::error_code &ec) {
+                              if (ec) {
+                                HandleError(ec);
+                                return;
+
+                                if (delegate_) {
+                                  delegate_->DidConnect(self);
+                                }
+                              }
+                            });
+      break;
+    case ConnectRequest::kDomain:
+      auto query = boost::asio::ip::tcp::resolver::query(
+          request.domain(), std::to_string(request.port()));
+      auto resolver = std::make_shared<boost::asio::ip::tcp::resolver>(
+          socket_.get_io_service());
+      resolver->async_resolve(
+          query, [self, this, resolver](
+                     const boost::system::error_code &ec,
+                     boost::asio::ip::tcp::resolver::iterator iterator) {
+            if (ec) {
+              HandleError(ec);
+              return;
+            }
+
+            auto resolved_request = ConnectRequest(iterator);
+            Connect(resolved_request);
+          });
+      break;
+  }
 }
 
 Error BoostTcpSocket::Bind(const boost::asio::ip::tcp::endpoint endpoint) {

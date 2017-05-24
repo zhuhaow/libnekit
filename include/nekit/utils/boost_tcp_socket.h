@@ -23,6 +23,8 @@
 #ifndef NEKIT_UTILS_BOOST_TCP_SOCKET
 #define NEKIT_UTILS_BOOST_TCP_SOCKET
 
+#include <boost/asio.hpp>
+
 #include "tcp_socket_interface.h"
 
 namespace nekit {
@@ -36,7 +38,7 @@ class BoostTcpSocket final : public TcpSocketInterface {
 
   void set_delegate(DelegatePointer delegate) override;
 
-  void Connect(const boost::asio::ip::tcp::endpoint endpoint) override;
+  void Connect(const ConnectRequest request) override;
   Error Bind(const boost::asio::ip::tcp::endpoint endpoint) override;
   Error Shutdown() override;
 
@@ -59,6 +61,8 @@ class BoostTcpSocket final : public TcpSocketInterface {
   Error ConvertBoostError(const boost::system::error_code &ec);
 
   void CheckClose();
+
+  void ConnectCallback(const boost::system::error_code &ec);
 
   BoostSocket socket_;
   DelegatePointer delegate_;

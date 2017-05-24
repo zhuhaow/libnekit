@@ -25,6 +25,39 @@
 namespace nekit {
 namespace utils {
 
+TcpSocketInterface::ConnectRequest::ConnectRequest(std::string domain,
+                                                   uint16_t port)
+    : type_(kDomain), domain_(domain), port_(port) {}
+
+TcpSocketInterface::ConnectRequest::ConnectRequest(
+    boost::asio::ip::tcp::endpoint endpoint)
+    : type_(kEndpoint), endpoint_(endpoint) {}
+
+TcpSocketInterface::ConnectRequest::ConnectRequest(
+    boost::asio::ip::tcp::resolver::iterator endpoint_iterator)
+    : type_(kEndpointIterator), endpoint_iterator_(endpoint_iterator) {}
+
+TcpSocketInterface::ConnectRequest::Type
+TcpSocketInterface::ConnectRequest::type() const {
+  return type_;
+}
+
+std::string TcpSocketInterface::ConnectRequest::domain() const {
+  return domain_;
+}
+
+uint16_t TcpSocketInterface::ConnectRequest::port() const { return port_; }
+
+boost::asio::ip::tcp::endpoint TcpSocketInterface::ConnectRequest::endpoint()
+    const {
+  return endpoint_;
+}
+
+boost::asio::ip::tcp::resolver::iterator
+TcpSocketInterface::ConnectRequest::endpoint_iterator() const {
+  return endpoint_iterator_;
+}
+
 const char* TcpSocketInterface::ErrorCategory::name() const BOOST_NOEXCEPT {
   return "NEKit::utils::TcpSocket";
 }

@@ -50,6 +50,31 @@ class TcpSocketInterface
 
   const static std::error_category &error_category();
 
+  class ConnectRequest final {
+   public:
+    enum Type { kDomain, kEndpoint, kEndpointIterator };
+
+    ConnectRequest(std::string domain, uint16_t port);
+    ConnectRequest(boost::asio::ip::tcp::endpoint endpoint);
+    ConnectRequest(boost::asio::ip::tcp::resolver::iterator endpoint_iterator);
+
+    Type type() const;
+
+    std::string domain() const;
+    uint16_t port() const;
+
+    boost::asio::ip::tcp::endpoint endpoint() const;
+
+    boost::asio::ip::tcp::resolver::iterator endpoint_iterator() const;
+
+   private:
+    Type type_;
+    std::string domain_;
+    uint16_t port_;
+    boost::asio::ip::tcp::endpoint endpoint_;
+    boost::asio::ip::tcp::resolver::iterator endpoint_iterator_;
+  };
+
   typedef std::shared_ptr<TcpSocketInterface> Pointer;
   typedef std::shared_ptr<TcpSocketDelegateInterface> DelegatePointer;
 
@@ -58,11 +83,7 @@ class TcpSocketInterface
   virtual void set_delegate(DelegatePointer delegate) = 0;
 
   // Connect to remote asynchronously.
-  void Connect(const std::string &ip_address, unsigned short port) {
-    Connect(boost::asio::ip::tcp::endpoint(
-        boost::asio::ip::address::from_string(ip_address), port));
-  }
-  virtual void Connect(const boost::asio::ip::tcp::endpoint endpoint) = 0;
+  virtual void Connect(const ConnectRequest request) = 0;
 
   // Bind socket to specific endpoint.
   Error Bind(const std::string &ip_address, unsigned short port) {
