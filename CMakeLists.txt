@@ -53,6 +53,10 @@ if(WIN32)
   add_definitions(-DELPP_WINSOCK2 -DWIN32_LEAN_AND_MEAN)
 endif()
 
+if(MSVC)
+  add_definitions(-FI ciso646)
+endif()
+
 hunter_add_package(Boost COMPONENTS system)
 find_package(Boost CONFIG REQUIRED system)
 
