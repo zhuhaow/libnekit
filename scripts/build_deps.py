@@ -5,10 +5,9 @@ LIBRARIES=[
     ('google/googletest', 'release-1.8.0', 'googletest')
 ]
 
-import os, sys, tempfile, shutil, argparse, platform, errno
+import os, tempfile, shutil, argparse, platform, errno
 
 from plumbum import FG, local
-from plumbum.path.utils import copy
 from plumbum.cmd import git, cmake
 
 source_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -149,7 +148,7 @@ def main():
     args = parser.parse_args()
 
     target_platform = Platform.from_string(args.platform_name)
-    assert check_platform(target_platform) 
+    assert check_platform(target_platform), "Can't compile dependency for target platform on current platform."
 
     tempdir = tempfile.mkdtemp()
     try:
