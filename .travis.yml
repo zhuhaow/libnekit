@@ -11,8 +11,6 @@ addons:
   apt:
     packages:
       - valgrind
-      - libc6-dev
-      - libc++-dev
 
 matrix:
   include:
