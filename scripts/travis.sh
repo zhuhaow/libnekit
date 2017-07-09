@@ -11,7 +11,7 @@ cmake -H. -Bbuild -DPLATFORM=$PLATFORM
 cmake --build build
 
 # Test on iOS is still unsupported.
-if [[ `perl -e "print lc('$PLATFORM');"` != "ios" ]]; then
+if [[ $(perl -e "print lc('$PLATFORM');") != "ios" ]]; then
    cd build
    ctest --output-on-failure
 fi

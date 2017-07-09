@@ -28,13 +28,13 @@ PARALLEL_MAKE=4   # how many threads to make boost with
 
 BITCODE="-fembed-bitcode"  # Uncomment this line for Bitcode generation
 
-BUILD_DIR=`mktemp -d`
+BUILD_DIR=$(mktemp -d)
 LOGDIR="$BUILD_DIR/logs/"
 IOS_MIN_VERSION=9.0
-SDKVERSION=`xcrun -sdk iphoneos --show-sdk-version`
-OSX_SDKVERSION=`xcrun -sdk macosx --show-sdk-version`
-DEVELOPER=`xcode-select -print-path`
-XCODE_ROOT=`xcode-select -print-path`
+SDKVERSION=$(xcrun -sdk iphoneos --show-sdk-version)
+OSX_SDKVERSION=$(xcrun -sdk macosx --show-sdk-version)
+DEVELOPER=$(xcode-select -print-path)
+XCODE_ROOT=$(xcode-select -print-path)
 
 if [ ! -d "$DEVELOPER" ]; then
   echo "xcode path is not set correctly $DEVELOPER does not exist (most likely because of xcode > 4.3)"
@@ -53,7 +53,7 @@ case $DEVELOPER in
 esac
 
 : ${BOOST_LIBS:="random regex graph random chrono thread signals filesystem system date_time locale"}
-: ${IPHONE_SDKVERSION:=`xcodebuild -showsdks | grep iphoneos | egrep "[[:digit:]]+\.[[:digit:]]+" -o | tail -1`}
+: ${IPHONE_SDKVERSION:=$(xcodebuild -showsdks | grep iphoneos | egrep "[[:digit:]]+\.[[:digit:]]+" -o | tail -1)}
 : ${EXTRA_CPPFLAGS:="-fPIC -DBOOST_SP_USE_SPINLOCK -std=$CPPSTD -stdlib=$STDLIB -miphoneos-version-min=$IOS_MIN_VERSION $BITCODE -fvisibility=hidden -fvisibility-inlines-hidden"}
 
 : ${IOSBUILDDIR:=$BUILD_DIR/libs/boost/lib}
