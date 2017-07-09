@@ -5,15 +5,9 @@ if (CMAKE_VERSION VERSION_LESS "3.7.1")
   message(WARNING "To support Android, you should use at least 3.7.1")
 endif()
 
-option(HUNTER_STATUS_PRINT "Print build information in hunter" OFF)
-include("cmake/HunterGate.cmake")
-HunterGate(
-    URL "https://github.com/ruslo/hunter/archive/v0.18.44.tar.gz"
-    SHA1 "a78f0b377b8e53c038f12fc18b0c02564c4534c8"
-    LOCAL
-)
-
 project(libnekit CXX)
+
+set(PLATFORM "" CACHE STRING "Name of the platform.")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -41,6 +35,8 @@ if(COVERAGE)
 endif()
 
 include_directories("include")
+include_directories("deps/${PLATFORM}/include")
+list(APPEND CMAKE_LIBRARY_PATH "deps/${PLATFORM}/lib")
 
 if(APPLE)
   execute_process(COMMAND scripts/find_include_path.sh WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE INCLUDE_DIRS)
@@ -53,13 +49,9 @@ if(WIN32)
   add_definitions(-DELPP_WINSOCK2 -DWIN32_LEAN_AND_MEAN)
 endif()
 
-hunter_add_package(Boost COMPONENTS system)
-find_package(Boost CONFIG REQUIRED system)
-
 set(SOURCES
   src/stream_coder/stream_coder_pipe.cc
   src/stream_coder/socks5_stream_coder_session.cc
-  src/deps/easylogging++.cc
   src/utils/buffer.cc
   src/utils/boost_tcp_socket.cc
   src/utils/tcp_socket_interface.cc
@@ -70,7 +62,19 @@ target_compile_features(nekit PUBLIC cxx_lambdas)
 target_compile_features(nekit PUBLIC cxx_decltype)
 target_compile_features(nekit PUBLIC cxx_auto_type)
 
-set(LIBS ${LIBS} Boost::boost Boost::system)
+find_library(BOOST boost 
+  NO_SYSTEM_ENVIROMENT_PATH)
+if(NOT BOOST)
+  message(FATAL_ERROR "Boost not found. Build dependency first.")
+endif()
+set(LIBS ${LIBS} ${BOOST})
+
+find_library(EASY_LOGGING easyloggingpp NO_SYSTEM_ENVIROMENT_PATH)
+if(NOT EASY_LOGGING)
+  message(FATAL_ERROR "Easylogging++ not found. Build dependency first.")
+endif()
+set(LIBS ${LIBS} ${EASY_LOGGING})
+
 target_link_libraries(nekit ${LIBS})
 
 enable_testing()

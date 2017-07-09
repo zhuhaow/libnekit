@@ -1,5 +1,3 @@
-# Derived from https://github.com/travis-ci-tester/toolchain-table
-
 language:
   - cpp
 
@@ -8,10 +6,6 @@ sudo:
 
 dist:
   - trusty
-
-cache:
-  directories:
-    - .hunter
 
 addons:
   apt:
@@ -22,74 +16,27 @@ addons:
 
 matrix:
   include:
-    - os: linux
-      env: CONFIG=Debug TOOLCHAIN=clang-libstdcxx COVERAGE=ON
-    - os: linux
-      env: CONFIG=Debug TOOLCHAIN=gcc COVERAGE=ON
-    - os: linux
-      env: CONFIG=Debug TOOLCHAIN=android-ndk-r10e-api-19-armeabi-v7a-neon 
-    - os: linux
-      env: CONFIG=Debug TOOLCHAIN=android-ndk-r11c-api-19-armeabi-v7a-neon
-
     - os: osx
-      osx_image: xcode8.2
-      env: CONFIG=Debug TOOLCHAIN=default COVERAGE=ON
+      osx_image: xcode9
+      env: PLATFORM=mac COVERAGE=ON
     - os: osx
-      osx_image: xcode8.2
-      env: CONFIG=Debug TOOLCHAIN=osx-10-12 COVERAGE=ON
-      # xcode 7.3 provides a too old libc++ that has some bugs with shared_ptr, but it does not mean iOS 9.x is not supported.
-    # - os: osx
-    #   osx_image: xcode7.3
-    #   env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-9-3 
+      osx_image: xcode8.3
+      env: PLATFORM=mac COVERAGE=ON
     - os: osx
-      osx_image: xcode8
-      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-10-0
+      osx_image: xcode9
+      env: PLATFORM=ios
     - os: osx
-      osx_image: xcode8.1
-      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-10-1
-    - os: osx
-      osx_image: xcode8.2
-      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-10-2
+      osx_image: xcode8.3
+      env: PLATFORM=ios
 
 install:
-  # Info about OS
-  - uname -a
+  - pip install plumbum
 
-  # Install Python 3
-  - if [[ "`uname`" == "Darwin" ]]; then travis_retry brew install python3 ios-sim; fi
-
-  # Install Python package 'requests'
-  # 'easy_install3' is not installed by 'brew install python3' on OS X 10.9 Maverick
-  - if [[ "`uname`" == "Darwin" ]]; then pip3 install requests; fi
-  - if [[ "`uname`" == "Linux" ]]; then travis_retry pip3 install --user requests; fi
-
-  # Install latest Polly toolchains and scripts
-  - wget https://github.com/ruslo/polly/archive/master.zip
-  - unzip master.zip
-  - POLLY_ROOT="`pwd`/polly-master"
-
-  # Alternatively the exact version can be used:
-  # - POLLY_VERSION=0.10.0
-  # - wget https://github.com/ruslo/polly/archive/v${POLLY_VERSION}.zip
-  # - unzip v${POLLY_VERSION}.zip
-  # - POLLY_ROOT="`pwd`/polly-${POLLY_VERSION}"
-
-  - export PATH="${POLLY_ROOT}/bin:${PATH}"
-
-  # Install dependencies (CMake, Android NDK)
-  - install-ci-dependencies.py
-
-  # Tune locations
-  - export PATH="`pwd`/_ci/cmake/bin:${PATH}"
-
-  # Installed if toolchain is Android (otherwise directory doesn't exist)
-  - export ANDROID_NDK_r10e="`pwd`/_ci/android-ndk-r10e"
-  - export ANDROID_NDK_r11c="`pwd`/_ci/android-ndk-r11c"
-
-  - export HUNTER_ROOT="`pwd`/.hunter"
+before_script:
+  - scripts/build_deps.py $PLATFORM
 
 script:
-  - build.py --toolchain ${TOOLCHAIN} --config ${CONFIG} --fwd COVERAGE=${COVERAGE} --test --verbose
+  - scripts/travis.sh
 
 after_success:
   - if [ -n "$COVERAGE" ]; then bash <(curl -s https://codecov.io/bash); fi

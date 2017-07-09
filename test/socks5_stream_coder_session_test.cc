@@ -22,7 +22,7 @@
 
 #include <gtest/gtest.h>
 
-#include "nekit/deps/easylogging++.h"
+#include <easylogging++.h>
 
 #include "nekit/stream_coder/socks5_stream_coder_session.h"
 
