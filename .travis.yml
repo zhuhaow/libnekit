@@ -29,6 +29,9 @@ matrix:
       osx_image: xcode8.3
       env: PLATFORM=ios
 
+    - os: linux
+      env: PLATFORM=linux COVERAGE=ON
+
 install:
   - pip install plumbum
 

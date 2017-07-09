@@ -118,7 +118,7 @@ def build_boost(boost_dir, install_prefix, target_platform):
             with local.cwd(os.path.join(source_dir, "scripts")):
                 local[local.cwd / "build_boost_ios.sh"] & FG
 
-    elif target_platform == Platform.OSX:
+    elif target_platform in [Platform.OSX, Platform.Linux]:
         with local.cwd(boost_dir):
             temp_dir = tempfile.mkdtemp()
 

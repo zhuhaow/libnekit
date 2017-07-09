@@ -5,7 +5,7 @@ if (CMAKE_VERSION VERSION_LESS "3.7.1")
   message(WARNING "To support Android, you should use at least 3.7.1")
 endif()
 
-project(libnekit CXX)
+project(libnekit C CXX)
 
 set(PLATFORM "" CACHE STRING "Name of the platform.")
 
