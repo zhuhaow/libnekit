@@ -52,7 +52,6 @@ endif()
 set(SOURCES
   src/stream_coder/stream_coder_pipe.cc
   src/stream_coder/socks5_stream_coder_session.cc
-  src/utils/buffer.cc
   src/utils/boost_tcp_socket.cc
   src/utils/tcp_socket_interface.cc
   )

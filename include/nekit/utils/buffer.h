@@ -24,6 +24,7 @@
 #define NEKIT_UTILS_BUFFER
 
 #include <cstddef>
+#include <cstdint>
 
 #include <boost/noncopyable.hpp>
 
@@ -31,27 +32,69 @@
 
 namespace nekit {
 namespace utils {
-struct Buffer : public boost::noncopyable {
+struct Buffer final : public boost::noncopyable {
  public:
-  Buffer(std::size_t size);
-  Buffer(BufferReserveSize size);
-  Buffer(BufferReserveSize size, std::size_t content);
-  ~Buffer();
+  Buffer(std::size_t size)
+      : size_(size), data_(::operator new(size)), front_(0), back_(0) {}
+
+  Buffer(BufferReserveSize size) : Buffer(size, 0) {}
+
+  Buffer(BufferReserveSize size, std::size_t content)
+      : Buffer(size.prefix() + size.suffix() + content) {
+    ReserveFront(size.prefix());
+    ReserveBack(size.suffix());
+  }
+
+  ~Buffer() { ::operator delete(data_); }
 
   // Return the underlying buffer.
-  void *data();
-  const void *data() const;
-  std::size_t size() const;
+  void *data() { return data_; }
+  const void *data() const { return data_; }
+  std::size_t size() const { return size_; }
 
-  bool ReserveFront(std::size_t size);
-  bool ReleaseFront(std::size_t size);
+  bool ReserveFront(std::size_t size) {
+    // Be careful. Overflow is not checked.
+    if (size >= size_ || size + front_ + back_ > size_) {
+      return false;
+    }
 
-  bool ReserveBack(std::size_t size);
-  bool ReleaseBack(std::size_t size);
+    front_ += size;
+    return true;
+  }
 
-  std::size_t capacity() const;
-  void *buffer();
-  const void *buffer() const;
+  bool ReleaseFront(std::size_t size) {
+    if (front_ < size) {
+      return false;
+    }
+
+    front_ -= size;
+    return true;
+  }
+
+  bool ReserveBack(std::size_t size) {
+    // Be careful. Overflow is not checked.
+    if (size >= size_ || size + front_ + back_ > size_) {
+      return false;
+    }
+
+    back_ += size;
+    return true;
+  }
+
+  bool ReleaseBack(std::size_t size) {
+    if (back_ < size) {
+      return false;
+    }
+
+    back_ -= size;
+    return true;
+  }
+
+  std::size_t capacity() const { return size_ - front_ - back_; }
+
+  void *buffer() { return static_cast<uint8_t *>(data_) + front_; }
+
+  const void *buffer() const { return static_cast<uint8_t *>(data_) + front_; }
 
  private:
   const std::size_t size_;
