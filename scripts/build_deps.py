@@ -5,10 +5,10 @@ LIBRARIES=[
     ('google/googletest', 'release-1.8.0', 'googletest')
 ]
 
-import os, tempfile, shutil, argparse, platform, errno
+import os, tempfile, shutil, argparse, platform, errno, zipfile
 
 from plumbum import FG, local
-from plumbum.cmd import git, cmake
+from plumbum.cmd import git, cmake, tar
 
 source_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 install_dir = os.path.abspath(os.path.join(source_dir, "deps"))
@@ -155,8 +155,9 @@ def main():
         for library in LIBRARIES:
             download_repo(tempdir, "https://github.com/" + library[0] + ".git", library[2], library[1])
 
-        # Copy boost source to build temp folder
-        shutil.copytree(os.path.join(source_dir, "boost"), os.path.join(tempdir, "boost"))
+        # Extract boost source to build temp folder
+        with local.cwd(tempdir):
+            tar["xvpzf", os.path.join(source_dir, "boost.tar.gz")] & FG
 
         # Remove built binaries and headers.
         shutil.rmtree(install_path(target_platform), True)
