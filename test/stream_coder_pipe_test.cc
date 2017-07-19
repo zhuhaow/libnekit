@@ -40,20 +40,20 @@ using ::testing::InSequence;
 using ::testing::Mock;
 using ::testing::NiceMock;
 
-const int c1_ip = 1;  // ip: input prefix
-const int c1_is = 2;  // is: input suffix
-const int c1_op = 4;  // op: output prefix
-const int c1_os = 8;  // os: output suffix
+const uint c1_ip = 1;  // ip: input prefix
+const uint c1_is = 2;  // is: input suffix
+const uint c1_op = 4;  // op: output prefix
+const uint c1_os = 8;  // os: output suffix
 
-const int c2_ip = 16;   // ip: input prefix
-const int c2_is = 32;   // is: input suffix
-const int c2_op = 64;   // op: output prefix
-const int c2_os = 128;  // os: output suffix
+const uint c2_ip = 16;   // ip: input prefix
+const uint c2_is = 32;   // is: input suffix
+const uint c2_op = 64;   // op: output prefix
+const uint c2_os = 128;  // os: output suffix
 
-const int c3_ip = 256;   // ip: input prefix
-const int c3_is = 512;   // is: input suffix
-const int c3_op = 1024;  // op: output prefix
-const int c3_os = 2048;  // os: output suffix
+const uint c3_ip = 256;   // ip: input prefix
+const uint c3_is = 512;   // is: input suffix
+const uint c3_op = 1024;  // op: output prefix
+const uint c3_os = 2048;  // os: output suffix
 
 enum MockError { kError = 0 };
 
@@ -156,7 +156,8 @@ TEST_F(StreamCoderPipeDefaultFixture, ComputesReserveSize) {
 }
 
 TEST_F(StreamCoderPipeDefaultFixture, RemoveFirstWhenNegotiating) {
-  EXPECT_CALL(*coder1_, Negotiate()).WillOnce(Return(ActionRequest::kRemoveSelf));
+  EXPECT_CALL(*coder1_, Negotiate())
+      .WillOnce(Return(ActionRequest::kRemoveSelf));
   EXPECT_CALL(*coder2_, Negotiate());
   EXPECT_CALL(*coder3_, Negotiate());
 
@@ -183,7 +184,8 @@ TEST_F(StreamCoderPipeDefaultFixture, RemoveFirstWhenNegotiating) {
 }
 
 TEST_F(StreamCoderPipeDefaultFixture, RemoveMiddleWhenNegotiating) {
-  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(ActionRequest::kRemoveSelf));
+  EXPECT_CALL(*coder2_, Negotiate())
+      .WillOnce(Return(ActionRequest::kRemoveSelf));
   EXPECT_CALL(*coder1_, Negotiate());
   EXPECT_CALL(*coder3_, Negotiate());
 
@@ -210,7 +212,8 @@ TEST_F(StreamCoderPipeDefaultFixture, RemoveMiddleWhenNegotiating) {
 }
 
 TEST_F(StreamCoderPipeDefaultFixture, RemoveLastWhenNegotiating) {
-  EXPECT_CALL(*coder3_, Negotiate()).WillOnce(Return(ActionRequest::kRemoveSelf));
+  EXPECT_CALL(*coder3_, Negotiate())
+      .WillOnce(Return(ActionRequest::kRemoveSelf));
   EXPECT_CALL(*coder1_, Negotiate());
   EXPECT_CALL(*coder2_, Negotiate());
 
@@ -237,9 +240,12 @@ TEST_F(StreamCoderPipeDefaultFixture, RemoveLastWhenNegotiating) {
 }
 
 TEST_F(StreamCoderPipeDefaultFixture, RemoveAllWhenNegotiating) {
-  EXPECT_CALL(*coder1_, Negotiate()).WillOnce(Return(ActionRequest::kRemoveSelf));
-  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(ActionRequest::kRemoveSelf));
-  EXPECT_CALL(*coder3_, Negotiate()).WillOnce(Return(ActionRequest::kRemoveSelf));
+  EXPECT_CALL(*coder1_, Negotiate())
+      .WillOnce(Return(ActionRequest::kRemoveSelf));
+  EXPECT_CALL(*coder2_, Negotiate())
+      .WillOnce(Return(ActionRequest::kRemoveSelf));
+  EXPECT_CALL(*coder3_, Negotiate())
+      .WillOnce(Return(ActionRequest::kRemoveSelf));
 
   RegisterAllCoders();
 
@@ -373,7 +379,8 @@ TEST_F(StreamCoderPipeDefaultFixture,
   {
     InSequence s;
 
-    EXPECT_CALL(*coder1_, Input(_)).WillOnce(Return(ActionRequest::kRemoveSelf));
+    EXPECT_CALL(*coder1_, Input(_))
+        .WillOnce(Return(ActionRequest::kRemoveSelf));
     EXPECT_CALL(*coder2_, Input(_)).WillOnce(Return(ActionRequest::kReady));
   }
 
@@ -446,7 +453,8 @@ TEST_F(StreamCoderPipeDefaultFixture, MultipleWantToReadWhenNegotiating) {
 }
 
 TEST_F(StreamCoderPipeDefaultFixture, FirstWantToWriteWhenNegotiating) {
-  EXPECT_CALL(*coder1_, Negotiate()).WillOnce(Return(ActionRequest::kWantWrite));
+  EXPECT_CALL(*coder1_, Negotiate())
+      .WillOnce(Return(ActionRequest::kWantWrite));
   EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(ActionRequest::kReady));
   EXPECT_CALL(*coder2_, Negotiate());
   EXPECT_CALL(*coder3_, Negotiate());
@@ -479,7 +487,8 @@ TEST_F(StreamCoderPipeDefaultFixture, FirstWantToWriteWhenNegotiating) {
 
 TEST_F(StreamCoderPipeDefaultFixture, MiddleWantToWriteWhenNegotiating) {
   EXPECT_CALL(*coder1_, Negotiate());
-  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(ActionRequest::kWantWrite));
+  EXPECT_CALL(*coder2_, Negotiate())
+      .WillOnce(Return(ActionRequest::kWantWrite));
   EXPECT_CALL(*coder3_, Negotiate());
 
   {
@@ -518,7 +527,8 @@ TEST_F(StreamCoderPipeDefaultFixture, MiddleWantToWriteWhenNegotiating) {
 TEST_F(StreamCoderPipeDefaultFixture, LastWantToWriteWhenNegotiating) {
   EXPECT_CALL(*coder1_, Negotiate());
   EXPECT_CALL(*coder2_, Negotiate());
-  EXPECT_CALL(*coder3_, Negotiate()).WillOnce(Return(ActionRequest::kWantWrite));
+  EXPECT_CALL(*coder3_, Negotiate())
+      .WillOnce(Return(ActionRequest::kWantWrite));
 
   {
     InSequence s;
@@ -557,14 +567,16 @@ TEST_F(StreamCoderPipeDefaultFixture, LastWantToWriteWhenNegotiating) {
 TEST_F(StreamCoderPipeDefaultFixture,
        MiddleWantToWriteThenFirstRemoveWhenNegotiating) {
   EXPECT_CALL(*coder1_, Negotiate());
-  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(ActionRequest::kWantWrite));
+  EXPECT_CALL(*coder2_, Negotiate())
+      .WillOnce(Return(ActionRequest::kWantWrite));
   EXPECT_CALL(*coder3_, Negotiate());
 
   {
     InSequence s;
 
     EXPECT_CALL(*coder2_, Output(_)).WillOnce(Return(ActionRequest::kReady));
-    EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(ActionRequest::kRemoveSelf));
+    EXPECT_CALL(*coder1_, Output(_))
+        .WillOnce(Return(ActionRequest::kRemoveSelf));
   }
 
   RegisterAllCoders();
@@ -594,9 +606,11 @@ TEST_F(StreamCoderPipeDefaultFixture,
 }
 
 TEST_F(StreamCoderPipeDefaultFixture, MultipleWantToWriteWhenNegotiating) {
-  EXPECT_CALL(*coder1_, Negotiate()).WillOnce(Return(ActionRequest::kWantWrite));
+  EXPECT_CALL(*coder1_, Negotiate())
+      .WillOnce(Return(ActionRequest::kWantWrite));
   EXPECT_CALL(*coder2_, Negotiate());
-  EXPECT_CALL(*coder3_, Negotiate()).WillOnce(Return(ActionRequest::kWantWrite));
+  EXPECT_CALL(*coder3_, Negotiate())
+      .WillOnce(Return(ActionRequest::kWantWrite));
 
   {
     InSequence s;
@@ -643,7 +657,8 @@ TEST_F(StreamCoderPipeDefaultFixture, MultipleWantToWriteWhenNegotiating) {
 
 TEST_F(StreamCoderPipeDefaultFixture, ReturnErrorWhenInternalCoderReturnError) {
   EXPECT_CALL(*coder1_, Negotiate());
-  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(ActionRequest::kErrorHappened));
+  EXPECT_CALL(*coder2_, Negotiate())
+      .WillOnce(Return(ActionRequest::kErrorHappened));
   EXPECT_CALL(*coder2_, GetLatestError())
       .WillOnce(Return(std::make_error_code(kError)));
 
