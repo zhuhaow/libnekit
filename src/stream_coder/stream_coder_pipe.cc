@@ -14,10 +14,10 @@ struct StreamCoderPipe::Impl {
   typedef std::list<std::unique_ptr<StreamCoderInterface>>::const_iterator
       StreamCoderConstIterator;
 
-  Impl() : status_{kInvalid} {}
+  Impl() : status_{Phase::kInvalid} {}
 
   void AppendStreamCoder(std::unique_ptr<StreamCoderInterface>&& stream_coder) {
-    assert(status_ == kInvalid);
+    assert(status_ == Phase::kInvalid);
 
     list_.push_back(std::move(stream_coder));
   }
@@ -25,14 +25,14 @@ struct StreamCoderPipe::Impl {
   utils::Error GetLatestError() const { return last_error_; }
 
   ActionRequest Negotiate() {
-    assert(status_ == kInvalid);
+    assert(status_ == Phase::kInvalid);
 
     if (!VerifyNonEmpty()) {
-      return kErrorHappened;
+      return ActionRequest::kErrorHappened;
     }
 
     active_coder_ = list_.begin();
-    status_ = kNegotiating;
+    status_ = Phase::kNegotiating;
 
     return NegotiateNextCoder();
   }
@@ -51,13 +51,13 @@ struct StreamCoderPipe::Impl {
 
   ActionRequest Input(utils::Buffer* buffer) {
     if (!VerifyNonEmpty()) {
-      return kErrorHappened;
+      return ActionRequest::kErrorHappened;
     }
 
     switch (status_) {
-      case kForwarding:
+      case Phase::kForwarding:
         return InputForForward(buffer);
-      case kNegotiating:
+      case Phase::kNegotiating:
         return InputForNegotiation(buffer);
       default:
         assert(false);  // not reachable
@@ -78,56 +78,56 @@ struct StreamCoderPipe::Impl {
 
   ActionRequest Output(utils::Buffer* buffer) {
     if (!VerifyNonEmpty()) {
-      return kErrorHappened;
+      return ActionRequest::kErrorHappened;
     }
 
     switch (status_) {
-      case kForwarding:
+      case Phase::kForwarding:
         return OutputForForward(buffer);
-      case kNegotiating:
+      case Phase::kNegotiating:
         return OutputForNegotiation(buffer);
       default:
         assert(false);  // not reachable
     }
   }
 
-  bool forwarding() const { return status_ == kForwarding; }
+  bool forwarding() const { return status_ == Phase::kForwarding; }
 
  private:
-  enum Phase { kInvalid, kNegotiating, kForwarding, kClosed };
+  enum class Phase { kInvalid, kNegotiating, kForwarding, kClosed };
 
   ActionRequest NegotiateNextCoder() {
-    assert(status_ == kNegotiating);
+    assert(status_ == Phase::kNegotiating);
 
     while (active_coder_ != list_.end()) {
       auto request = (*active_coder_)->Negotiate();
       switch (request) {
-        case kReady:
+        case ActionRequest::kReady:
           ++active_coder_;
           break;
-        case kRemoveSelf:
+        case ActionRequest::kRemoveSelf:
           active_coder_ = list_.erase(active_coder_);
           break;
-        case kErrorHappened:
+        case ActionRequest::kErrorHappened:
           last_error_ = (*active_coder_)->GetLatestError();
-          status_ = kClosed;
-          return kErrorHappened;
-        case kWantRead:
-        case kWantWrite:
+          status_ = Phase::kClosed;
+          return ActionRequest::kErrorHappened;
+        case ActionRequest::kWantRead:
+        case ActionRequest::kWantWrite:
           return request;
-        case kContinue:
-        case kEvent:
+        case ActionRequest::kContinue:
+        case ActionRequest::kEvent:
           assert(false);  // unreachable
       }
     }
 
     if (list_.empty()) {
       last_error_ = std::make_error_code(kNoCoder);
-      return kErrorHappened;
+      return ActionRequest::kErrorHappened;
     }
 
-    status_ = kForwarding;
-    return kReady;
+    status_ = Phase::kForwarding;
+    return ActionRequest::kReady;
   }
 
   bool VerifyNonEmpty() {
@@ -183,14 +183,14 @@ struct StreamCoderPipe::Impl {
     auto iter = list_.begin();
     while (iter != active_coder_) {
       switch ((*iter)->Input(buffer)) {
-        case kContinue:
+        case ActionRequest::kContinue:
           ++iter;
           break;
-        case kErrorHappened:
+        case ActionRequest::kErrorHappened:
           last_error_ = (*iter)->GetLatestError();
-          status_ = kClosed;
-          return kErrorHappened;
-        case kRemoveSelf:
+          status_ = Phase::kClosed;
+          return ActionRequest::kErrorHappened;
+        case ActionRequest::kRemoveSelf:
           iter = list_.erase(iter);
           break;
         default:
@@ -201,22 +201,22 @@ struct StreamCoderPipe::Impl {
     // now processing active_coder_
     auto action = (*iter)->Input(buffer);
     switch (action) {
-      case kErrorHappened:
+      case ActionRequest::kErrorHappened:
         last_error_ = (*iter)->GetLatestError();
-        status_ = kClosed;
-        return kErrorHappened;
-      case kRemoveSelf:
+        status_ = Phase::kClosed;
+        return ActionRequest::kErrorHappened;
+      case ActionRequest::kRemoveSelf:
         list_.erase(iter);
         ++active_coder_;
         return NegotiateNextCoder();
-      case kReady:
+      case ActionRequest::kReady:
         ++active_coder_;
         return NegotiateNextCoder();
-      case kWantRead:
-      case kWantWrite:
+      case ActionRequest::kWantRead:
+      case ActionRequest::kWantWrite:
         return action;
-      case kContinue:
-      case kEvent:
+      case ActionRequest::kContinue:
+      case ActionRequest::kEvent:
         assert(false);  // not reachable
     }
   }
@@ -225,14 +225,14 @@ struct StreamCoderPipe::Impl {
     auto iter = list_.begin();
     while (iter != list_.end()) {
       switch ((*iter)->Input(buffer)) {
-        case kContinue:
+        case ActionRequest::kContinue:
           ++iter;
           break;
-        case kErrorHappened:
+        case ActionRequest::kErrorHappened:
           last_error_ = (*iter)->GetLatestError();
-          status_ = kClosed;
-          return kErrorHappened;
-        case kRemoveSelf:
+          status_ = Phase::kClosed;
+          return ActionRequest::kErrorHappened;
+        case ActionRequest::kRemoveSelf:
           iter = list_.erase(iter);
           break;
         default:
@@ -240,7 +240,7 @@ struct StreamCoderPipe::Impl {
       }
     }
 
-    return kContinue;
+    return ActionRequest::kContinue;
   }
 
   ActionRequest OutputForNegotiation(utils::Buffer* buffer) {
@@ -251,26 +251,26 @@ struct StreamCoderPipe::Impl {
     // processing active_coder_ first
     auto action = (*iter)->Output(buffer);
     switch (action) {
-      case kErrorHappened:
+      case ActionRequest::kErrorHappened:
         last_error_ = (*iter)->GetLatestError();
-        status_ = kClosed;
-        return kErrorHappened;
-      case kRemoveSelf:
+        status_ = Phase::kClosed;
+        return ActionRequest::kErrorHappened;
+      case ActionRequest::kRemoveSelf:
         ++active_coder_;
         // if the iter is the first one, then the iter will still be the first
         // one
         iter = list_.erase(iter);
         action = NegotiateNextCoder();
         break;
-      case kReady:
+      case ActionRequest::kReady:
         ++active_coder_;
         action = NegotiateNextCoder();
         break;
-      case kWantRead:
-      case kWantWrite:
+      case ActionRequest::kWantRead:
+      case ActionRequest::kWantWrite:
         break;
-      case kContinue:
-      case kEvent:
+      case ActionRequest::kContinue:
+      case ActionRequest::kEvent:
         assert(false);  // not reachable
     }
 
@@ -281,13 +281,13 @@ struct StreamCoderPipe::Impl {
     do {
       --iter;
       switch ((*iter)->Output(buffer)) {
-        case kContinue:
+        case ActionRequest::kContinue:
           break;
-        case kErrorHappened:
+        case ActionRequest::kErrorHappened:
           last_error_ = (*iter)->GetLatestError();
-          status_ = kClosed;
-          return kErrorHappened;
-        case kRemoveSelf:
+          status_ = Phase::kClosed;
+          return ActionRequest::kErrorHappened;
+        case ActionRequest::kRemoveSelf:
           iter = list_.erase(iter);
           break;
         default:
@@ -304,13 +304,13 @@ struct StreamCoderPipe::Impl {
     do {
       --iter;
       switch ((*iter)->Output(buffer)) {
-        case kContinue:
+        case ActionRequest::kContinue:
           break;
-        case kErrorHappened:
+        case ActionRequest::kErrorHappened:
           last_error_ = (*iter)->GetLatestError();
-          status_ = kClosed;
-          return kErrorHappened;
-        case kRemoveSelf:
+          status_ = Phase::kClosed;
+          return ActionRequest::kErrorHappened;
+        case ActionRequest::kRemoveSelf:
           iter = list_.erase(iter);
           break;
         default:
@@ -318,7 +318,7 @@ struct StreamCoderPipe::Impl {
       }
     } while (iter != list_.begin());
 
-    return kContinue;
+    return ActionRequest::kContinue;
   }
 
   std::list<std::unique_ptr<StreamCoderInterface>> list_;

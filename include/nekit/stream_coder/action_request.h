@@ -26,7 +26,7 @@
 namespace nekit {
 namespace stream_coder {
 
-enum ActionRequest {
+enum class ActionRequest {
   kContinue = 0,   // Continue forwarding data.
   kRemoveSelf,     // The coder is not useful anymore and should be removed.
   kErrorHappened,  // Some error happened, the coder can no longer process data.

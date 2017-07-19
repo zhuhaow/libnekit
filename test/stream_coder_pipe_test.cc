@@ -88,19 +88,19 @@ class StreamCoderPipeDefaultFixture : public ::testing::Test {
         .WillByDefault(Return(BufferReserveSize(c1_ip, c1_is)));
     ON_CALL(*coder1_, OutputReserve())
         .WillByDefault(Return(BufferReserveSize(c1_op, c1_os)));
-    ON_CALL(*coder1_, Negotiate()).WillByDefault(Return(kReady));
+    ON_CALL(*coder1_, Negotiate()).WillByDefault(Return(ActionRequest::kReady));
 
     ON_CALL(*coder2_, InputReserve())
         .WillByDefault(Return(BufferReserveSize(c2_ip, c2_is)));
     ON_CALL(*coder2_, OutputReserve())
         .WillByDefault(Return(BufferReserveSize(c2_op, c2_os)));
-    ON_CALL(*coder2_, Negotiate()).WillByDefault(Return(kReady));
+    ON_CALL(*coder2_, Negotiate()).WillByDefault(Return(ActionRequest::kReady));
 
     ON_CALL(*coder3_, InputReserve())
         .WillByDefault(Return(BufferReserveSize(c3_ip, c3_is)));
     ON_CALL(*coder3_, OutputReserve())
         .WillByDefault(Return(BufferReserveSize(c3_op, c3_os)));
-    ON_CALL(*coder3_, Negotiate()).WillByDefault(Return(kReady));
+    ON_CALL(*coder3_, Negotiate()).WillByDefault(Return(ActionRequest::kReady));
 
     // We do not test these methods since they are const and the result is
     // already checked. So there it doesn't matter how they are called.
@@ -125,7 +125,7 @@ class StreamCoderPipeDefaultFixture : public ::testing::Test {
 
 TEST(StreamCoderPipeUnitTest, ReturnErrorOnNegotiationWhenEmpty) {
   StreamCoderPipe pipe;
-  EXPECT_EQ(pipe.Negotiate(), kErrorHappened);
+  EXPECT_EQ(pipe.Negotiate(), ActionRequest::kErrorHappened);
   EXPECT_EQ(pipe.GetLatestError().category(),
             StreamCoderPipe::error_category());
   EXPECT_EQ(pipe.GetLatestError().value(),
@@ -142,7 +142,7 @@ TEST_F(StreamCoderPipeDefaultFixture, ComputesReserveSize) {
 
   EXPECT_FALSE(pipe_.forwarding());
 
-  EXPECT_EQ(pipe_.Negotiate(), kReady);
+  EXPECT_EQ(pipe_.Negotiate(), ActionRequest::kReady);
 
   EXPECT_TRUE(pipe_.forwarding());
 
@@ -156,7 +156,7 @@ TEST_F(StreamCoderPipeDefaultFixture, ComputesReserveSize) {
 }
 
 TEST_F(StreamCoderPipeDefaultFixture, RemoveFirstWhenNegotiating) {
-  EXPECT_CALL(*coder1_, Negotiate()).WillOnce(Return(kRemoveSelf));
+  EXPECT_CALL(*coder1_, Negotiate()).WillOnce(Return(ActionRequest::kRemoveSelf));
   EXPECT_CALL(*coder2_, Negotiate());
   EXPECT_CALL(*coder3_, Negotiate());
 
@@ -169,7 +169,7 @@ TEST_F(StreamCoderPipeDefaultFixture, RemoveFirstWhenNegotiating) {
 
   EXPECT_FALSE(pipe_.forwarding());
 
-  EXPECT_EQ(pipe_.Negotiate(), kReady);
+  EXPECT_EQ(pipe_.Negotiate(), ActionRequest::kReady);
 
   EXPECT_TRUE(pipe_.forwarding());
 
@@ -183,7 +183,7 @@ TEST_F(StreamCoderPipeDefaultFixture, RemoveFirstWhenNegotiating) {
 }
 
 TEST_F(StreamCoderPipeDefaultFixture, RemoveMiddleWhenNegotiating) {
-  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(kRemoveSelf));
+  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(ActionRequest::kRemoveSelf));
   EXPECT_CALL(*coder1_, Negotiate());
   EXPECT_CALL(*coder3_, Negotiate());
 
@@ -196,7 +196,7 @@ TEST_F(StreamCoderPipeDefaultFixture, RemoveMiddleWhenNegotiating) {
 
   EXPECT_FALSE(pipe_.forwarding());
 
-  EXPECT_EQ(pipe_.Negotiate(), kReady);
+  EXPECT_EQ(pipe_.Negotiate(), ActionRequest::kReady);
 
   EXPECT_TRUE(pipe_.forwarding());
 
@@ -210,7 +210,7 @@ TEST_F(StreamCoderPipeDefaultFixture, RemoveMiddleWhenNegotiating) {
 }
 
 TEST_F(StreamCoderPipeDefaultFixture, RemoveLastWhenNegotiating) {
-  EXPECT_CALL(*coder3_, Negotiate()).WillOnce(Return(kRemoveSelf));
+  EXPECT_CALL(*coder3_, Negotiate()).WillOnce(Return(ActionRequest::kRemoveSelf));
   EXPECT_CALL(*coder1_, Negotiate());
   EXPECT_CALL(*coder2_, Negotiate());
 
@@ -223,7 +223,7 @@ TEST_F(StreamCoderPipeDefaultFixture, RemoveLastWhenNegotiating) {
 
   EXPECT_FALSE(pipe_.forwarding());
 
-  EXPECT_EQ(pipe_.Negotiate(), kReady);
+  EXPECT_EQ(pipe_.Negotiate(), ActionRequest::kReady);
 
   EXPECT_TRUE(pipe_.forwarding());
 
@@ -237,15 +237,15 @@ TEST_F(StreamCoderPipeDefaultFixture, RemoveLastWhenNegotiating) {
 }
 
 TEST_F(StreamCoderPipeDefaultFixture, RemoveAllWhenNegotiating) {
-  EXPECT_CALL(*coder1_, Negotiate()).WillOnce(Return(kRemoveSelf));
-  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(kRemoveSelf));
-  EXPECT_CALL(*coder3_, Negotiate()).WillOnce(Return(kRemoveSelf));
+  EXPECT_CALL(*coder1_, Negotiate()).WillOnce(Return(ActionRequest::kRemoveSelf));
+  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(ActionRequest::kRemoveSelf));
+  EXPECT_CALL(*coder3_, Negotiate()).WillOnce(Return(ActionRequest::kRemoveSelf));
 
   RegisterAllCoders();
 
   EXPECT_FALSE(pipe_.forwarding());
 
-  EXPECT_EQ(pipe_.Negotiate(), kErrorHappened);
+  EXPECT_EQ(pipe_.Negotiate(), ActionRequest::kErrorHappened);
 
   EXPECT_FALSE(pipe_.forwarding());
 
@@ -256,8 +256,8 @@ TEST_F(StreamCoderPipeDefaultFixture, RemoveAllWhenNegotiating) {
 }
 
 TEST_F(StreamCoderPipeDefaultFixture, FirstWantToReadWhenNegotiating) {
-  EXPECT_CALL(*coder1_, Negotiate()).WillOnce(Return(kWantRead));
-  EXPECT_CALL(*coder1_, Input(_)).WillOnce(Return(kReady));
+  EXPECT_CALL(*coder1_, Negotiate()).WillOnce(Return(ActionRequest::kWantRead));
+  EXPECT_CALL(*coder1_, Input(_)).WillOnce(Return(ActionRequest::kReady));
   EXPECT_CALL(*coder2_, Negotiate());
   EXPECT_CALL(*coder3_, Negotiate());
 
@@ -265,7 +265,7 @@ TEST_F(StreamCoderPipeDefaultFixture, FirstWantToReadWhenNegotiating) {
 
   EXPECT_FALSE(pipe_.forwarding());
 
-  EXPECT_EQ(pipe_.Negotiate(), kWantRead);
+  EXPECT_EQ(pipe_.Negotiate(), ActionRequest::kWantRead);
 
   EXPECT_FALSE(pipe_.forwarding());
 
@@ -274,7 +274,7 @@ TEST_F(StreamCoderPipeDefaultFixture, FirstWantToReadWhenNegotiating) {
   EXPECT_EQ(rsize.suffix(), c1_is);
 
   nekit::utils::Buffer buffer(10);
-  EXPECT_EQ(pipe_.Input(&buffer), kReady);
+  EXPECT_EQ(pipe_.Input(&buffer), ActionRequest::kReady);
 
   EXPECT_TRUE(pipe_.forwarding());
 
@@ -289,21 +289,21 @@ TEST_F(StreamCoderPipeDefaultFixture, FirstWantToReadWhenNegotiating) {
 
 TEST_F(StreamCoderPipeDefaultFixture, MiddleWantToReadWhenNegotiating) {
   EXPECT_CALL(*coder1_, Negotiate());
-  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(kWantRead));
+  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(ActionRequest::kWantRead));
   EXPECT_CALL(*coder3_, Negotiate());
 
   {
     InSequence s;
 
-    EXPECT_CALL(*coder1_, Input(_)).WillOnce(Return(kContinue));
-    EXPECT_CALL(*coder2_, Input(_)).WillOnce(Return(kReady));
+    EXPECT_CALL(*coder1_, Input(_)).WillOnce(Return(ActionRequest::kContinue));
+    EXPECT_CALL(*coder2_, Input(_)).WillOnce(Return(ActionRequest::kReady));
   }
 
   RegisterAllCoders();
 
   EXPECT_FALSE(pipe_.forwarding());
 
-  EXPECT_EQ(pipe_.Negotiate(), kWantRead);
+  EXPECT_EQ(pipe_.Negotiate(), ActionRequest::kWantRead);
 
   EXPECT_FALSE(pipe_.forwarding());
 
@@ -312,7 +312,7 @@ TEST_F(StreamCoderPipeDefaultFixture, MiddleWantToReadWhenNegotiating) {
   EXPECT_EQ(rsize.suffix(), c1_is + c2_is);
 
   nekit::utils::Buffer buffer(10);
-  EXPECT_EQ(pipe_.Input(&buffer), kReady);
+  EXPECT_EQ(pipe_.Input(&buffer), ActionRequest::kReady);
 
   EXPECT_TRUE(pipe_.forwarding());
 
@@ -328,21 +328,21 @@ TEST_F(StreamCoderPipeDefaultFixture, MiddleWantToReadWhenNegotiating) {
 TEST_F(StreamCoderPipeDefaultFixture, LastWantToReadWhenNegotiating) {
   EXPECT_CALL(*coder1_, Negotiate());
   EXPECT_CALL(*coder2_, Negotiate());
-  EXPECT_CALL(*coder3_, Negotiate()).WillOnce(Return(kWantRead));
+  EXPECT_CALL(*coder3_, Negotiate()).WillOnce(Return(ActionRequest::kWantRead));
 
   {
     InSequence s;
 
-    EXPECT_CALL(*coder1_, Input(_)).WillOnce(Return(kContinue));
-    EXPECT_CALL(*coder2_, Input(_)).WillOnce(Return(kContinue));
-    EXPECT_CALL(*coder3_, Input(_)).WillOnce(Return(kReady));
+    EXPECT_CALL(*coder1_, Input(_)).WillOnce(Return(ActionRequest::kContinue));
+    EXPECT_CALL(*coder2_, Input(_)).WillOnce(Return(ActionRequest::kContinue));
+    EXPECT_CALL(*coder3_, Input(_)).WillOnce(Return(ActionRequest::kReady));
   }
 
   RegisterAllCoders();
 
   EXPECT_FALSE(pipe_.forwarding());
 
-  EXPECT_EQ(pipe_.Negotiate(), kWantRead);
+  EXPECT_EQ(pipe_.Negotiate(), ActionRequest::kWantRead);
 
   EXPECT_FALSE(pipe_.forwarding());
 
@@ -351,7 +351,7 @@ TEST_F(StreamCoderPipeDefaultFixture, LastWantToReadWhenNegotiating) {
   EXPECT_EQ(rsize.suffix(), c1_is + c2_is + c3_is);
 
   nekit::utils::Buffer buffer(10);
-  EXPECT_EQ(pipe_.Input(&buffer), kReady);
+  EXPECT_EQ(pipe_.Input(&buffer), ActionRequest::kReady);
 
   EXPECT_TRUE(pipe_.forwarding());
 
@@ -367,26 +367,26 @@ TEST_F(StreamCoderPipeDefaultFixture, LastWantToReadWhenNegotiating) {
 TEST_F(StreamCoderPipeDefaultFixture,
        MiddleWantToReadThenFirstRemoveWhenNegotiating) {
   EXPECT_CALL(*coder1_, Negotiate());
-  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(kWantRead));
+  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(ActionRequest::kWantRead));
   EXPECT_CALL(*coder3_, Negotiate());
 
   {
     InSequence s;
 
-    EXPECT_CALL(*coder1_, Input(_)).WillOnce(Return(kRemoveSelf));
-    EXPECT_CALL(*coder2_, Input(_)).WillOnce(Return(kReady));
+    EXPECT_CALL(*coder1_, Input(_)).WillOnce(Return(ActionRequest::kRemoveSelf));
+    EXPECT_CALL(*coder2_, Input(_)).WillOnce(Return(ActionRequest::kReady));
   }
 
   RegisterAllCoders();
 
-  EXPECT_EQ(pipe_.Negotiate(), kWantRead);
+  EXPECT_EQ(pipe_.Negotiate(), ActionRequest::kWantRead);
 
   BufferReserveSize rsize = pipe_.InputReserve();
   EXPECT_EQ(rsize.prefix(), c1_ip + c2_ip);
   EXPECT_EQ(rsize.suffix(), c1_is + c2_is);
 
   nekit::utils::Buffer buffer(10);
-  EXPECT_EQ(pipe_.Input(&buffer), kReady);
+  EXPECT_EQ(pipe_.Input(&buffer), ActionRequest::kReady);
 
   rsize = pipe_.InputReserve();
   EXPECT_EQ(rsize.prefix(), c2_ip + c3_ip);
@@ -398,24 +398,24 @@ TEST_F(StreamCoderPipeDefaultFixture,
 }
 
 TEST_F(StreamCoderPipeDefaultFixture, MultipleWantToReadWhenNegotiating) {
-  EXPECT_CALL(*coder1_, Negotiate()).WillOnce(Return(kWantRead));
+  EXPECT_CALL(*coder1_, Negotiate()).WillOnce(Return(ActionRequest::kWantRead));
   EXPECT_CALL(*coder2_, Negotiate());
-  EXPECT_CALL(*coder3_, Negotiate()).WillOnce(Return(kWantRead));
+  EXPECT_CALL(*coder3_, Negotiate()).WillOnce(Return(ActionRequest::kWantRead));
 
   {
     InSequence s;
 
-    EXPECT_CALL(*coder1_, Input(_)).WillOnce(Return(kReady));
-    EXPECT_CALL(*coder1_, Input(_)).WillOnce(Return(kContinue));
-    EXPECT_CALL(*coder2_, Input(_)).WillOnce(Return(kContinue));
-    EXPECT_CALL(*coder3_, Input(_)).WillOnce(Return(kReady));
+    EXPECT_CALL(*coder1_, Input(_)).WillOnce(Return(ActionRequest::kReady));
+    EXPECT_CALL(*coder1_, Input(_)).WillOnce(Return(ActionRequest::kContinue));
+    EXPECT_CALL(*coder2_, Input(_)).WillOnce(Return(ActionRequest::kContinue));
+    EXPECT_CALL(*coder3_, Input(_)).WillOnce(Return(ActionRequest::kReady));
   }
 
   RegisterAllCoders();
 
   EXPECT_FALSE(pipe_.forwarding());
 
-  EXPECT_EQ(pipe_.Negotiate(), kWantRead);
+  EXPECT_EQ(pipe_.Negotiate(), ActionRequest::kWantRead);
 
   EXPECT_FALSE(pipe_.forwarding());
 
@@ -424,7 +424,7 @@ TEST_F(StreamCoderPipeDefaultFixture, MultipleWantToReadWhenNegotiating) {
   EXPECT_EQ(rsize.suffix(), c1_is);
 
   nekit::utils::Buffer buffer(10);
-  EXPECT_EQ(pipe_.Input(&buffer), kWantRead);
+  EXPECT_EQ(pipe_.Input(&buffer), ActionRequest::kWantRead);
 
   EXPECT_FALSE(pipe_.forwarding());
 
@@ -432,7 +432,7 @@ TEST_F(StreamCoderPipeDefaultFixture, MultipleWantToReadWhenNegotiating) {
   EXPECT_EQ(rsize.prefix(), c1_ip + c2_ip + c3_ip);
   EXPECT_EQ(rsize.suffix(), c1_is + c2_is + c3_is);
 
-  EXPECT_EQ(pipe_.Input(&buffer), kReady);
+  EXPECT_EQ(pipe_.Input(&buffer), ActionRequest::kReady);
 
   EXPECT_TRUE(pipe_.forwarding());
 
@@ -446,8 +446,8 @@ TEST_F(StreamCoderPipeDefaultFixture, MultipleWantToReadWhenNegotiating) {
 }
 
 TEST_F(StreamCoderPipeDefaultFixture, FirstWantToWriteWhenNegotiating) {
-  EXPECT_CALL(*coder1_, Negotiate()).WillOnce(Return(kWantWrite));
-  EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(kReady));
+  EXPECT_CALL(*coder1_, Negotiate()).WillOnce(Return(ActionRequest::kWantWrite));
+  EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(ActionRequest::kReady));
   EXPECT_CALL(*coder2_, Negotiate());
   EXPECT_CALL(*coder3_, Negotiate());
 
@@ -455,7 +455,7 @@ TEST_F(StreamCoderPipeDefaultFixture, FirstWantToWriteWhenNegotiating) {
 
   EXPECT_FALSE(pipe_.forwarding());
 
-  EXPECT_EQ(pipe_.Negotiate(), kWantWrite);
+  EXPECT_EQ(pipe_.Negotiate(), ActionRequest::kWantWrite);
 
   EXPECT_FALSE(pipe_.forwarding());
 
@@ -464,7 +464,7 @@ TEST_F(StreamCoderPipeDefaultFixture, FirstWantToWriteWhenNegotiating) {
   EXPECT_EQ(rsize.suffix(), c1_os);
 
   nekit::utils::Buffer buffer(10);
-  EXPECT_EQ(pipe_.Output(&buffer), kReady);
+  EXPECT_EQ(pipe_.Output(&buffer), ActionRequest::kReady);
 
   EXPECT_TRUE(pipe_.forwarding());
 
@@ -479,21 +479,21 @@ TEST_F(StreamCoderPipeDefaultFixture, FirstWantToWriteWhenNegotiating) {
 
 TEST_F(StreamCoderPipeDefaultFixture, MiddleWantToWriteWhenNegotiating) {
   EXPECT_CALL(*coder1_, Negotiate());
-  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(kWantWrite));
+  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(ActionRequest::kWantWrite));
   EXPECT_CALL(*coder3_, Negotiate());
 
   {
     InSequence s;
 
-    EXPECT_CALL(*coder2_, Output(_)).WillOnce(Return(kReady));
-    EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(kContinue));
+    EXPECT_CALL(*coder2_, Output(_)).WillOnce(Return(ActionRequest::kReady));
+    EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(ActionRequest::kContinue));
   }
 
   RegisterAllCoders();
 
   EXPECT_FALSE(pipe_.forwarding());
 
-  EXPECT_EQ(pipe_.Negotiate(), kWantWrite);
+  EXPECT_EQ(pipe_.Negotiate(), ActionRequest::kWantWrite);
 
   EXPECT_FALSE(pipe_.forwarding());
 
@@ -502,7 +502,7 @@ TEST_F(StreamCoderPipeDefaultFixture, MiddleWantToWriteWhenNegotiating) {
   EXPECT_EQ(rsize.suffix(), c1_os + c2_os);
 
   nekit::utils::Buffer buffer(10);
-  EXPECT_EQ(pipe_.Output(&buffer), kReady);
+  EXPECT_EQ(pipe_.Output(&buffer), ActionRequest::kReady);
 
   EXPECT_TRUE(pipe_.forwarding());
 
@@ -518,21 +518,21 @@ TEST_F(StreamCoderPipeDefaultFixture, MiddleWantToWriteWhenNegotiating) {
 TEST_F(StreamCoderPipeDefaultFixture, LastWantToWriteWhenNegotiating) {
   EXPECT_CALL(*coder1_, Negotiate());
   EXPECT_CALL(*coder2_, Negotiate());
-  EXPECT_CALL(*coder3_, Negotiate()).WillOnce(Return(kWantWrite));
+  EXPECT_CALL(*coder3_, Negotiate()).WillOnce(Return(ActionRequest::kWantWrite));
 
   {
     InSequence s;
 
-    EXPECT_CALL(*coder3_, Output(_)).WillOnce(Return(kReady));
-    EXPECT_CALL(*coder2_, Output(_)).WillOnce(Return(kContinue));
-    EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(kContinue));
+    EXPECT_CALL(*coder3_, Output(_)).WillOnce(Return(ActionRequest::kReady));
+    EXPECT_CALL(*coder2_, Output(_)).WillOnce(Return(ActionRequest::kContinue));
+    EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(ActionRequest::kContinue));
   }
 
   RegisterAllCoders();
 
   EXPECT_FALSE(pipe_.forwarding());
 
-  EXPECT_EQ(pipe_.Negotiate(), kWantWrite);
+  EXPECT_EQ(pipe_.Negotiate(), ActionRequest::kWantWrite);
 
   EXPECT_FALSE(pipe_.forwarding());
 
@@ -541,7 +541,7 @@ TEST_F(StreamCoderPipeDefaultFixture, LastWantToWriteWhenNegotiating) {
   EXPECT_EQ(rsize.suffix(), c1_os + c2_os + c3_os);
 
   nekit::utils::Buffer buffer(10);
-  EXPECT_EQ(pipe_.Output(&buffer), kReady);
+  EXPECT_EQ(pipe_.Output(&buffer), ActionRequest::kReady);
 
   EXPECT_TRUE(pipe_.forwarding());
 
@@ -557,21 +557,21 @@ TEST_F(StreamCoderPipeDefaultFixture, LastWantToWriteWhenNegotiating) {
 TEST_F(StreamCoderPipeDefaultFixture,
        MiddleWantToWriteThenFirstRemoveWhenNegotiating) {
   EXPECT_CALL(*coder1_, Negotiate());
-  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(kWantWrite));
+  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(ActionRequest::kWantWrite));
   EXPECT_CALL(*coder3_, Negotiate());
 
   {
     InSequence s;
 
-    EXPECT_CALL(*coder2_, Output(_)).WillOnce(Return(kReady));
-    EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(kRemoveSelf));
+    EXPECT_CALL(*coder2_, Output(_)).WillOnce(Return(ActionRequest::kReady));
+    EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(ActionRequest::kRemoveSelf));
   }
 
   RegisterAllCoders();
 
   EXPECT_FALSE(pipe_.forwarding());
 
-  EXPECT_EQ(pipe_.Negotiate(), kWantWrite);
+  EXPECT_EQ(pipe_.Negotiate(), ActionRequest::kWantWrite);
 
   EXPECT_FALSE(pipe_.forwarding());
 
@@ -580,7 +580,7 @@ TEST_F(StreamCoderPipeDefaultFixture,
   EXPECT_EQ(rsize.suffix(), c1_os + c2_os);
 
   nekit::utils::Buffer buffer(10);
-  EXPECT_EQ(pipe_.Output(&buffer), kReady);
+  EXPECT_EQ(pipe_.Output(&buffer), ActionRequest::kReady);
 
   EXPECT_TRUE(pipe_.forwarding());
 
@@ -594,24 +594,24 @@ TEST_F(StreamCoderPipeDefaultFixture,
 }
 
 TEST_F(StreamCoderPipeDefaultFixture, MultipleWantToWriteWhenNegotiating) {
-  EXPECT_CALL(*coder1_, Negotiate()).WillOnce(Return(kWantWrite));
+  EXPECT_CALL(*coder1_, Negotiate()).WillOnce(Return(ActionRequest::kWantWrite));
   EXPECT_CALL(*coder2_, Negotiate());
-  EXPECT_CALL(*coder3_, Negotiate()).WillOnce(Return(kWantWrite));
+  EXPECT_CALL(*coder3_, Negotiate()).WillOnce(Return(ActionRequest::kWantWrite));
 
   {
     InSequence s;
 
-    EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(kReady));
-    EXPECT_CALL(*coder3_, Output(_)).WillOnce(Return(kReady));
-    EXPECT_CALL(*coder2_, Output(_)).WillOnce(Return(kContinue));
-    EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(kContinue));
+    EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(ActionRequest::kReady));
+    EXPECT_CALL(*coder3_, Output(_)).WillOnce(Return(ActionRequest::kReady));
+    EXPECT_CALL(*coder2_, Output(_)).WillOnce(Return(ActionRequest::kContinue));
+    EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(ActionRequest::kContinue));
   }
 
   RegisterAllCoders();
 
   EXPECT_FALSE(pipe_.forwarding());
 
-  EXPECT_EQ(pipe_.Negotiate(), kWantWrite);
+  EXPECT_EQ(pipe_.Negotiate(), ActionRequest::kWantWrite);
 
   EXPECT_FALSE(pipe_.forwarding());
 
@@ -620,7 +620,7 @@ TEST_F(StreamCoderPipeDefaultFixture, MultipleWantToWriteWhenNegotiating) {
   EXPECT_EQ(rsize.suffix(), c1_os);
 
   nekit::utils::Buffer buffer(10);
-  EXPECT_EQ(pipe_.Output(&buffer), kWantWrite);
+  EXPECT_EQ(pipe_.Output(&buffer), ActionRequest::kWantWrite);
 
   EXPECT_FALSE(pipe_.forwarding());
 
@@ -628,7 +628,7 @@ TEST_F(StreamCoderPipeDefaultFixture, MultipleWantToWriteWhenNegotiating) {
   EXPECT_EQ(rsize.prefix(), c1_op + c2_op + c3_op);
   EXPECT_EQ(rsize.suffix(), c1_os + c2_os + c3_os);
 
-  EXPECT_EQ(pipe_.Output(&buffer), kReady);
+  EXPECT_EQ(pipe_.Output(&buffer), ActionRequest::kReady);
 
   EXPECT_TRUE(pipe_.forwarding());
 
@@ -643,7 +643,7 @@ TEST_F(StreamCoderPipeDefaultFixture, MultipleWantToWriteWhenNegotiating) {
 
 TEST_F(StreamCoderPipeDefaultFixture, ReturnErrorWhenInternalCoderReturnError) {
   EXPECT_CALL(*coder1_, Negotiate());
-  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(kErrorHappened));
+  EXPECT_CALL(*coder2_, Negotiate()).WillOnce(Return(ActionRequest::kErrorHappened));
   EXPECT_CALL(*coder2_, GetLatestError())
       .WillOnce(Return(std::make_error_code(kError)));
 
@@ -651,7 +651,7 @@ TEST_F(StreamCoderPipeDefaultFixture, ReturnErrorWhenInternalCoderReturnError) {
 
   EXPECT_FALSE(pipe_.forwarding());
 
-  EXPECT_EQ(pipe_.Negotiate(), kErrorHappened);
+  EXPECT_EQ(pipe_.Negotiate(), ActionRequest::kErrorHappened);
 
   EXPECT_FALSE(pipe_.forwarding());
 
@@ -667,24 +667,24 @@ TEST_F(StreamCoderPipeDefaultFixture, Forwarding) {
   {
     InSequence s;
 
-    EXPECT_CALL(*coder3_, Output(_)).WillOnce(Return(kContinue));
-    EXPECT_CALL(*coder2_, Output(_)).WillOnce(Return(kContinue));
-    EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(kContinue));
+    EXPECT_CALL(*coder3_, Output(_)).WillOnce(Return(ActionRequest::kContinue));
+    EXPECT_CALL(*coder2_, Output(_)).WillOnce(Return(ActionRequest::kContinue));
+    EXPECT_CALL(*coder1_, Output(_)).WillOnce(Return(ActionRequest::kContinue));
   }
 
   {
     InSequence s;
 
-    EXPECT_CALL(*coder1_, Input(_)).WillOnce(Return(kContinue));
-    EXPECT_CALL(*coder2_, Input(_)).WillOnce(Return(kContinue));
-    EXPECT_CALL(*coder3_, Input(_)).WillOnce(Return(kContinue));
+    EXPECT_CALL(*coder1_, Input(_)).WillOnce(Return(ActionRequest::kContinue));
+    EXPECT_CALL(*coder2_, Input(_)).WillOnce(Return(ActionRequest::kContinue));
+    EXPECT_CALL(*coder3_, Input(_)).WillOnce(Return(ActionRequest::kContinue));
   }
 
   RegisterAllCoders();
 
   EXPECT_FALSE(pipe_.forwarding());
 
-  EXPECT_EQ(pipe_.Negotiate(), kReady);
+  EXPECT_EQ(pipe_.Negotiate(), ActionRequest::kReady);
 
   EXPECT_TRUE(pipe_.forwarding());
 
@@ -697,6 +697,6 @@ TEST_F(StreamCoderPipeDefaultFixture, Forwarding) {
   EXPECT_EQ(rsize.suffix(), c1_os + c2_os + c3_os);
 
   nekit::utils::Buffer buffer(10);
-  EXPECT_EQ(pipe_.Input(&buffer), kContinue);
-  EXPECT_EQ(pipe_.Output(&buffer), kContinue);
+  EXPECT_EQ(pipe_.Input(&buffer), ActionRequest::kContinue);
+  EXPECT_EQ(pipe_.Output(&buffer), ActionRequest::kContinue);
 }
