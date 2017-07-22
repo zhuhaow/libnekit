@@ -1,6 +1,7 @@
 #include <cassert>
 
 #include "nekit/transport/tcp_socket.h"
+#include "nekit/utils/auto.h"
 
 namespace nekit {
 namespace transport {
@@ -16,25 +17,28 @@ void TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
       boost::asio::mutable_buffers_1(buffer->buffer(), buffer->capacity()),
       [this](const boost::system::error_code &ec,
              std::size_t bytes_transferred) mutable {
+
+        Auto(this->read_buffer_ = nullptr;
+             this->read_handler_ = TransportInterface::EventHandler(););
+
         if (ec) {
+          if (ec.category() == boost::asio::error::system_category &&
+              ec.value() ==
+                  boost::asio::error::basic_errors::operation_aborted) {
+            return;
+          }
+
           auto error = ConvertBoostError(ec);
-          if (error == TcpSocketError::kEOF) {
+          if (error == ErrorCode::EndOfFile) {
             this->read_closed_ = true;
           }
           this->read_handler_(std::move(this->read_buffer_), error);
-
-          this->read_buffer_ = nullptr;
-          this->read_handler_ = TransportInterface::EventHandler();
           return;
         }
 
         this->read_buffer_->ReserveBack(this->read_buffer_->capacity() -
                                         bytes_transferred);
-        this->read_handler_(std::move(this->read_buffer_),
-                            TcpSocketError::kNoError);
-
-        this->read_buffer_ = nullptr;
-        this->read_handler_ = TransportInterface::EventHandler();
+        this->read_handler_(std::move(this->read_buffer_), ErrorCode::NoError);
         return;
       });
 };
@@ -50,20 +54,23 @@ void TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
              std::size_t bytes_transferred) mutable {
         assert(bytes_transferred == this->write_buffer_->capacity());
 
+        Auto(this->write_buffer_ = nullptr;
+             this->write_handler_ = TransportInterface::EventHandler(););
+
         if (ec) {
+          if (ec.category() == boost::asio::error::system_category &&
+              ec.value() ==
+                  boost::asio::error::basic_errors::operation_aborted) {
+            return;
+          }
+
           this->write_handler_(std::move(this->write_buffer_),
                                ConvertBoostError(ec));
-
-          this->write_buffer_ = nullptr;
-          this->write_handler_ = TransportInterface::EventHandler();
           return;
         }
 
         this->write_handler_(std::move(this->write_buffer_),
-                             TcpSocketError::kNoError);
-
-        this->write_buffer_ = nullptr;
-        this->write_handler_ = TransportInterface::EventHandler();
+                             ErrorCode::NoError);
         return;
       });
 }
@@ -113,11 +120,32 @@ utils::Endpoint TcpSocket::remoteEndpoint() const {
   return endpoint;
 }
 
-TcpSocket::TcpSocketError TcpSocket::ConvertBoostError(
+TcpSocket::ErrorCode TcpSocket::ConvertBoostError(
     const boost::system::error_code &ec) const {
-  (void)ec;
-  return TcpSocketError::kUnknownError;
-}
+  if (ec.category() == boost::asio::error::system_category) {
+    switch (ec.value()) {
+      case boost::asio::error::basic_errors::connection_aborted:
+        return ErrorCode::ConnectionAborted;
+      case boost::asio::error::basic_errors::connection_reset:
+        return ErrorCode::ConnectionReset;
+      case boost::asio::error::basic_errors::host_unreachable:
+        return ErrorCode::HostUnreachable;
+      case boost::asio::error::basic_errors::network_down:
+        return ErrorCode::NetworkDown;
+      case boost::asio::error::basic_errors::network_reset:
+        return ErrorCode::NetworkReset;
+      case boost::asio::error::basic_errors::network_unreachable:
+        return ErrorCode::NetworkUnreachable;
+      case boost::asio::error::basic_errors::timed_out:
+        return ErrorCode::TimedOut;
+    }
+  } else if (ec.category() == boost::asio::error::misc_category) {
+    if (ec.value() == boost::asio::error::misc_errors::eof) {
+      return ErrorCode::EndOfFile;
+    }
+  }
+  return ErrorCode::UnknownError;
+}  // namespace transport
 
 namespace {
 struct TcpSocketErrorCategory : std::error_category {
@@ -129,13 +157,36 @@ const char *TcpSocketErrorCategory::name() const noexcept {
   return "TCP socket";
 }
 
-std::string TcpSocketErrorCategory::message(int ev) const { return ""; }
+std::string TcpSocketErrorCategory::message(int ev) const {
+  switch (static_cast<TcpSocket::ErrorCode>(ev)) {
+    case TcpSocket::ErrorCode::NoError:
+      return "no error";
+    case TcpSocket::ErrorCode::ConnectionAborted:
+      return "connection aborted";
+    case TcpSocket::ErrorCode::ConnectionReset:
+      return "connection reset";
+    case TcpSocket::ErrorCode::HostUnreachable:
+      return "host unreachable";
+    case TcpSocket::ErrorCode::NetworkDown:
+      return "network down";
+    case TcpSocket::ErrorCode::NetworkReset:
+      return "network reset";
+    case TcpSocket::ErrorCode::NetworkUnreachable:
+      return "network unreachable";
+    case TcpSocket::ErrorCode::TimedOut:
+      return "timeout";
+    case TcpSocket::ErrorCode::EndOfFile:
+      return "end of file";
+    case TcpSocket::ErrorCode::UnknownError:
+      return "unknown error";
+  }
+}
 
 const TcpSocketErrorCategory tcpSocketErrorCategory{};
 
 }  // namespace
 
-std::error_code make_error_code(TcpSocket::TcpSocketError e) {
+std::error_code make_error_code(TcpSocket::ErrorCode e) {
   return {static_cast<int>(e), tcpSocketErrorCategory};
 }
 }  // namespace transport

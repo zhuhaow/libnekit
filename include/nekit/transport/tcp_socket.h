@@ -37,7 +37,18 @@ namespace transport {
 
 class TcpSocket final : public ConnectionInterface, private boost::noncopyable {
  public:
-  enum class TcpSocketError { kNoError = 0, kEOF, kUnknownError };
+  enum class ErrorCode {
+    NoError = 0,
+    ConnectionAborted,
+    ConnectionReset,
+    HostUnreachable,
+    NetworkDown,
+    NetworkReset,
+    NetworkUnreachable,
+    TimedOut,
+    EndOfFile,
+    UnknownError
+  };
 
   ~TcpSocket() = default;
 
@@ -59,7 +70,7 @@ class TcpSocket final : public ConnectionInterface, private boost::noncopyable {
 
  private:
   TcpSocket(boost::asio::ip::tcp::socket&& socket);
-  TcpSocketError ConvertBoostError(const boost::system::error_code&) const;
+  ErrorCode ConvertBoostError(const boost::system::error_code&) const;
 
   boost::asio::ip::tcp::socket socket_;
   bool read_closed_{false}, write_closed_{false};
@@ -67,13 +78,13 @@ class TcpSocket final : public ConnectionInterface, private boost::noncopyable {
   TransportInterface::EventHandler read_handler_, write_handler_;
 };
 
-std::error_code make_error_code(TcpSocket::TcpSocketError e);
+std::error_code make_error_code(TcpSocket::ErrorCode e);
 
 }  // namespace transport
 }  // namespace nekit
 
 namespace std {
 template <>
-struct is_error_code_enum<nekit::transport::TcpSocket::TcpSocketError>
-    : true_type {};
+struct is_error_code_enum<nekit::transport::TcpSocket::ErrorCode> : true_type {
+};
 }  // namespace std
