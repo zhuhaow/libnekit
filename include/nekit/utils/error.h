@@ -27,7 +27,7 @@
 namespace nekit {
 namespace utils {
 
-typedef std::error_code Error;
+using Error = std::error_code;
 
 }  // namespace utils
 }  // namespace nekit
