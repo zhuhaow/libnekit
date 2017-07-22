@@ -31,6 +31,11 @@ if(HAS_PEDANTIC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic")
 endif()
 
+check_cxx_compiler_flag(-Wno-pragma-once-outside-header HAS_PRAGMA_ONCE_WARNING)
+if(HAS_PRAGMA_ONCE_WARNING)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-pragma-once-outside-header")
+endif()
+
 option(COVERAGE "Generate coverage report" OFF)
 if(COVERAGE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 --coverage")

@@ -20,8 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef NEKIT_UTILS_ENDPOINT
-#define NEKIT_UTILS_ENDPOINT
+#pragma once
 
 #include <boost/asio.hpp>
 
@@ -30,5 +29,3 @@ namespace utils {
 using Endpoint = boost::asio::ip::tcp::endpoint;
 }
 }  // namespace nekit
-
-#endif /* NEKIT_UTILS_ENDPOINT */

@@ -20,8 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef NEKIT_TRANSPORT_LISTENER_INTERFACE
-#define NEKIT_TRANSPORT_LISTENER_INTERFACE
+#pragma once
 
 #include <functional>
 #include <memory>
@@ -41,5 +40,3 @@ class ListenerInterface {
 };
 }  // namespace transport
 }  // namespace nekit
-
-#endif /* NEKIT_TRANSPORT_LISTENER_INTERFACE */

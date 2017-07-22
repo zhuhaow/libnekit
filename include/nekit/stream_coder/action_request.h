@@ -20,8 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef NEKIT_STREAM_CODER_ACTION_REQUEST
-#define NEKIT_STREAM_CODER_ACTION_REQUEST
+#pragma once
 
 namespace nekit {
 namespace stream_coder {
@@ -41,5 +40,3 @@ enum class ActionRequest {
 };
 }
 }  // namespace nekit
-
-#endif /* NEKIT_STREAM_CODER_ACTION_REQUEST */

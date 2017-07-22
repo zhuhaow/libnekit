@@ -20,8 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef NEKIT_TEST_STREAM_CODER_MOCK_STREAM_CODER
-#define NEKIT_TEST_STREAM_CODER_MOCK_STREAM_CODER
+#pragma once
 
 #include <gmock/gmock.h>
 
@@ -57,4 +56,3 @@ class MockStreamCoder : public StreamCoderInterface {
 
 }  // namespace stream_coder
 }  // namespace nekit
-#endif /* NEKIT_TEST_STREAM_CODER_MOCK_STREAM_CODER */

@@ -20,8 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef NEKIT_TRANSPORT_TRANSPORT_INTERFACE
-#define NEKIT_TRANSPORT_TRANSPORT_INTERFACE
+#pragma once
 
 #include <functional>
 #include <memory>
@@ -51,5 +50,3 @@ class TransportInterface {
 };
 }  // namespace transport
 }  // namespace nekit
-
-#endif /* NEKIT_TRANSPORT_TRANSPORT_INTERFACE */

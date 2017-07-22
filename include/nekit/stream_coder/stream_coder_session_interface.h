@@ -20,8 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef NEKIT_UTILS_STREAM_CODER_SESSION_INTERFACE
-#define NEKIT_UTILS_STREAM_CODER_SESSION_INTERFACE
+#pragma once
 
 #include <memory>
 
@@ -39,5 +38,3 @@ class StreamCoderSessionInterface : public StreamCoderInterface {
 };
 }  // namespace stream_coder
 }  // namespace nekit
-
-#endif /* NEKIT_UTILS_STREAM_CODER_SESSION_INTERFACE */

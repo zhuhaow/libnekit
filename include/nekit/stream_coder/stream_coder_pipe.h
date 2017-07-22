@@ -20,8 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef NEKIT_STREAM_CODER_STREAM_CODER_PIPE
-#define NEKIT_STREAM_CODER_STREAM_CODER_PIPE
+#pragma once
 
 #include <memory>
 #include <system_error>
@@ -77,4 +76,3 @@ struct is_error_code_enum<nekit::stream_coder::StreamCoderPipe::ErrorCode>
 error_code make_error_code(
     nekit::stream_coder::StreamCoderPipe::ErrorCode errc);
 }  // namespace std
-#endif /* NEKIT_STREAM_CODER_STREAM_CODER_PIPE */

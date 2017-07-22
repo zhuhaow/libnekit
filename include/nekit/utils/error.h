@@ -20,8 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef NEKIT_UTILS_ERROR
-#define NEKIT_UTILS_ERROR
+#pragma once
 
 #include <system_error>
 
@@ -32,5 +31,3 @@ typedef std::error_code Error;
 
 }  // namespace utils
 }  // namespace nekit
-
-#endif /* NEKIT_UTILS_ERROR */

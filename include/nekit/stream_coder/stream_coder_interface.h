@@ -20,8 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef NEKIT_STREAM_CODER_STREAM_CODER_INTERFACE
-#define NEKIT_STREAM_CODER_STREAM_CODER_INTERFACE
+#pragma once
 
 #include <boost/noncopyable.hpp>
 
@@ -52,5 +51,3 @@ class StreamCoderInterface : boost::noncopyable {
 
 }  // namespace stream_coder
 }  // namespace nekit
-
-#endif /* NEKIT_STREAM_CODER_STREAM_CODER_INTERFACE */

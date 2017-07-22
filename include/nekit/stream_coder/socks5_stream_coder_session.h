@@ -20,8 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef NEKIT_STREAM_CODER_SOCKS5_STREAM_CODER_SESSION
-#define NEKIT_STREAM_CODER_SOCKS5_STREAM_CODER_SESSION
+#pragma once
 
 #include <array>
 
@@ -84,4 +83,3 @@ struct is_error_code_enum<
 error_code make_error_code(
     nekit::stream_coder::SOCKS5StreamCoderSession::ErrorCode errc);
 }  // namespace std
-#endif /* NEKIT_STREAM_CODER_SOCKS5_STREAM_CODER_SESSION */

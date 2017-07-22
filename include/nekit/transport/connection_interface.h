@@ -20,8 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef NEKIT_TRANSPORT_CONNECTION_INTERFACE
-#define NEKIT_TRANSPORT_CONNECTION_INTERFACE
+#pragma once
 
 #include "../utils/endpoint.h"
 #include "transport_interface.h"
@@ -35,5 +34,3 @@ class ConnectionInterface : public TransportInterface {
 };
 }  // namespace transport
 }  // namespace nekit
-
-#endif /* NEKIT_TRANSPORT_CONNECTION_INTERFACE */

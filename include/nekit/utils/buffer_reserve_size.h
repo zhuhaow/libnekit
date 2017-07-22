@@ -20,8 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef NEKIT_UTILS_BUFFER_RESERVE_SIZE
-#define NEKIT_UTILS_BUFFER_RESERVE_SIZE
+#pragma once
 
 #include <cstddef>
 
@@ -53,5 +52,3 @@ struct BufferReserveSize {
 };
 }  // namespace utils
 }  // namespace nekit
-
-#endif /* NEKIT_UTILS_BUFFER_RESERVE_SIZE */

@@ -20,8 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef NEKIT_TRANSPORT_TCP_SOCKET
-#define NEKIT_TRANSPORT_TCP_SOCKET
+#pragma once
 
 #include <functional>
 #include <system_error>
@@ -78,5 +77,3 @@ template <>
 struct is_error_code_enum<nekit::transport::TcpSocket::TcpSocketError>
     : true_type {};
 }  // namespace std
-
-#endif /* NEKIT_TRANSPORT_TCP_SOCKET */

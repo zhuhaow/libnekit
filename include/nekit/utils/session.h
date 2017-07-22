@@ -20,8 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef NEKIT_UTILS_SESSION
-#define NEKIT_UTILS_SESSION
+#pragma once
 
 #include <string>
 
@@ -40,5 +39,3 @@ struct Session {
 };
 }  // namespace utils
 }  // namespace nekit
-
-#endif /* NEKIT_UTILS_SESSION */

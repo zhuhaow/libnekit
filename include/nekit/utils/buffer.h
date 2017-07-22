@@ -20,8 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef NEKIT_UTILS_BUFFER
-#define NEKIT_UTILS_BUFFER
+#pragma once
 
 #include <cstddef>
 #include <cstdint>
@@ -105,5 +104,3 @@ struct Buffer final : public boost::noncopyable {
 };
 }  // namespace utils
 }  // namespace nekit
-
-#endif /* NEKIT_UTILS_BUFFER */
