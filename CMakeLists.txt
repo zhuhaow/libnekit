@@ -11,6 +11,9 @@ set(PLATFORM "" CACHE STRING "Name of the platform.")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 include(CheckCXXCompilerFlag)
 
 check_cxx_compiler_flag(-Wall HAS_WALL)
@@ -52,14 +55,10 @@ endif()
 set(SOURCES
   src/stream_coder/stream_coder_pipe.cc
   src/stream_coder/socks5_stream_coder_session.cc
-  src/utils/boost_tcp_socket.cc
-  src/utils/tcp_socket_interface.cc
+  src/transport/tcp_socket.cc
   )
 
 add_library(nekit ${SOURCES})
-target_compile_features(nekit PUBLIC cxx_lambdas)
-target_compile_features(nekit PUBLIC cxx_decltype)
-target_compile_features(nekit PUBLIC cxx_auto_type)
 
 find_library(BOOST boost 
   NO_SYSTEM_ENVIROMENT_PATH)
