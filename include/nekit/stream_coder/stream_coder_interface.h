@@ -22,11 +22,12 @@
 
 #pragma once
 
+#include <system_error>
+
 #include <boost/noncopyable.hpp>
 
 #include "../utils/buffer.h"
 #include "../utils/buffer_reserve_size.h"
-#include "../utils/error.h"
 #include "action_request.h"
 
 namespace nekit {
@@ -44,7 +45,7 @@ class StreamCoderInterface : boost::noncopyable {
   virtual utils::BufferReserveSize OutputReserve() const = 0;
   virtual ActionRequest Output(utils::Buffer* buffer) = 0;
 
-  virtual utils::Error GetLatestError() const = 0;
+  virtual std::error_code GetLatestError() const = 0;
 
   virtual bool forwarding() const = 0;
 };

@@ -23,8 +23,8 @@
 #pragma once
 
 #include <array>
+#include <system_error>
 
-#include "../utils/error.h"
 #include "stream_coder_session_interface.h"
 
 namespace nekit {
@@ -58,18 +58,18 @@ class SOCKS5StreamCoderSession final : public StreamCoderSessionInterface {
   utils::BufferReserveSize OutputReserve() const;
   ActionRequest Output(utils::Buffer* buffer);
 
-  utils::Error GetLatestError() const;
+  std::error_code GetLatestError() const;
 
   bool forwarding() const;
 
-  ActionRequest Continue(utils::Error error);
+  ActionRequest Continue(std::error_code error);
 
  private:
   enum Status { kReadingVersion, kReadingRequest, kForwarding };
 
   Status status_;
   std::shared_ptr<utils::Session> session_;
-  utils::Error last_error_;
+  std::error_code last_error_;
 };
 }  // namespace stream_coder
 }  // namespace nekit

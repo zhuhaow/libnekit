@@ -23,8 +23,8 @@
 #pragma once
 
 #include <memory>
+#include <system_error>
 
-#include "../utils/error.h"
 #include "../utils/session.h"
 #include "stream_coder_interface.h"
 
@@ -34,7 +34,7 @@ class StreamCoderSessionInterface : public StreamCoderInterface {
  public:
   virtual ~StreamCoderSessionInterface() {}
 
-  virtual ActionRequest Continue(utils::Error error) = 0;
+  virtual ActionRequest Continue(std::error_code error) = 0;
 };
 }  // namespace stream_coder
 }  // namespace nekit

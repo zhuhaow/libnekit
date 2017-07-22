@@ -245,7 +245,7 @@ ActionRequest SOCKS5StreamCoderSession::Output(utils::Buffer *buffer) {
   }
 }
 
-utils::Error SOCKS5StreamCoderSession::GetLatestError() const {
+std::error_code SOCKS5StreamCoderSession::GetLatestError() const {
   return last_error_;
 }
 
@@ -253,7 +253,7 @@ bool SOCKS5StreamCoderSession::forwarding() const {
   return status_ == kForwarding;
 }
 
-ActionRequest SOCKS5StreamCoderSession::Continue(utils::Error error) {
+ActionRequest SOCKS5StreamCoderSession::Continue(std::error_code error) {
   if (error) {
     last_error_ = error;
     return ActionRequest::kErrorHappened;
