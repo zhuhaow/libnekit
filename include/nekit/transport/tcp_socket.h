@@ -74,6 +74,9 @@ class TcpSocket final : public ConnectionInterface, private boost::noncopyable {
 
   boost::asio::ip::tcp::socket socket_;
   bool read_closed_{false}, write_closed_{false};
+
+  // Due to boost limit, the callback handler must be copyable, thus we have to
+  // keep them here.
   std::unique_ptr<utils::Buffer> read_buffer_, write_buffer_;
   TransportInterface::EventHandler read_handler_, write_handler_;
 };
