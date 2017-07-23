@@ -85,7 +85,4 @@ namespace std {
 template <>
 struct is_error_code_enum<nekit::stream_coder::StreamCoderPipe::ErrorCode>
     : public true_type {};
-
-error_code make_error_code(
-    nekit::stream_coder::StreamCoderPipe::ErrorCode errc);
 }  // namespace std
