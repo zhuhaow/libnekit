@@ -35,17 +35,17 @@ namespace stream_coder {
 
 class StreamCoderInterface : boost::noncopyable {
  public:
-  virtual ~StreamCoderInterface() {}
+  virtual ~StreamCoderInterface() = default;
 
   virtual ActionRequest Negotiate() = 0;
 
-  virtual utils::BufferReserveSize InputReserve() const = 0;
-  virtual ActionRequest Input(utils::Buffer* buffer) = 0;
+  virtual utils::BufferReserveSize EncodeReserve() const = 0;
+  virtual ActionRequest Encode(utils::Buffer* buffer) = 0;
 
-  virtual utils::BufferReserveSize OutputReserve() const = 0;
-  virtual ActionRequest Output(utils::Buffer* buffer) = 0;
+  virtual utils::BufferReserveSize DecodeReserve() const = 0;
+  virtual ActionRequest Decode(utils::Buffer* buffer) = 0;
 
-  virtual std::error_code GetLatestError() const = 0;
+  virtual std::error_code GetLastError() const = 0;
 
   virtual bool forwarding() const = 0;
 };

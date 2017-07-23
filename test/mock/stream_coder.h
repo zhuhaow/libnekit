@@ -46,11 +46,11 @@ class MockStreamCoder : public StreamCoderInterface {
   virtual ~MockStreamCoder() { Die(); }
 
   MOCK_METHOD0(Negotiate, ActionRequest());
-  MOCK_CONST_METHOD0(InputReserve, utils::BufferReserveSize());
-  MOCK_METHOD1(Input, ActionRequest(utils::Buffer* buffer));
-  MOCK_CONST_METHOD0(OutputReserve, utils::BufferReserveSize());
-  MOCK_METHOD1(Output, ActionRequest(utils::Buffer* buffer));
-  MOCK_CONST_METHOD0(GetLatestError, utils::Error());
+  MOCK_CONST_METHOD0(EncodeReserve, utils::BufferReserveSize());
+  MOCK_METHOD1(Encode, ActionRequest(utils::Buffer* buffer));
+  MOCK_CONST_METHOD0(DecodeReserve, utils::BufferReserveSize());
+  MOCK_METHOD1(Decode, ActionRequest(utils::Buffer* buffer));
+  MOCK_CONST_METHOD0(GetLatestError, std::error_code());
   MOCK_CONST_METHOD0(forwarding, bool());
 };
 

@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <list>
 #include <memory>
 #include <system_error>
 
@@ -34,35 +35,47 @@ namespace stream_coder {
 
 class StreamCoderPipe final : public StreamCoderInterface {
  public:
-  enum ErrorCode { kNoCoder = 1 };
+  enum class ErrorCode { NoError = 0, NoCoder };
 
-  class ErrorCategory final : public std::error_category {
-    const char* name() const BOOST_NOEXCEPT override;
-    std::string message(int error_code) const override;
-  };
+  using StreamCoderIterator =
+      std::list<std::unique_ptr<StreamCoderInterface>>::iterator;
 
-  const static ErrorCategory& error_category();
+  using StreamCoderConstIterator =
+      std::list<std::unique_ptr<StreamCoderInterface>>::const_iterator;
 
   StreamCoderPipe();
-  ~StreamCoderPipe();
+  ~StreamCoderPipe() = default;
 
   void AppendStreamCoder(std::unique_ptr<StreamCoderInterface>&& stream_coder);
 
   ActionRequest Negotiate() override;
 
-  utils::BufferReserveSize InputReserve() const override;
-  ActionRequest Input(utils::Buffer* buffer) override;
+  utils::BufferReserveSize EncodeReserve() const override;
+  ActionRequest Encode(utils::Buffer* buffer) override;
 
-  utils::BufferReserveSize OutputReserve() const override;
-  ActionRequest Output(utils::Buffer* buffer) override;
+  utils::BufferReserveSize DecodeReserve() const override;
+  ActionRequest Decode(utils::Buffer* buffer) override;
 
-  utils::Error GetLatestError() const override;
+  std::error_code GetLastError() const override;
 
   bool forwarding() const override;
 
  private:
-  struct Impl;
-  std::unique_ptr<Impl> impl_;
+  enum class Phase { Invalid, Negotiating, Forwarding, Closed };
+
+  ActionRequest NegotiateNextCoder();
+  bool VerifyNonEmpty();
+  StreamCoderConstIterator FindTailIterator() const;
+  StreamCoderIterator FindTailIterator();
+  ActionRequest EncodeForNegotiation(utils::Buffer* buffer);
+  ActionRequest EncodeForForward(utils::Buffer* buffer);
+  ActionRequest DecodeForNegotiation(utils::Buffer* buffer);
+  ActionRequest DecodeForForward(utils::Buffer* buffer);
+
+  std::list<std::unique_ptr<StreamCoderInterface>> list_;
+  StreamCoderIterator active_coder_;
+  std::error_code last_error_;
+  Phase status_;
 };
 
 }  // namespace stream_coder
@@ -71,7 +84,7 @@ class StreamCoderPipe final : public StreamCoderInterface {
 namespace std {
 template <>
 struct is_error_code_enum<nekit::stream_coder::StreamCoderPipe::ErrorCode>
-    : public std::true_type {};
+    : public true_type {};
 
 error_code make_error_code(
     nekit::stream_coder::StreamCoderPipe::ErrorCode errc);

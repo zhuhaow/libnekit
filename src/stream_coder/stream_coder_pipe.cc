@@ -7,382 +7,340 @@
 namespace nekit {
 namespace stream_coder {
 
-struct StreamCoderPipe::Impl {
- public:
-  typedef std::list<std::unique_ptr<StreamCoderInterface>>::iterator
-      StreamCoderIterator;
-  typedef std::list<std::unique_ptr<StreamCoderInterface>>::const_iterator
-      StreamCoderConstIterator;
-
-  Impl() : status_{Phase::kInvalid} {}
-
-  void AppendStreamCoder(std::unique_ptr<StreamCoderInterface>&& stream_coder) {
-    assert(status_ == Phase::kInvalid);
-
-    list_.push_back(std::move(stream_coder));
-  }
-
-  utils::Error GetLatestError() const { return last_error_; }
-
-  ActionRequest Negotiate() {
-    assert(status_ == Phase::kInvalid);
-
-    if (!VerifyNonEmpty()) {
-      return ActionRequest::kErrorHappened;
-    }
-
-    active_coder_ = list_.begin();
-    status_ = Phase::kNegotiating;
-
-    return NegotiateNextCoder();
-  }
-
-  utils::BufferReserveSize InputReserve() const {
-    utils::BufferReserveSize reserve{0, 0};
-
-    auto tail = FindTailIterator();
-
-    for (auto iter = list_.begin(); iter != tail; ++iter) {
-      reserve += (*iter)->InputReserve();
-    }
-
-    return reserve;
-  }
-
-  ActionRequest Input(utils::Buffer* buffer) {
-    if (!VerifyNonEmpty()) {
-      return ActionRequest::kErrorHappened;
-    }
-
-    switch (status_) {
-      case Phase::kForwarding:
-        return InputForForward(buffer);
-      case Phase::kNegotiating:
-        return InputForNegotiation(buffer);
-      default:
-        assert(false);  // not reachable
-    }
-  }
-
-  utils::BufferReserveSize OutputReserve() const {
-    utils::BufferReserveSize reserve{0, 0};
-
-    auto tail = FindTailIterator();
-
-    for (auto iter = list_.begin(); iter != tail; ++iter) {
-      reserve += (*iter)->OutputReserve();
-    }
-
-    return reserve;
-  }
-
-  ActionRequest Output(utils::Buffer* buffer) {
-    if (!VerifyNonEmpty()) {
-      return ActionRequest::kErrorHappened;
-    }
-
-    switch (status_) {
-      case Phase::kForwarding:
-        return OutputForForward(buffer);
-      case Phase::kNegotiating:
-        return OutputForNegotiation(buffer);
-      default:
-        assert(false);  // not reachable
-    }
-  }
-
-  bool forwarding() const { return status_ == Phase::kForwarding; }
-
- private:
-  enum class Phase { kInvalid, kNegotiating, kForwarding, kClosed };
-
-  ActionRequest NegotiateNextCoder() {
-    assert(status_ == Phase::kNegotiating);
-
-    while (active_coder_ != list_.end()) {
-      auto request = (*active_coder_)->Negotiate();
-      switch (request) {
-        case ActionRequest::kReady:
-          ++active_coder_;
-          break;
-        case ActionRequest::kRemoveSelf:
-          active_coder_ = list_.erase(active_coder_);
-          break;
-        case ActionRequest::kErrorHappened:
-          last_error_ = (*active_coder_)->GetLatestError();
-          status_ = Phase::kClosed;
-          return ActionRequest::kErrorHappened;
-        case ActionRequest::kWantRead:
-        case ActionRequest::kWantWrite:
-          return request;
-        case ActionRequest::kContinue:
-        case ActionRequest::kEvent:
-          assert(false);  // unreachable
-      }
-    }
-
-    if (list_.empty()) {
-      last_error_ = std::make_error_code(kNoCoder);
-      return ActionRequest::kErrorHappened;
-    }
-
-    status_ = Phase::kForwarding;
-    return ActionRequest::kReady;
-  }
-
-  bool VerifyNonEmpty() {
-    if (!list_.empty()) {
-      return true;
-    }
-
-    last_error_ = std::make_error_code(kNoCoder);
-    return false;
-  }
-
-  StreamCoderConstIterator FindTailIterator() const {
-    StreamCoderConstIterator tail;
-    switch (status_) {
-      case Phase::kNegotiating:
-        assert(active_coder_ != list_.end());
-        tail = active_coder_;
-        tail++;
-        break;
-      case Phase::kForwarding:
-        tail = list_.cend();
-        break;
-      case Phase::kClosed:
-      case Phase::kInvalid:
-        assert(false);  // not reachable
-    }
-
-    return tail;
-  }
-
-  StreamCoderIterator FindTailIterator() {
-    StreamCoderIterator tail;
-    switch (status_) {
-      case Phase::kNegotiating:
-        assert(active_coder_ != list_.end());
-        tail = active_coder_;
-        tail++;
-        break;
-      case Phase::kForwarding:
-        tail = list_.end();
-        break;
-      case Phase::kClosed:
-      case Phase::kInvalid:
-        assert(false);  // not reachable
-    }
-
-    return tail;
-  }
-
-  ActionRequest InputForNegotiation(utils::Buffer* buffer) {
-    assert(active_coder_ != list_.end());
-
-    auto iter = list_.begin();
-    while (iter != active_coder_) {
-      switch ((*iter)->Input(buffer)) {
-        case ActionRequest::kContinue:
-          ++iter;
-          break;
-        case ActionRequest::kErrorHappened:
-          last_error_ = (*iter)->GetLatestError();
-          status_ = Phase::kClosed;
-          return ActionRequest::kErrorHappened;
-        case ActionRequest::kRemoveSelf:
-          iter = list_.erase(iter);
-          break;
-        default:
-          assert(false);  // not reachable
-      }
-    }
-
-    // now processing active_coder_
-    auto action = (*iter)->Input(buffer);
-    switch (action) {
-      case ActionRequest::kErrorHappened:
-        last_error_ = (*iter)->GetLatestError();
-        status_ = Phase::kClosed;
-        return ActionRequest::kErrorHappened;
-      case ActionRequest::kRemoveSelf:
-        list_.erase(iter);
-        ++active_coder_;
-        return NegotiateNextCoder();
-      case ActionRequest::kReady:
-        ++active_coder_;
-        return NegotiateNextCoder();
-      case ActionRequest::kWantRead:
-      case ActionRequest::kWantWrite:
-        return action;
-      case ActionRequest::kContinue:
-      case ActionRequest::kEvent:
-        assert(false);  // not reachable
-    }
-  }
-
-  ActionRequest InputForForward(utils::Buffer* buffer) {
-    auto iter = list_.begin();
-    while (iter != list_.end()) {
-      switch ((*iter)->Input(buffer)) {
-        case ActionRequest::kContinue:
-          ++iter;
-          break;
-        case ActionRequest::kErrorHappened:
-          last_error_ = (*iter)->GetLatestError();
-          status_ = Phase::kClosed;
-          return ActionRequest::kErrorHappened;
-        case ActionRequest::kRemoveSelf:
-          iter = list_.erase(iter);
-          break;
-        default:
-          assert(false);
-      }
-    }
-
-    return ActionRequest::kContinue;
-  }
-
-  ActionRequest OutputForNegotiation(utils::Buffer* buffer) {
-    assert(active_coder_ != list_.end());
-
-    auto iter = active_coder_;
-
-    // processing active_coder_ first
-    auto action = (*iter)->Output(buffer);
-    switch (action) {
-      case ActionRequest::kErrorHappened:
-        last_error_ = (*iter)->GetLatestError();
-        status_ = Phase::kClosed;
-        return ActionRequest::kErrorHappened;
-      case ActionRequest::kRemoveSelf:
-        ++active_coder_;
-        // if the iter is the first one, then the iter will still be the first
-        // one
-        iter = list_.erase(iter);
-        action = NegotiateNextCoder();
-        break;
-      case ActionRequest::kReady:
-        ++active_coder_;
-        action = NegotiateNextCoder();
-        break;
-      case ActionRequest::kWantRead:
-      case ActionRequest::kWantWrite:
-        break;
-      case ActionRequest::kContinue:
-      case ActionRequest::kEvent:
-        assert(false);  // not reachable
-    }
-
-    if (iter == list_.begin()) {
-      return action;
-    }
-
-    do {
-      --iter;
-      switch ((*iter)->Output(buffer)) {
-        case ActionRequest::kContinue:
-          break;
-        case ActionRequest::kErrorHappened:
-          last_error_ = (*iter)->GetLatestError();
-          status_ = Phase::kClosed;
-          return ActionRequest::kErrorHappened;
-        case ActionRequest::kRemoveSelf:
-          iter = list_.erase(iter);
-          break;
-        default:
-          assert(false);  // not reachable
-      }
-    } while (iter != list_.begin());
-
-    return action;
-  }
-
-  ActionRequest OutputForForward(utils::Buffer* buffer) {
-    auto iter = list_.end();
-
-    do {
-      --iter;
-      switch ((*iter)->Output(buffer)) {
-        case ActionRequest::kContinue:
-          break;
-        case ActionRequest::kErrorHappened:
-          last_error_ = (*iter)->GetLatestError();
-          status_ = Phase::kClosed;
-          return ActionRequest::kErrorHappened;
-        case ActionRequest::kRemoveSelf:
-          iter = list_.erase(iter);
-          break;
-        default:
-          assert(false);  // not reachable
-      }
-    } while (iter != list_.begin());
-
-    return ActionRequest::kContinue;
-  }
-
-  std::list<std::unique_ptr<StreamCoderInterface>> list_;
-  StreamCoderIterator active_coder_;
-  utils::Error last_error_;
-  Phase status_;
-};
-
-const char* StreamCoderPipe::ErrorCategory::name() const BOOST_NOEXCEPT {
-  return "NEKit::StreamCoder::StreamCoderPipe";
-}
-
-std::string StreamCoderPipe::ErrorCategory::message(int error_code) const {
-  switch (ErrorCode(error_code)) {
-    case ErrorCode::kNoCoder:
-      return "No StreamCoder set.";
-  }
-}
-
-const StreamCoderPipe::ErrorCategory& StreamCoderPipe::error_category() {
-  static ErrorCategory category_;
-  return category_;
-}
-
-StreamCoderPipe::StreamCoderPipe() : impl_{new Impl()} {}
-
-StreamCoderPipe::~StreamCoderPipe() {}
+StreamCoderPipe::StreamCoderPipe() : status_{Phase::Invalid} {}
 
 void StreamCoderPipe::AppendStreamCoder(
     std::unique_ptr<StreamCoderInterface>&& stream_coder) {
-  impl_->AppendStreamCoder(std::move(stream_coder));
+  assert(status_ == Phase::Invalid);
+
+  list_.push_back(std::move(stream_coder));
 }
 
-utils::Error StreamCoderPipe::GetLatestError() const {
-  return impl_->GetLatestError();
+std::error_code StreamCoderPipe::GetLastError() const { return last_error_; }
+
+ActionRequest StreamCoderPipe::Negotiate() {
+  assert(status_ == Phase::Invalid);
+
+  if (!VerifyNonEmpty()) {
+    return ActionRequest::ErrorHappened;
+  }
+
+  active_coder_ = list_.begin();
+  status_ = Phase::Negotiating;
+
+  return NegotiateNextCoder();
 }
 
-ActionRequest StreamCoderPipe::Negotiate() { return impl_->Negotiate(); }
+utils::BufferReserveSize StreamCoderPipe::EncodeReserve() const {
+  utils::BufferReserveSize reserve{0, 0};
 
-utils::BufferReserveSize StreamCoderPipe::InputReserve() const {
-  return impl_->InputReserve();
+  auto tail = FindTailIterator();
+
+  for (auto iter = list_.begin(); iter != tail; ++iter) {
+    reserve += (*iter)->EncodeReserve();
+  }
+
+  return reserve;
 }
 
-ActionRequest StreamCoderPipe::Input(utils::Buffer* buffer) {
-  return impl_->Input(buffer);
+ActionRequest StreamCoderPipe::Encode(utils::Buffer* buffer) {
+  if (!VerifyNonEmpty()) {
+    return ActionRequest::ErrorHappened;
+  }
+
+  switch (status_) {
+    case Phase::Forwarding:
+      return EncodeForForward(buffer);
+    case Phase::Negotiating:
+      return EncodeForNegotiation(buffer);
+    default:
+      assert(false);  // not reachable
+  }
 }
 
-utils::BufferReserveSize StreamCoderPipe::OutputReserve() const {
-  return impl_->OutputReserve();
+utils::BufferReserveSize StreamCoderPipe::DecodeReserve() const {
+  utils::BufferReserveSize reserve{0, 0};
+
+  auto tail = FindTailIterator();
+
+  for (auto iter = list_.begin(); iter != tail; ++iter) {
+    reserve += (*iter)->DecodeReserve();
+  }
+
+  return reserve;
 }
 
-ActionRequest StreamCoderPipe::Output(utils::Buffer* buffer) {
-  return impl_->Output(buffer);
+ActionRequest StreamCoderPipe::Decode(utils::Buffer* buffer) {
+  if (!VerifyNonEmpty()) {
+    return ActionRequest::ErrorHappened;
+  }
+
+  switch (status_) {
+    case Phase::Forwarding:
+      return DecodeForForward(buffer);
+    case Phase::Negotiating:
+      return DecodeForNegotiation(buffer);
+    default:
+      assert(false);  // not reachable
+  }
 }
 
-bool StreamCoderPipe::forwarding() const { return impl_->forwarding(); }
+bool StreamCoderPipe::forwarding() const {
+  return status_ == Phase::Forwarding;
+}
 
+ActionRequest StreamCoderPipe::NegotiateNextCoder() {
+  assert(status_ == Phase::Negotiating);
+
+  while (active_coder_ != list_.end()) {
+    auto request = (*active_coder_)->Negotiate();
+    switch (request) {
+      case ActionRequest::Ready:
+        ++active_coder_;
+        break;
+      case ActionRequest::RemoveSelf:
+        active_coder_ = list_.erase(active_coder_);
+        break;
+      case ActionRequest::ErrorHappened:
+        last_error_ = (*active_coder_)->GetLastError();
+        status_ = Phase::Closed;
+        return ActionRequest::ErrorHappened;
+      case ActionRequest::WantRead:
+      case ActionRequest::WantWrite:
+        return request;
+      case ActionRequest::Continue:
+      case ActionRequest::Event:
+        assert(false);  // unreachable
+    }
+  }
+
+  if (list_.empty()) {
+    last_error_ = ErrorCode::NoCoder;
+    return ActionRequest::ErrorHappened;
+  }
+
+  status_ = Phase::Forwarding;
+  return ActionRequest::Ready;
+}
+
+bool StreamCoderPipe::VerifyNonEmpty() {
+  if (!list_.empty()) {
+    return true;
+  }
+
+  last_error_ = ErrorCode::NoCoder;
+  return false;
+}
+
+StreamCoderPipe::StreamCoderConstIterator StreamCoderPipe::FindTailIterator()
+    const {
+  StreamCoderConstIterator tail;
+  switch (status_) {
+    case Phase::Negotiating:
+      assert(active_coder_ != list_.end());
+      tail = active_coder_;
+      tail++;
+      break;
+    case Phase::Forwarding:
+      tail = list_.cend();
+      break;
+    case Phase::Closed:
+    case Phase::Invalid:
+      assert(false);  // not reachable
+  }
+
+  return tail;
+}
+
+StreamCoderPipe::StreamCoderIterator StreamCoderPipe::FindTailIterator() {
+  StreamCoderIterator tail;
+  switch (status_) {
+    case Phase::Negotiating:
+      assert(active_coder_ != list_.end());
+      tail = active_coder_;
+      tail++;
+      break;
+    case Phase::Forwarding:
+      tail = list_.end();
+      break;
+    case Phase::Closed:
+    case Phase::Invalid:
+      assert(false);  // not reachable
+  }
+
+  return tail;
+}
+
+ActionRequest StreamCoderPipe::EncodeForNegotiation(utils::Buffer* buffer) {
+  assert(active_coder_ != list_.end());
+
+  auto iter = list_.begin();
+  while (iter != active_coder_) {
+    switch ((*iter)->Encode(buffer)) {
+      case ActionRequest::Continue:
+        ++iter;
+        break;
+      case ActionRequest::ErrorHappened:
+        last_error_ = (*iter)->GetLastError();
+        status_ = Phase::Closed;
+        return ActionRequest::ErrorHappened;
+      case ActionRequest::RemoveSelf:
+        iter = list_.erase(iter);
+        break;
+      default:
+        assert(false);  // not reachable
+    }
+  }
+
+  // now processing active_coder_
+  auto action = (*iter)->Encode(buffer);
+  switch (action) {
+    case ActionRequest::ErrorHappened:
+      last_error_ = (*iter)->GetLastError();
+      status_ = Phase::Closed;
+      return ActionRequest::ErrorHappened;
+    case ActionRequest::RemoveSelf:
+      list_.erase(iter);
+      ++active_coder_;
+      return NegotiateNextCoder();
+    case ActionRequest::Ready:
+      ++active_coder_;
+      return NegotiateNextCoder();
+    case ActionRequest::WantRead:
+    case ActionRequest::WantWrite:
+      return action;
+    case ActionRequest::Continue:
+    case ActionRequest::Event:
+      assert(false);  // not reachable
+  }
+}
+
+ActionRequest StreamCoderPipe::EncodeForForward(utils::Buffer* buffer) {
+  auto iter = list_.begin();
+  while (iter != list_.end()) {
+    switch ((*iter)->Encode(buffer)) {
+      case ActionRequest::Continue:
+        ++iter;
+        break;
+      case ActionRequest::ErrorHappened:
+        last_error_ = (*iter)->GetLastError();
+        status_ = Phase::Closed;
+        return ActionRequest::ErrorHappened;
+      case ActionRequest::RemoveSelf:
+        iter = list_.erase(iter);
+        break;
+      default:
+        assert(false);
+    }
+  }
+
+  return ActionRequest::Continue;
+}
+
+ActionRequest StreamCoderPipe::DecodeForNegotiation(utils::Buffer* buffer) {
+  assert(active_coder_ != list_.end());
+
+  auto iter = active_coder_;
+
+  // processing active_coder_ first
+  auto action = (*iter)->Decode(buffer);
+  switch (action) {
+    case ActionRequest::ErrorHappened:
+      last_error_ = (*iter)->GetLastError();
+      status_ = Phase::Closed;
+      return ActionRequest::ErrorHappened;
+    case ActionRequest::RemoveSelf:
+      ++active_coder_;
+      // if the iter is the first one, then the iter will still be the first
+      // one
+      iter = list_.erase(iter);
+      action = NegotiateNextCoder();
+      break;
+    case ActionRequest::Ready:
+      ++active_coder_;
+      action = NegotiateNextCoder();
+      break;
+    case ActionRequest::WantRead:
+    case ActionRequest::WantWrite:
+      break;
+    case ActionRequest::Continue:
+    case ActionRequest::Event:
+      assert(false);  // not reachable
+  }
+
+  if (iter == list_.begin()) {
+    return action;
+  }
+
+  do {
+    --iter;
+    switch ((*iter)->Decode(buffer)) {
+      case ActionRequest::Continue:
+        break;
+      case ActionRequest::ErrorHappened:
+        last_error_ = (*iter)->GetLastError();
+        status_ = Phase::Closed;
+        return ActionRequest::ErrorHappened;
+      case ActionRequest::RemoveSelf:
+        iter = list_.erase(iter);
+        break;
+      default:
+        assert(false);  // not reachable
+    }
+  } while (iter != list_.begin());
+
+  return action;
+}
+
+ActionRequest StreamCoderPipe::DecodeForForward(utils::Buffer* buffer) {
+  auto iter = list_.end();
+
+  do {
+    --iter;
+    switch ((*iter)->Decode(buffer)) {
+      case ActionRequest::Continue:
+        break;
+      case ActionRequest::ErrorHappened:
+        last_error_ = (*iter)->GetLastError();
+        status_ = Phase::Closed;
+        return ActionRequest::ErrorHappened;
+      case ActionRequest::RemoveSelf:
+        iter = list_.erase(iter);
+        break;
+      default:
+        assert(false);  // not reachable
+    }
+  } while (iter != list_.begin());
+
+  return ActionRequest::Continue;
+}
+
+namespace {
+struct StreamCoderPipeErrorCategory : std::error_category {
+  const char* name() const noexcept override;
+  std::string message(int) const override;
+};
+
+const char* StreamCoderPipeErrorCategory::name() const noexcept {
+  return "StreamCoderPipe";
+}
+
+std::string StreamCoderPipeErrorCategory::message(int ev) const {
+  switch (static_cast<StreamCoderPipe::ErrorCode>(ev)) {
+    case StreamCoderPipe::ErrorCode::NoError:
+      return "no error";
+    case StreamCoderPipe::ErrorCode::NoCoder:
+      return "no StreamCoder set";
+  }
+}
+
+const StreamCoderPipeErrorCategory streamCoderPipeErrorCategory{};
+
+}  // namespace
+
+std::error_code make_error_code(
+    nekit::stream_coder::StreamCoderPipe::ErrorCode e) {
+  return {static_cast<int>(e), streamCoderPipeErrorCategory};
+}
 }  // namespace stream_coder
 }  // namespace nekit
-
-namespace std {
-error_code make_error_code(
-    nekit::stream_coder::StreamCoderPipe::ErrorCode errc) {
-  return error_code(static_cast<int>(errc),
-                    nekit::stream_coder::StreamCoderPipe::error_category());
-}
-}  // namespace std

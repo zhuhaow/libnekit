@@ -26,17 +26,17 @@ namespace nekit {
 namespace stream_coder {
 
 enum class ActionRequest {
-  kContinue = 0,   // Continue forwarding data.
-  kRemoveSelf,     // The coder is not useful anymore and should be removed.
-  kErrorHappened,  // Some error happened, the coder can no longer process data.
+  Continue = 0,   // Continue forwarding data.
+  RemoveSelf,     // The coder is not useful anymore and should be removed.
+  ErrorHappened,  // Some error happened, the coder can no longer process data.
 
   // The following is only used in negotiating phase.
-  kWantRead,   // The coder wants to read data to decode.
-  kWantWrite,  // The coder wants to write data.
-  kReady,      // Negotiating finished, ready to forward data.
+  WantRead,   // The coder wants to read data to decode.
+  WantWrite,  // The coder wants to write data.
+  Ready,      // Negotiating finished, ready to forward data.
 
   // This is used to extend ActionRequest to indicate some event happened.
-  kEvent
+  Event
 };
 }
 }  // namespace nekit
