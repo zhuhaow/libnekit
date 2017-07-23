@@ -50,7 +50,7 @@ class MockStreamCoder : public StreamCoderInterface {
   MOCK_METHOD1(Encode, ActionRequest(utils::Buffer* buffer));
   MOCK_CONST_METHOD0(DecodeReserve, utils::BufferReserveSize());
   MOCK_METHOD1(Decode, ActionRequest(utils::Buffer* buffer));
-  MOCK_CONST_METHOD0(GetLatestError, std::error_code());
+  MOCK_CONST_METHOD0(GetLastError, std::error_code());
   MOCK_CONST_METHOD0(forwarding, bool());
 };
 

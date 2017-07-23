@@ -59,7 +59,7 @@ endif()
 
 set(SOURCES
   src/stream_coder/stream_coder_pipe.cc
-  src/stream_coder/socks5_stream_coder_session.cc
+  src/stream_coder/socks5_server_stream_coder.cc
   src/transport/tcp_socket.cc
   )
 

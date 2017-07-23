@@ -22,77 +22,50 @@
 
 #include <cassert>
 
-#include "nekit/stream_coder/socks5_stream_coder_session.h"
+#include "nekit/stream_coder/socks5_server_stream_coder.h"
 
 namespace nekit {
 namespace stream_coder {
-const char *SOCKS5StreamCoderSession::ErrorCategory::name() const
-    BOOST_NOEXCEPT {
-  return "SOCKS5 error.";
-}
-
-std::string SOCKS5StreamCoderSession::ErrorCategory::message(
-    int error_code) const {
-  switch (ErrorCode(error_code)) {
-    case kNoError:
-      return "No error.";
-    case kRequestIncomplete:
-      return "Client send incomplete request.";
-    case kUnsupportedAuthenticationMethod:
-      return "All client requested authentication methods are not "
-             "supported.";
-    case kUnsupportedCommand:
-      return "Unknown command.";
-    case kUnsupportedAddressType:
-      return "Unknown address type.";
-    case kUnsupportedVersion:
-      return "SOCKS version is not supported.";
-  }
-}
-
-const std::error_category &SOCKS5StreamCoderSession::error_category() {
-  static ErrorCategory category_;
-  return category_;
-}
-
-SOCKS5StreamCoderSession::SOCKS5StreamCoderSession(
+Socks5ServerStreamCoder::Socks5ServerStreamCoder(
     std::shared_ptr<utils::Session> session)
-    : status_(kReadingVersion), session_(session) {}
+    : status_(Status::ReadingVersion), session_(session) {}
 
-  ActionRequest SOCKS5StreamCoderSession::Negotiate() { return ActionRequest::kWantRead; }
+ActionRequest Socks5ServerStreamCoder::Negotiate() {
+  return ActionRequest::WantRead;
+}
 
-utils::BufferReserveSize SOCKS5StreamCoderSession::InputReserve() const {
+utils::BufferReserveSize Socks5ServerStreamCoder::DecodeReserve() const {
   switch (status_) {
-    case kForwarding:
-    case kReadingVersion:
-    case kReadingRequest:
+    case Status::Forwarding:
+    case Status::ReadingVersion:
+    case Status::ReadingRequest:
       return {0, 0};
     default:
       assert(false);
   }
 }
 
-ActionRequest SOCKS5StreamCoderSession::Input(utils::Buffer *buffer) {
+ActionRequest Socks5ServerStreamCoder::Decode(utils::Buffer *buffer) {
   switch (status_) {
-    case kForwarding:
-      return ActionRequest::kContinue;
+    case Status::Forwarding:
+      return ActionRequest::Continue;
 
-    case kReadingVersion: {
+    case Status::ReadingVersion: {
       if (buffer->capacity() <= 2) {
-        last_error_ = std::make_error_code(kRequestIncomplete);
-        return ActionRequest::kErrorHappened;
+        last_error_ = ErrorCode::RequestIncomplete;
+        return ActionRequest::ErrorHappened;
       }
 
       auto data = static_cast<uint8_t *>(buffer->buffer());
       if (*data++ != 5) {
-        last_error_ = std::make_error_code(kUnsupportedVersion);
-        return ActionRequest::kErrorHappened;
+        last_error_ = ErrorCode::UnsupportedVersion;
+        return ActionRequest::ErrorHappened;
       }
 
       auto len = *data++;
       if (buffer->capacity() != 2 + len) {
-        last_error_ = std::make_error_code(kRequestIncomplete);
-        return ActionRequest::kErrorHappened;
+        last_error_ = ErrorCode::RequestIncomplete;
+        return ActionRequest::ErrorHappened;
       }
 
       bool supported = false;
@@ -105,28 +78,28 @@ ActionRequest SOCKS5StreamCoderSession::Input(utils::Buffer *buffer) {
       }
 
       if (!supported) {
-        last_error_ = std::make_error_code(kUnsupportedAuthenticationMethod);
-        return ActionRequest::kErrorHappened;
+        last_error_ = ErrorCode::UnsupportedAuthenticationMethod;
+        return ActionRequest::ErrorHappened;
       }
 
-      return ActionRequest::kWantWrite;
+      return ActionRequest::WantWrite;
     } break;
 
-    case kReadingRequest: {
+    case Status::ReadingRequest: {
       if (buffer->capacity() < 10) {
-        last_error_ = std::make_error_code(kRequestIncomplete);
-        return ActionRequest::kErrorHappened;
+        last_error_ = ErrorCode::RequestIncomplete;
+        return ActionRequest::ErrorHappened;
       }
 
       auto data = static_cast<uint8_t *>(buffer->buffer());
       if (*data++ != 5) {
-        last_error_ = std::make_error_code(kUnsupportedVersion);
-        return ActionRequest::kErrorHappened;
+        last_error_ = ErrorCode::UnsupportedVersion;
+        return ActionRequest::ErrorHappened;
       }
 
       if (*data++ != 1) {
-        last_error_ = std::make_error_code(kUnsupportedCommand);
-        return ActionRequest::kErrorHappened;
+        last_error_ = ErrorCode::UnsupportedCommand;
+        return ActionRequest::ErrorHappened;
       }
 
       data++;
@@ -134,8 +107,8 @@ ActionRequest SOCKS5StreamCoderSession::Input(utils::Buffer *buffer) {
       switch (*data++) {
         case 1: {
           if (buffer->capacity() != 4 + 4 + 2) {
-            last_error_ = std::make_error_code(kRequestIncomplete);
-            return ActionRequest::kErrorHappened;
+            last_error_ = ErrorCode::RequestIncomplete;
+            return ActionRequest::ErrorHappened;
           }
 
           auto bytes = boost::asio::ip::address_v4::bytes_type();
@@ -148,8 +121,8 @@ ActionRequest SOCKS5StreamCoderSession::Input(utils::Buffer *buffer) {
           auto len = *data++;
 
           if (buffer->capacity() != 4 + 1 + len + 2) {
-            last_error_ = std::make_error_code(kRequestIncomplete);
-            return ActionRequest::kErrorHappened;
+            last_error_ = ErrorCode::RequestIncomplete;
+            return ActionRequest::ErrorHappened;
           }
 
           session_->domain = std::string(reinterpret_cast<char *>(data), len);
@@ -158,8 +131,8 @@ ActionRequest SOCKS5StreamCoderSession::Input(utils::Buffer *buffer) {
         } break;
         case 4: {
           if (buffer->capacity() != 4 + 16 + 2) {
-            last_error_ = std::make_error_code(kRequestIncomplete);
-            return ActionRequest::kErrorHappened;
+            last_error_ = ErrorCode::RequestIncomplete;
+            return ActionRequest::ErrorHappened;
           }
 
           auto bytes = boost::asio::ip::address_v6::bytes_type();
@@ -169,24 +142,24 @@ ActionRequest SOCKS5StreamCoderSession::Input(utils::Buffer *buffer) {
           data += 16;
         } break;
         default: {
-          last_error_ = std::make_error_code(kUnsupportedAddressType);
-          return ActionRequest::kErrorHappened;
+          last_error_ = ErrorCode::UnsupportedAddressType;
+          return ActionRequest::ErrorHappened;
         }
       }
 
       session_->port = ntohs(*reinterpret_cast<uint16_t *>(data));
-      return ActionRequest::kEvent;
+      return ActionRequest::Event;
     }
   }
 }
 
-utils::BufferReserveSize SOCKS5StreamCoderSession::OutputReserve() const {
+utils::BufferReserveSize Socks5ServerStreamCoder::EncodeReserve() const {
   switch (status_) {
-    case kForwarding:
+    case Status::Forwarding:
       return {0, 0};
-    case kReadingVersion:
+    case Status::ReadingVersion:
       return {0, 2};
-    case kReadingRequest:
+    case Status::ReadingRequest:
       switch (session_->type) {
         case utils::Session::kDomain:
           return {0, 10};
@@ -200,20 +173,20 @@ utils::BufferReserveSize SOCKS5StreamCoderSession::OutputReserve() const {
   }
 }
 
-ActionRequest SOCKS5StreamCoderSession::Output(utils::Buffer *buffer) {
+ActionRequest Socks5ServerStreamCoder::Encode(utils::Buffer *buffer) {
   switch (status_) {
-    case kForwarding:
-      return ActionRequest::kContinue;
-    case kReadingVersion: {
+    case Status::Forwarding:
+      return ActionRequest::Continue;
+    case Status::ReadingVersion: {
       buffer->ReleaseBack(2);
       assert(buffer->capacity() == 2);
       auto data = static_cast<uint8_t *>(buffer->buffer());
       *data = 5;
       *(data + 1) = 0;
-      status_ = kReadingRequest;
-      return ActionRequest::kWantRead;
+      status_ = Status::ReadingRequest;
+      return ActionRequest::WantRead;
     }
-    case kReadingRequest: {
+    case Status::ReadingRequest: {
       std::size_t len;
       uint8_t type;
       switch (session_->type) {
@@ -240,36 +213,69 @@ ActionRequest SOCKS5StreamCoderSession::Output(utils::Buffer *buffer) {
       *(data + 3) = type;
       std::memset(data + 4, 0, len - 4);
 
-      return ActionRequest::kReady;
+      return ActionRequest::Ready;
     }
   }
 }
 
-std::error_code SOCKS5StreamCoderSession::GetLatestError() const {
+std::error_code Socks5ServerStreamCoder::GetLastError() const {
   return last_error_;
 }
 
-bool SOCKS5StreamCoderSession::forwarding() const {
-  return status_ == kForwarding;
+bool Socks5ServerStreamCoder::forwarding() const {
+  return status_ == Status::Forwarding;
 }
 
-ActionRequest SOCKS5StreamCoderSession::Continue(std::error_code error) {
-  if (error) {
-    last_error_ = error;
-    return ActionRequest::kErrorHappened;
+ActionRequest Socks5ServerStreamCoder::ReportError(std::error_code error) {
+  // It is possible to report it elegantly.
+  last_error_ = error;
+  return ActionRequest::ErrorHappened;
+}
+
+ActionRequest Socks5ServerStreamCoder::Continue() {
+  return ActionRequest::WantWrite;
+}
+
+std::shared_ptr<utils::Session> Socks5ServerStreamCoder::session() const {
+  return session_;
+}
+
+namespace {
+struct Socks5ServerStreamCoderErrorCategory : std::error_category {
+  const char *name() const noexcept override;
+  std::string message(int) const override;
+};
+
+const char *Socks5ServerStreamCoderErrorCategory::name() const BOOST_NOEXCEPT {
+  return "SOCKS5 server stream coder";
+}
+
+std::string Socks5ServerStreamCoderErrorCategory::message(
+    int error_code) const {
+  switch (static_cast<Socks5ServerStreamCoder::ErrorCode>(error_code)) {
+    case Socks5ServerStreamCoder::ErrorCode::NoError:
+      return "no error";
+    case Socks5ServerStreamCoder::ErrorCode::RequestIncomplete:
+      return "client send incomplete request";
+    case Socks5ServerStreamCoder::ErrorCode::UnsupportedAuthenticationMethod:
+      return "all client requested authentication methods are not "
+             "supported";
+    case Socks5ServerStreamCoder::ErrorCode::UnsupportedCommand:
+      return "unknown command";
+    case Socks5ServerStreamCoder::ErrorCode::UnsupportedAddressType:
+      return "unknown address type";
+    case Socks5ServerStreamCoder::ErrorCode::UnsupportedVersion:
+      return "SOCKS version is not supported";
   }
-  return ActionRequest::kWantWrite;
 }
 
+const Socks5ServerStreamCoderErrorCategory
+    socks5ServerStreamCoderErrorCategory{};
+
+}  // namespace
+
+std::error_code make_error_code(Socks5ServerStreamCoder::ErrorCode ec) {
+  return {static_cast<int>(ec), socks5ServerStreamCoderErrorCategory};
+}
 }  // namespace stream_coder
 }  // namespace nekit
-
-namespace std {
-
-error_code make_error_code(
-    nekit::stream_coder::SOCKS5StreamCoderSession::ErrorCode errc) {
-  return error_code(
-      static_cast<int>(errc),
-      nekit::stream_coder::SOCKS5StreamCoderSession::error_category());
-}
-}  // namespace std

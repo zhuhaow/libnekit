@@ -24,7 +24,7 @@
 
 #include <easylogging++.h>
 
-#include "nekit/stream_coder/socks5_stream_coder_session.h"
+#include "nekit/stream_coder/socks5_server_stream_coder.h"
 
 INITIALIZE_EASYLOGGINGPP
 
@@ -33,24 +33,24 @@ using namespace nekit::utils;
 
 TEST(SOCKS5StreamCoderSessionNegotiation, CorrectIPv4Request) {
   auto session = std::make_shared<Session>();
-  SOCKS5StreamCoderSession coder(session);
-  EXPECT_EQ(coder.Negotiate(), ActionRequest::kWantRead);
+  Socks5ServerStreamCoder coder(session);
+  EXPECT_EQ(coder.Negotiate(), ActionRequest::WantRead);
 
-  Buffer buffer1(coder.InputReserve(), 3);
+  Buffer buffer1(coder.DecodeReserve(), 3);
   auto data = static_cast<uint8_t *>(buffer1.buffer());
   *data++ = 5;
   *data++ = 1;
   *data++ = 0;
-  EXPECT_EQ(coder.Input(&buffer1), ActionRequest::kWantWrite);
+  EXPECT_EQ(coder.Decode(&buffer1), ActionRequest::WantWrite);
 
-  Buffer buffer2(coder.OutputReserve());
-  EXPECT_EQ(coder.Output(&buffer2), ActionRequest::kWantRead);
-  EXPECT_EQ(buffer2.capacity(), 2);
+  Buffer buffer2(coder.EncodeReserve());
+  EXPECT_EQ(coder.Encode(&buffer2), ActionRequest::WantRead);
+  EXPECT_EQ(buffer2.capacity(), 2u);
   data = static_cast<uint8_t *>(buffer2.buffer());
   EXPECT_EQ(*data++, 5);
   EXPECT_EQ(*data, 0);
 
-  Buffer buffer3(coder.InputReserve(), 10);
+  Buffer buffer3(coder.DecodeReserve(), 10);
   data = static_cast<uint8_t *>(buffer3.buffer());
   *data++ = 5;
   *data++ = 1;  // CONNECT
@@ -62,18 +62,16 @@ TEST(SOCKS5StreamCoderSessionNegotiation, CorrectIPv4Request) {
   *data++ = 8;  // 8.8.8.8
   *data++ = 0;
   *data = 53;  // 53
-  EXPECT_EQ(coder.Input(&buffer3), ActionRequest::kEvent);
+  EXPECT_EQ(coder.Decode(&buffer3), ActionRequest::Event);
   EXPECT_EQ(session->type, Session::kAddress);
   EXPECT_EQ(session->address.is_v4(), true);
   EXPECT_EQ(session->address.to_string(), "8.8.8.8");
   EXPECT_EQ(session->port, 53);
 
-  EXPECT_EQ(
-      coder.Continue(std::make_error_code(SOCKS5StreamCoderSession::kNoError)),
-      ActionRequest::kWantWrite);
-  Buffer buffer4(coder.OutputReserve());
-  EXPECT_EQ(coder.Output(&buffer4), ActionRequest::kReady);
-  EXPECT_EQ(buffer4.capacity(), 10);
+  EXPECT_EQ(coder.Continue(), ActionRequest::WantWrite);
+  Buffer buffer4(coder.EncodeReserve());
+  EXPECT_EQ(coder.Encode(&buffer4), ActionRequest::Ready);
+  EXPECT_EQ(buffer4.capacity(), 10u);
   data = static_cast<uint8_t *>(buffer3.buffer());
   *data++ = 5;
   *data++ = 0;  // SUCCESS
@@ -83,24 +81,24 @@ TEST(SOCKS5StreamCoderSessionNegotiation, CorrectIPv4Request) {
 
 TEST(SOCKS5StreamCoderSessionNegotiation, CorrectIPv6Request) {
   auto session = std::make_shared<Session>();
-  SOCKS5StreamCoderSession coder(session);
-  EXPECT_EQ(coder.Negotiate(), ActionRequest::kWantRead);
+  Socks5ServerStreamCoder coder(session);
+  EXPECT_EQ(coder.Negotiate(), ActionRequest::WantRead);
 
-  Buffer buffer1(coder.InputReserve(), 3);
+  Buffer buffer1(coder.DecodeReserve(), 3);
   auto data = static_cast<uint8_t *>(buffer1.buffer());
   *data++ = 5;
   *data++ = 1;
   *data++ = 0;
-  EXPECT_EQ(coder.Input(&buffer1), ActionRequest::kWantWrite);
+  EXPECT_EQ(coder.Decode(&buffer1), ActionRequest::WantWrite);
 
-  Buffer buffer2(coder.OutputReserve());
-  EXPECT_EQ(coder.Output(&buffer2), ActionRequest::kWantRead);
-  EXPECT_EQ(buffer2.capacity(), 2);
+  Buffer buffer2(coder.EncodeReserve());
+  EXPECT_EQ(coder.Encode(&buffer2), ActionRequest::WantRead);
+  EXPECT_EQ(buffer2.capacity(), 2u);
   data = static_cast<uint8_t *>(buffer2.buffer());
   EXPECT_EQ(*data++, 5);
   EXPECT_EQ(*data, 0);
 
-  Buffer buffer3(coder.InputReserve(), 22);
+  Buffer buffer3(coder.DecodeReserve(), 22);
   data = static_cast<uint8_t *>(buffer3.buffer());
   *data++ = 5;
   *data++ = 1;  // CONNECT
@@ -112,18 +110,16 @@ TEST(SOCKS5StreamCoderSessionNegotiation, CorrectIPv6Request) {
   }
   *data++ = 0;
   *data = 53;  // 53
-  EXPECT_EQ(coder.Input(&buffer3), ActionRequest::kEvent);
+  EXPECT_EQ(coder.Decode(&buffer3), ActionRequest::Event);
   EXPECT_EQ(session->type, Session::kAddress);
   EXPECT_EQ(session->address.is_v6(), true);
   EXPECT_EQ(session->address.to_string(), "808:808:808:808:808:808:808:808");
   EXPECT_EQ(session->port, 53);
 
-  EXPECT_EQ(
-      coder.Continue(std::make_error_code(SOCKS5StreamCoderSession::kNoError)),
-      ActionRequest::kWantWrite);
-  Buffer buffer4(coder.OutputReserve());
-  EXPECT_EQ(coder.Output(&buffer4), ActionRequest::kReady);
-  EXPECT_EQ(buffer4.capacity(), 22);
+  EXPECT_EQ(coder.Continue(), ActionRequest::WantWrite);
+  Buffer buffer4(coder.EncodeReserve());
+  EXPECT_EQ(coder.Encode(&buffer4), ActionRequest::Ready);
+  EXPECT_EQ(buffer4.capacity(), 22u);
   data = static_cast<uint8_t *>(buffer3.buffer());
   *data++ = 5;
   *data++ = 0;  // SUCCESS
@@ -133,24 +129,24 @@ TEST(SOCKS5StreamCoderSessionNegotiation, CorrectIPv6Request) {
 
 TEST(SOCKS5StreamCoderSessionNegotiation, CorrectDomainRequest) {
   auto session = std::make_shared<Session>();
-  SOCKS5StreamCoderSession coder(session);
-  EXPECT_EQ(coder.Negotiate(), ActionRequest::kWantRead);
+  Socks5ServerStreamCoder coder(session);
+  EXPECT_EQ(coder.Negotiate(), ActionRequest::WantRead);
 
-  Buffer buffer1(coder.InputReserve(), 3);
+  Buffer buffer1(coder.DecodeReserve(), 3);
   auto data = static_cast<uint8_t *>(buffer1.buffer());
   *data++ = 5;
   *data++ = 1;
   *data++ = 0;
-  EXPECT_EQ(coder.Input(&buffer1), ActionRequest::kWantWrite);
+  EXPECT_EQ(coder.Decode(&buffer1), ActionRequest::WantWrite);
 
-  Buffer buffer2(coder.OutputReserve());
-  EXPECT_EQ(coder.Output(&buffer2), ActionRequest::kWantRead);
-  EXPECT_EQ(buffer2.capacity(), 2);
+  Buffer buffer2(coder.EncodeReserve());
+  EXPECT_EQ(coder.Encode(&buffer2), ActionRequest::WantRead);
+  EXPECT_EQ(buffer2.capacity(), 2u);
   data = static_cast<uint8_t *>(buffer2.buffer());
   EXPECT_EQ(*data++, 5);
   EXPECT_EQ(*data, 0);
 
-  Buffer buffer3(coder.InputReserve(), 4 + 1 + 11 + 2);
+  Buffer buffer3(coder.DecodeReserve(), 4 + 1 + 11 + 2);
   data = static_cast<uint8_t *>(buffer3.buffer());
   *data++ = 5;
   *data++ = 1;  // CONNECT
@@ -162,16 +158,14 @@ TEST(SOCKS5StreamCoderSessionNegotiation, CorrectDomainRequest) {
   data += 11;
   *data++ = 0;
   *data = 53;  // 53
-  EXPECT_EQ(coder.Input(&buffer3), ActionRequest::kEvent);
+  EXPECT_EQ(coder.Decode(&buffer3), ActionRequest::Event);
   EXPECT_EQ(session->type, Session::kDomain);
   EXPECT_EQ(session->domain, "example.com");
   EXPECT_EQ(session->port, 53);
 
-  EXPECT_EQ(
-      coder.Continue(std::make_error_code(SOCKS5StreamCoderSession::kNoError)),
-      ActionRequest::kWantWrite);
-  Buffer buffer4(coder.OutputReserve());
-  EXPECT_EQ(coder.Output(&buffer4), ActionRequest::kReady);
+  EXPECT_EQ(coder.Continue(), ActionRequest::WantWrite);
+  Buffer buffer4(coder.EncodeReserve());
+  EXPECT_EQ(coder.Encode(&buffer4), ActionRequest::Ready);
   EXPECT_EQ(buffer4.capacity(), 10);
   data = static_cast<uint8_t *>(buffer3.buffer());
   *data++ = 5;

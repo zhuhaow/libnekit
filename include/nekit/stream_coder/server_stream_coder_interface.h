@@ -30,11 +30,11 @@
 
 namespace nekit {
 namespace stream_coder {
-class StreamCoderSessionInterface : public StreamCoderInterface {
+class ServerStreamCoderInterface : public StreamCoderInterface {
  public:
-  virtual ~StreamCoderSessionInterface() {}
-
-  virtual ActionRequest Continue(std::error_code error) = 0;
+  virtual ActionRequest ReportError(std::error_code error) = 0;
+  virtual ActionRequest Continue() = 0;
+  virtual std::shared_ptr<utils::Session> session() const = 0;
 };
 }  // namespace stream_coder
 }  // namespace nekit

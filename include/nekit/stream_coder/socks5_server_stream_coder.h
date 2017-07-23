@@ -25,61 +25,56 @@
 #include <array>
 #include <system_error>
 
-#include "stream_coder_session_interface.h"
+#include "server_stream_coder_interface.h"
 
 namespace nekit {
 namespace stream_coder {
-class SOCKS5StreamCoderSession final : public StreamCoderSessionInterface {
+class Socks5ServerStreamCoder final : public ServerStreamCoderInterface {
  public:
-  enum ErrorCode {
-    kNoError = 0,
-    kRequestIncomplete,
-    kUnsupportedVersion,
-    kUnsupportedAuthenticationMethod,
-    kUnsupportedCommand,
-    kUnsupportedAddressType
+  enum class ErrorCode {
+    NoError = 0,
+    RequestIncomplete,
+    UnsupportedVersion,
+    UnsupportedAuthenticationMethod,
+    UnsupportedCommand,
+    UnsupportedAddressType
   };
 
-  class ErrorCategory final : public std::error_category {
-    const char* name() const BOOST_NOEXCEPT override;
-    std::string message(int error_code) const override;
-  };
+  Socks5ServerStreamCoder(std::shared_ptr<utils::Session> session);
 
-  const static std::error_category& error_category();
+  ActionRequest Negotiate() override;
 
-  SOCKS5StreamCoderSession(std::shared_ptr<utils::Session> session);
-  ~SOCKS5StreamCoderSession() {}
+  utils::BufferReserveSize EncodeReserve() const override;
+  ActionRequest Encode(utils::Buffer* buffer) override;
 
-  ActionRequest Negotiate();
+  utils::BufferReserveSize DecodeReserve() const override;
+  ActionRequest Decode(utils::Buffer* buffer) override;
 
-  utils::BufferReserveSize InputReserve() const;
-  ActionRequest Input(utils::Buffer* buffer);
+  std::error_code GetLastError() const override;
 
-  utils::BufferReserveSize OutputReserve() const;
-  ActionRequest Output(utils::Buffer* buffer);
+  bool forwarding() const override;
 
-  std::error_code GetLatestError() const;
+  ActionRequest ReportError(std::error_code error) override;
 
-  bool forwarding() const;
+  ActionRequest Continue() override;
 
-  ActionRequest Continue(std::error_code error);
+  std::shared_ptr<utils::Session> session() const override;
 
  private:
-  enum Status { kReadingVersion, kReadingRequest, kForwarding };
+  enum class Status { ReadingVersion, ReadingRequest, Forwarding };
 
   Status status_;
   std::shared_ptr<utils::Session> session_;
   std::error_code last_error_;
 };
+
+std::error_code make_error_code(Socks5ServerStreamCoder::ErrorCode ec);
 }  // namespace stream_coder
 }  // namespace nekit
 
 namespace std {
 template <>
 struct is_error_code_enum<
-    nekit::stream_coder::SOCKS5StreamCoderSession::ErrorCode>
+    nekit::stream_coder::Socks5ServerStreamCoder::ErrorCode>
     : public std::true_type {};
-
-error_code make_error_code(
-    nekit::stream_coder::SOCKS5StreamCoderSession::ErrorCode errc);
 }  // namespace std

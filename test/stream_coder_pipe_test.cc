@@ -126,7 +126,7 @@ class StreamCoderPipeDefaultFixture : public ::testing::Test {
 TEST(StreamCoderPipeUnitTest, ReturnErrorOnNegotiationWhenEmpty) {
   StreamCoderPipe pipe;
   EXPECT_EQ(pipe.Negotiate(), ActionRequest::ErrorHappened);
-  EXPECT_EQ(pipe.GetLatestError().value(),
+  EXPECT_EQ(pipe.GetLastError().value(),
             static_cast<int>(StreamCoderPipe::ErrorCode::NoCoder));
   EXPECT_FALSE(pipe.forwarding());
 }
@@ -253,7 +253,7 @@ TEST_F(StreamCoderPipeDefaultFixture, RemoveAllWhenNegotiating) {
 
   EXPECT_FALSE(pipe_.forwarding());
 
-  EXPECT_EQ(pipe_.GetLatestError().value(),
+  EXPECT_EQ(pipe_.GetLastError().value(),
             static_cast<int>(StreamCoderPipe::ErrorCode::NoCoder));
 }
 
@@ -655,7 +655,7 @@ TEST_F(StreamCoderPipeDefaultFixture, ReturnErrorWhenInternalCoderReturnError) {
   EXPECT_CALL(*coder1_, Negotiate());
   EXPECT_CALL(*coder2_, Negotiate())
       .WillOnce(Return(ActionRequest::ErrorHappened));
-  EXPECT_CALL(*coder2_, GetLatestError())
+  EXPECT_CALL(*coder2_, GetLastError())
       .WillOnce(Return(std::make_error_code(kError)));
 
   RegisterAllCoders();
@@ -666,8 +666,8 @@ TEST_F(StreamCoderPipeDefaultFixture, ReturnErrorWhenInternalCoderReturnError) {
 
   EXPECT_FALSE(pipe_.forwarding());
 
-  EXPECT_EQ(pipe_.GetLatestError().category(), mock_error_category);
-  EXPECT_EQ(pipe_.GetLatestError().value(), static_cast<int>(kError));
+  EXPECT_EQ(pipe_.GetLastError().category(), mock_error_category);
+  EXPECT_EQ(pipe_.GetLastError().value(), static_cast<int>(kError));
 }
 
 TEST_F(StreamCoderPipeDefaultFixture, Forwarding) {
