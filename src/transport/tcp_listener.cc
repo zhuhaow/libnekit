@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#define BOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS
+
 #include "nekit/transport/tcp_listener.h"
 #include "nekit/transport/tcp_socket.h"
 #include "nekit/utils/boost_error.h"

@@ -34,8 +34,6 @@ class ListenerInterface {
  public:
   virtual ~ListenerInterface() = default;
 
-  // Due to the limitation of boost handler, the handler type must be copy
-  // constructible.
   using EventHandler = std::function<void(
       std::unique_ptr<ConnectionInterface>&&, std::error_code)>;
   virtual void Accept(EventHandler&&);

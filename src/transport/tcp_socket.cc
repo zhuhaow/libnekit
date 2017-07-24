@@ -22,6 +22,8 @@
 
 #include <cassert>
 
+#define BOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS
+
 #include "nekit/transport/tcp_socket.h"
 #include "nekit/utils/auto.h"
 #include "nekit/utils/boost_error.h"
@@ -34,15 +36,13 @@ TcpSocket::TcpSocket(boost::asio::ip::tcp::socket &&socket)
 
 void TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
                      TransportInterface::EventHandler &&handler) {
-  read_buffer_ = std::move(buffer);
-  read_handler_ = std::move(handler);
+  // read_buffer_ = std::move(buffer);
+  // read_handler_ = std::move(handler);
   socket_.async_read_some(
       boost::asio::mutable_buffers_1(buffer->buffer(), buffer->capacity()),
-      [this](const boost::system::error_code &ec,
-             std::size_t bytes_transferred) mutable {
-
-        Auto(this->read_buffer_ = nullptr;
-             this->read_handler_ = TransportInterface::EventHandler(););
+      [ this, buffer{std::move(buffer)}, handler{std::move(handler)} ](
+          const boost::system::error_code &ec,
+          std::size_t bytes_transferred) mutable {
 
         if (ec) {
           if (ec.category() == boost::asio::error::system_category &&
@@ -55,30 +55,25 @@ void TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
           if (error == ErrorCode::EndOfFile) {
             this->read_closed_ = true;
           }
-          this->read_handler_(std::move(this->read_buffer_), error);
+          handler(std::move(buffer), error);
           return;
         }
 
-        this->read_buffer_->ReserveBack(this->read_buffer_->capacity() -
-                                        bytes_transferred);
-        this->read_handler_(std::move(this->read_buffer_), ErrorCode::NoError);
+        buffer->ReserveBack(buffer->capacity() - bytes_transferred);
+        handler(std::move(buffer), ErrorCode::NoError);
         return;
       });
 };
 
 void TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
                       TransportInterface::EventHandler &&handler) {
-  write_buffer_ = std::move(buffer);
-  write_handler_ = std::move(handler);
   boost::asio::async_write(
       socket_,
       boost::asio::const_buffers_1(buffer->buffer(), buffer->capacity()),
-      [this](const boost::system::error_code &ec,
-             std::size_t bytes_transferred) mutable {
-        assert(bytes_transferred == this->write_buffer_->capacity());
-
-        Auto(this->write_buffer_ = nullptr;
-             this->write_handler_ = TransportInterface::EventHandler(););
+      [ this, buffer{std::move(buffer)}, handler{std::move(handler)} ](
+          const boost::system::error_code &ec,
+          std::size_t bytes_transferred) mutable {
+        assert(bytes_transferred == buffer->capacity());
 
         if (ec) {
           if (ec.category() == boost::asio::error::system_category &&
@@ -87,13 +82,11 @@ void TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
             return;
           }
 
-          this->write_handler_(std::move(this->write_buffer_),
-                               ConvertBoostError(ec));
+          handler(std::move(buffer), ConvertBoostError(ec));
           return;
         }
 
-        this->write_handler_(std::move(this->write_buffer_),
-                             ErrorCode::NoError);
+        handler(std::move(buffer), ErrorCode::NoError);
         return;
       });
 }
