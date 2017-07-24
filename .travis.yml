@@ -9,9 +9,13 @@ dist:
 
 addons:
   apt:
+    sources:
+      - ubuntu-toolchain-r-test
     packages:
+      - g++-5
+      - g++-6
       - valgrind
-
+      
 matrix:
   include:
     - os: osx
@@ -28,10 +32,16 @@ matrix:
       env: PLATFORM=ios
 
     - os: linux
-      env: PLATFORM=linux COVERAGE=ON
+      env: PLATFORM=linux COVERAGE=ON MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
+
+    - os: linux
+      env: PLATFORM=linux COVERAGE=ON MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
+
+before_install:
+  - eval "${MATRIX_EVAL}"
 
 install:
-  - pip install plumbum
+  - pip install --user plumbum
 
 before_script:
   - scripts/build_deps.py $PLATFORM
