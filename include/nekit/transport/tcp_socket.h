@@ -70,7 +70,7 @@ class TcpSocket final : public ConnectionInterface, private boost::noncopyable {
 
  private:
   TcpSocket(boost::asio::ip::tcp::socket&& socket);
-  ErrorCode ConvertBoostError(const boost::system::error_code&) const;
+  std::error_code ConvertBoostError(const boost::system::error_code&) const;
 
   boost::asio::ip::tcp::socket socket_;
   bool read_closed_{false}, write_closed_{false};

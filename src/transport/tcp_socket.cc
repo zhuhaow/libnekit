@@ -2,6 +2,7 @@
 
 #include "nekit/transport/tcp_socket.h"
 #include "nekit/utils/auto.h"
+#include "nekit/utils/boost_error.h"
 
 namespace nekit {
 namespace transport {
@@ -120,7 +121,7 @@ utils::Endpoint TcpSocket::remoteEndpoint() const {
   return endpoint;
 }
 
-TcpSocket::ErrorCode TcpSocket::ConvertBoostError(
+std::error_code TcpSocket::ConvertBoostError(
     const boost::system::error_code &ec) const {
   if (ec.category() == boost::asio::error::system_category) {
     switch (ec.value()) {
@@ -144,7 +145,7 @@ TcpSocket::ErrorCode TcpSocket::ConvertBoostError(
       return ErrorCode::EndOfFile;
     }
   }
-  return ErrorCode::UnknownError;
+  return std::make_error_code(ec);
 }  // namespace transport
 
 namespace {
