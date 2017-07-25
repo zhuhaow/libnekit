@@ -26,9 +26,8 @@
 
 namespace nekit {
 namespace stream_coder {
-Socks5ServerStreamCoder::Socks5ServerStreamCoder(
-    std::shared_ptr<utils::Session> session)
-    : status_(Status::ReadingVersion), session_(session) {}
+Socks5ServerStreamCoder::Socks5ServerStreamCoder()
+    : status_(Status::ReadingVersion) {}
 
 ActionRequest Socks5ServerStreamCoder::Negotiate() {
   return ActionRequest::WantRead;
@@ -113,8 +112,8 @@ ActionRequest Socks5ServerStreamCoder::Decode(utils::Buffer *buffer) {
 
           auto bytes = boost::asio::ip::address_v4::bytes_type();
           std::memcpy(bytes.data(), data, bytes.size());
-          session_->address = boost::asio::ip::address_v4(bytes);
-          session_->type = utils::Session::kAddress;
+          session_.reset(
+              new utils::Session(boost::asio::ip::address_v4(bytes)));
           data += 4;
         } break;
         case 3: {
@@ -125,8 +124,8 @@ ActionRequest Socks5ServerStreamCoder::Decode(utils::Buffer *buffer) {
             return ActionRequest::ErrorHappened;
           }
 
-          session_->domain = std::string(reinterpret_cast<char *>(data), len);
-          session_->type = utils::Session::kDomain;
+          session_.reset(new utils::Session(
+              std::string(reinterpret_cast<char *>(data), len)));
           data += len;
         } break;
         case 4: {
@@ -137,8 +136,8 @@ ActionRequest Socks5ServerStreamCoder::Decode(utils::Buffer *buffer) {
 
           auto bytes = boost::asio::ip::address_v6::bytes_type();
           std::memcpy(bytes.data(), data, bytes.size());
-          session_->address = boost::asio::ip::address_v6(bytes);
-          session_->type = utils::Session::kAddress;
+          session_.reset(
+              new utils::Session(boost::asio::ip::address_v6(bytes)));
           data += 16;
         } break;
         default: {
@@ -147,7 +146,7 @@ ActionRequest Socks5ServerStreamCoder::Decode(utils::Buffer *buffer) {
         }
       }
 
-      session_->port = ntohs(*reinterpret_cast<uint16_t *>(data));
+      session_->setPort(ntohs(*reinterpret_cast<uint16_t *>(data)));
       return ActionRequest::Event;
     }
   }
@@ -160,11 +159,11 @@ utils::BufferReserveSize Socks5ServerStreamCoder::EncodeReserve() const {
     case Status::ReadingVersion:
       return {0, 2};
     case Status::ReadingRequest:
-      switch (session_->type) {
-        case utils::Session::kDomain:
+      switch (session_->type()) {
+        case utils::Session::Type::Domain:
           return {0, 10};
-        case utils::Session::kAddress:
-          if (session_->address.is_v4()) {
+        case utils::Session::Type::Address:
+          if (session_->address().is_v4()) {
             return {0, 10};
           } else {
             return {0, 22};
@@ -189,13 +188,13 @@ ActionRequest Socks5ServerStreamCoder::Encode(utils::Buffer *buffer) {
     case Status::ReadingRequest: {
       std::size_t len;
       uint8_t type;
-      switch (session_->type) {
-        case utils::Session::kDomain:
+      switch (session_->type()) {
+        case utils::Session::Type::Domain:
           len = 10;
           type = 1;
           break;
-        case utils::Session::kAddress:
-          if (session_->address.is_v4()) {
+        case utils::Session::Type::Address:
+          if (session_->address().is_v4()) {
             len = 10;
             type = 1;
           } else {

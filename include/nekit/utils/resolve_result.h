@@ -22,49 +22,39 @@
 
 #pragma once
 
-#include <functional>
 #include <string>
-#include <system_error>
 #include <vector>
 
 #include <boost/asio.hpp>
 
-#include "resolver_interface.h"
-
 namespace nekit {
 namespace utils {
-struct Session {
+class ResolveResult final {
  public:
-  enum class Type { Domain, Address };
+  ResolveResult(std::string domain) : domain_{domain} {};
 
-  using EventHandler = std::function<void(std::error_code)>;
+  const std::string& domain() const { return domain_; }
 
-  Session(std::string host, uint16_t port = 0);
-  Session(boost::asio::ip::address ip, uint16_t port = 0);
+  bool isIPv4() const { return !resolved_ipv4_addresses_.empty(); }
+  std::vector<boost::asio::ip::address>& ipv4Result() {
+    return resolved_ipv4_addresses_;
+  }
+  const std::vector<boost::asio::ip::address>& ipv4Result() const {
+    return resolved_ipv4_addresses_;
+  }
 
-  void Resolve(ResolverInterface& resolver,
-               ResolverInterface::AddressPreference preference,
-               EventHandler&& handler);
-
-  bool isAddressAvailable() const;
-
-  // prefer ipv4 address
-  const boost::asio::ip::address& GetBestAddress() const;
-  const ResolveResult& resolveResult() const;
-
-  Type type() const;
-  const std::string& domain() const;
-  const boost::asio::ip::address& address() const;
-  uint16_t port() const;
-  void setPort(uint16_t port);
+  bool isIPv6() const { return !resolved_ipv6_addresses_.empty(); }
+  std::vector<boost::asio::ip::address>& ipv6Result() {
+    return resolved_ipv6_addresses_;
+  }
+  const std::vector<boost::asio::ip::address>& ipv6Result() const {
+    return resolved_ipv4_addresses_;
+  }
 
  private:
-  Type type_;
   std::string domain_;
-  boost::asio::ip::address address_;
-  uint16_t port_;
-
-  ResolveResult resolve_result_;
+  std::vector<boost::asio::ip::address> resolved_ipv4_addresses_;
+  std::vector<boost::asio::ip::address> resolved_ipv6_addresses_;
 };
 }  // namespace utils
 }  // namespace nekit

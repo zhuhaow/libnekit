@@ -40,7 +40,7 @@ class Socks5ServerStreamCoder final : public ServerStreamCoderInterface {
     UnsupportedAddressType
   };
 
-  Socks5ServerStreamCoder(std::shared_ptr<utils::Session> session);
+  Socks5ServerStreamCoder();
 
   ActionRequest Negotiate() override;
 

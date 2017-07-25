@@ -23,48 +23,28 @@
 #pragma once
 
 #include <functional>
-#include <string>
 #include <system_error>
-#include <vector>
 
-#include <boost/asio.hpp>
-
-#include "resolver_interface.h"
+#include "resolve_result.h"
 
 namespace nekit {
 namespace utils {
-struct Session {
+class ResolverInterface {
  public:
-  enum class Type { Domain, Address };
+  using EventHandler = std::function<void(ResolveResult&&, std::error_code)>;
 
-  using EventHandler = std::function<void(std::error_code)>;
+  enum class AddressPreference {
+    IPv4Only,
+    IPv6Only,
+    IPv4OrIPv6,
+    IPv6OrIPv4,
+    Any
+  };
 
-  Session(std::string host, uint16_t port = 0);
-  Session(boost::asio::ip::address ip, uint16_t port = 0);
+  virtual ~ResolverInterface() = default;
 
-  void Resolve(ResolverInterface& resolver,
-               ResolverInterface::AddressPreference preference,
-               EventHandler&& handler);
-
-  bool isAddressAvailable() const;
-
-  // prefer ipv4 address
-  const boost::asio::ip::address& GetBestAddress() const;
-  const ResolveResult& resolveResult() const;
-
-  Type type() const;
-  const std::string& domain() const;
-  const boost::asio::ip::address& address() const;
-  uint16_t port() const;
-  void setPort(uint16_t port);
-
- private:
-  Type type_;
-  std::string domain_;
-  boost::asio::ip::address address_;
-  uint16_t port_;
-
-  ResolveResult resolve_result_;
+  virtual void Resolve(std::string domain, AddressPreference preference,
+                       EventHandler&& handler) = 0;
 };
 }  // namespace utils
 }  // namespace nekit
