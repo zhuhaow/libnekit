@@ -49,6 +49,16 @@ std::error_code TcpListener::Bind(boost::asio::ip::address ip, uint16_t port) {
     return std::make_error_code(ec);
   }
 
+  acceptor_.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true), ec);
+  if (ec) {
+    return std::make_error_code(ec);
+  }
+
+  acceptor_.listen(8, ec);
+  if (ec) {
+    return std::make_error_code(ec);
+  }
+
   return ErrorCode::NoError;
 }
 
