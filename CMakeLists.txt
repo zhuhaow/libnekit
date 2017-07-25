@@ -7,7 +7,7 @@ endif()
 
 project(libnekit C CXX)
 
-set(PLATFORM "" CACHE STRING "Name of the platform.")
+set(PLATFORM "mac" CACHE STRING "Name of the platform.")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
