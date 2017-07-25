@@ -85,3 +85,5 @@ target_link_libraries(nekit ${LIBS})
 
 enable_testing()
 add_subdirectory(test)
+
+add_subdirectory(app)

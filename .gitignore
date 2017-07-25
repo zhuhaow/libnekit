@@ -387,3 +387,4 @@ cscope.po.out
 
 deps/
 /build
+/app/
