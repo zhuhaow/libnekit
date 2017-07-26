@@ -24,6 +24,6 @@
 
 namespace nekit {
 namespace utils {
-enum class IPProtocol { TCP, UDP }
+enum class IPProtocol { TCP, UDP };
 }
 }  // namespace nekit
