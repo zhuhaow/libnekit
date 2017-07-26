@@ -37,9 +37,9 @@ class ServerStreamCoderInterface : public StreamCoderInterface {
   virtual std::shared_ptr<utils::Session> session() const = 0;
 };
 
-class ServerStreamCoderFactory {
+class ServerStreamCoderFactoryInterface {
  public:
-  virtual ~ServerStreamCoderFactory() = default;
+  virtual ~ServerStreamCoderFactoryInterface() = default;
 
   virtual std::unique_ptr<ServerStreamCoderInterface> Build() = 0;
 };

@@ -70,7 +70,7 @@ class Socks5ServerStreamCoder final : public ServerStreamCoderInterface {
 
 std::error_code make_error_code(Socks5ServerStreamCoder::ErrorCode ec);
 
-class Socks5ServerStreamCoderFactory : public ServerStreamCoderFactory {
+class Socks5ServerStreamCoderFactory : public ServerStreamCoderFactoryInterface {
  public:
   std::unique_ptr<ServerStreamCoderInterface> Build() override;
 };

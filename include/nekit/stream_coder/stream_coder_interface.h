@@ -51,9 +51,9 @@ class StreamCoderInterface : boost::noncopyable {
   virtual bool forwarding() const = 0;
 };
 
-class StreamCoderFactory {
+class StreamCoderFactoryInterface {
  public:
-  virtual ~StreamCoderFactory() = default;
+  virtual ~StreamCoderFactoryInterface() = default;
 
   virtual std::unique_ptr<StreamCoderInterface> Build() = 0;
 };
