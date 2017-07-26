@@ -23,6 +23,7 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <string>
 #include <system_error>
 #include <vector>
@@ -42,7 +43,7 @@ struct Session {
   Session(std::string host, uint16_t port = 0);
   Session(boost::asio::ip::address ip, uint16_t port = 0);
 
-  void Resolve(ResolverInterface& resolver,
+  void Resolve(std::shared_ptr<ResolverInterface> resolver,
                ResolverInterface::AddressPreference preference,
                EventHandler&& handler);
 

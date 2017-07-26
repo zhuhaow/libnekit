@@ -45,7 +45,7 @@ Session::Session(boost::asio::ip::address ip, uint16_t port)
       port_{port},
       resolve_result_{ip.to_string()} {}
 
-void Session::Resolve(nekit::utils::ResolverInterface &resolver,
+void Session::Resolve(std::shared_ptr<ResolverInterface> resolver,
                       ResolverInterface::AddressPreference preference,
                       EventHandler &&handler) {
   if (isAddressAvailable()) {
@@ -53,18 +53,18 @@ void Session::Resolve(nekit::utils::ResolverInterface &resolver,
     return;
   }
 
-  resolver.Resolve(domain_, preference,
-                   [ this, handler{std::move(handler)} ](
-                       ResolveResult && result, std::error_code ec) {
-                     if (ec) {
-                       handler(ec);
-                       return;
-                     }
+  resolver->Resolve(domain_, preference,
+                    [ this, handler{std::move(handler)} ](
+                        ResolveResult && result, std::error_code ec) {
+                      if (ec) {
+                        handler(ec);
+                        return;
+                      }
 
-                     resolve_result_ = std::move(result);
-                     handler(ec);
-                     return;
-                   });
+                      resolve_result_ = std::move(result);
+                      handler(ec);
+                      return;
+                    });
 }
 
 bool Session::isAddressAvailable() const {
