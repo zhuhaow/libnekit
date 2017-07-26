@@ -178,7 +178,7 @@ ActionRequest Socks5ServerStreamCoder::Encode(utils::Buffer *buffer) {
       return ActionRequest::Continue;
     case Status::ReadingVersion: {
       buffer->ReleaseBack(2);
-      assert(buffer->capacity() == 2);
+      assert(buffer->capacity() >= 2);
       auto data = static_cast<uint8_t *>(buffer->buffer());
       *data = 5;
       *(data + 1) = 0;
