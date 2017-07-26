@@ -22,53 +22,8 @@
 
 #pragma once
 
-#include <functional>
-#include <memory>
-#include <string>
-#include <system_error>
-#include <vector>
-
-#include <boost/asio.hpp>
-
-#include "ip_protocol.h"
-#include "resolver_interface.h"
-
 namespace nekit {
 namespace utils {
-struct Session {
- public:
-  enum class Type { Domain, Address };
-
-  using EventHandler = std::function<void(std::error_code)>;
-
-  Session(std::string host, uint16_t port = 0);
-  Session(boost::asio::ip::address ip, uint16_t port = 0);
-
-  void Resolve(std::shared_ptr<ResolverInterface> resolver,
-               ResolverInterface::AddressPreference preference,
-               EventHandler&& handler);
-
-  bool isAddressAvailable() const;
-
-  // prefer ipv4 address
-  const boost::asio::ip::address& GetBestAddress() const;
-  const ResolveResult& resolveResult() const;
-
-  Type type() const;
-  const std::string& domain() const;
-  const boost::asio::ip::address& address() const;
-  uint16_t port() const;
-  void setPort(uint16_t port);
-  IPProtocol ipProtocol() const;
-
- private:
-  Type type_;
-  std::string domain_;
-  boost::asio::ip::address address_;
-  uint16_t port_;
-  IPProtocol ip_protocol_{IPProtocol::TCP};
-
-  ResolveResult resolve_result_;
-};
-}  // namespace utils
+enum class IPProtocol { TCP, UDP }
+}
 }  // namespace nekit

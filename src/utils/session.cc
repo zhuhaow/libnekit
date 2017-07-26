@@ -104,5 +104,7 @@ const boost::asio::ip::address &Session::address() const { return address_; }
 uint16_t Session::port() const { return port_; }
 
 void Session::setPort(uint16_t port) { port_ = port; }
+
+IPProtocol Session::ipProtocol() const { return ip_protocol_; }
 }  // namespace utils
 }  // namespace nekit
