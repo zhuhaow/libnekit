@@ -25,11 +25,13 @@
 #include <functional>
 #include <system_error>
 
+#include <boost/noncopyable.hpp>
+
 #include "resolve_result.h"
 
 namespace nekit {
 namespace utils {
-class ResolverInterface {
+class ResolverInterface : private boost::noncopyable {
  public:
   using EventHandler = std::function<void(ResolveResult&&, std::error_code)>;
 
