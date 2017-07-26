@@ -62,6 +62,7 @@ set(SOURCES
   src/stream_coder/socks5_server_stream_coder.cc
   src/transport/tcp_socket.cc
   src/transport/tcp_listener.cc
+  src/transport/tunnel.cc
   src/utils/boost_error.cc
   src/utils/session.cc
   )
