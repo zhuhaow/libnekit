@@ -69,6 +69,11 @@ class Socks5ServerStreamCoder final : public ServerStreamCoderInterface {
 };
 
 std::error_code make_error_code(Socks5ServerStreamCoder::ErrorCode ec);
+
+class Socks5ServerStreamCoderFactory : public ServerStreamCoderFactory {
+ public:
+  std::unique_ptr<ServerStreamCoderInterface> Build() override;
+};
 }  // namespace stream_coder
 }  // namespace nekit
 

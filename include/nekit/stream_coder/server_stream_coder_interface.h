@@ -36,5 +36,12 @@ class ServerStreamCoderInterface : public StreamCoderInterface {
   virtual ActionRequest Continue() = 0;
   virtual std::shared_ptr<utils::Session> session() const = 0;
 };
+
+class ServerStreamCoderFactory {
+ public:
+  virtual ~ServerStreamCoderFactory() = default;
+
+  virtual std::unique_ptr<ServerStreamCoderInterface> Build() = 0;
+};
 }  // namespace stream_coder
 }  // namespace nekit

@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <memory>
 #include <system_error>
 
 #include <boost/noncopyable.hpp>
@@ -50,5 +51,11 @@ class StreamCoderInterface : boost::noncopyable {
   virtual bool forwarding() const = 0;
 };
 
+class StreamCoderFactory {
+ public:
+  virtual ~StreamCoderFactory() = default;
+
+  virtual std::unique_ptr<StreamCoderInterface> Build() = 0;
+};
 }  // namespace stream_coder
 }  // namespace nekit
