@@ -22,33 +22,21 @@
 
 #pragma once
 
-#include <functional>
-#include <memory>
-#include <system_error>
+#include <boost/asio.hpp>
 
-#include <boost/noncopyable.hpp>
-
-#include "resolve_result.h"
+#include "resolver_interface.h"
 
 namespace nekit {
 namespace utils {
-class ResolverInterface : private boost::noncopyable {
+class SystemResolver : public ResolverInterface {
  public:
-  using EventHandler =
-      std::function<void(std::unique_ptr<ResolveResult>&&, std::error_code)>;
+  SystemResolver(boost::asio::io_service& io);
 
-  enum class AddressPreference {
-    IPv4Only,
-    IPv6Only,
-    IPv4OrIPv6,
-    IPv6OrIPv4,
-    Any
-  };
+  void Resolve(std::string domain, AddressPreference preference,
+               EventHandler&& handler) override;
 
-  virtual ~ResolverInterface() = default;
-
-  virtual void Resolve(std::string domain, AddressPreference preference,
-                       EventHandler&& handler) = 0;
+ private:
+  boost::asio::ip::tcp::resolver resolver_;
 };
 }  // namespace utils
 }  // namespace nekit

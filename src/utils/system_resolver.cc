@@ -20,35 +20,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
+#include "nekit/utils/system_resolver.h"
+#include "nekit/utils/boost_error.h"
 
-#include <functional>
-#include <memory>
-#include <system_error>
-
-#include <boost/noncopyable.hpp>
-
-#include "resolve_result.h"
+using namespace std;
 
 namespace nekit {
 namespace utils {
-class ResolverInterface : private boost::noncopyable {
- public:
-  using EventHandler =
-      std::function<void(std::unique_ptr<ResolveResult>&&, std::error_code)>;
+SystemResolver::SystemResolver(boost::asio::io_service& io) : resolver_{io} {}
 
-  enum class AddressPreference {
-    IPv4Only,
-    IPv6Only,
-    IPv4OrIPv6,
-    IPv6OrIPv4,
-    Any
-  };
+void SystemResolver::Resolve(std::string domain, AddressPreference preference,
+                             EventHandler&& handler) {
+  // Preference is ignored. Let the OS do the choice.
+  (void)preference;
 
-  virtual ~ResolverInterface() = default;
+  decltype(resolver_)::query query(domain, "");
+  resolver_.async_resolve(
+      query, [ domain, handler{std::move(handler)} ](
+                 const boost::system::error_code& ec,
+                 boost::asio::ip::tcp::resolver::iterator iter) {
+        if (ec) {
+          handler(nullptr, std::make_error_code(ec));
+          return;
+        }
 
-  virtual void Resolve(std::string domain, AddressPreference preference,
-                       EventHandler&& handler) = 0;
-};
+        auto result = std::make_unique<utils::ResolveResult>(domain);
+        while (iter != decltype(iter)()) {
+          if (iter->endpoint().address().is_v4()) {
+            result->ipv4Result().emplace_back(iter->endpoint().address());
+          } else {
+            result->ipv6Result().emplace_back(iter->endpoint().address());
+          }
+        }
+
+        handler(std::move(result), std::make_error_code(ec));
+        return;
+      });
+}
 }  // namespace utils
 }  // namespace nekit

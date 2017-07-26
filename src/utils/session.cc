@@ -53,18 +53,18 @@ void Session::Resolve(std::shared_ptr<ResolverInterface> resolver,
     return;
   }
 
-  resolver->Resolve(domain_, preference,
-                    [ this, handler{std::move(handler)} ](
-                        ResolveResult && result, std::error_code ec) {
-                      if (ec) {
-                        handler(ec);
-                        return;
-                      }
+  resolver->Resolve(domain_, preference, [
+    this, handler{std::move(handler)}
+  ](std::unique_ptr<ResolveResult> && result, std::error_code ec) {
+    if (ec) {
+      handler(ec);
+      return;
+    }
 
-                      resolve_result_ = std::move(result);
-                      handler(ec);
-                      return;
-                    });
+    resolve_result_ = std::move(*result);
+    handler(ec);
+    return;
+  });
 }
 
 bool Session::isAddressAvailable() const {

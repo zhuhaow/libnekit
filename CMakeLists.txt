@@ -65,6 +65,8 @@ set(SOURCES
   src/transport/tunnel.cc
   src/utils/boost_error.cc
   src/utils/session.cc
+  src/utils/system_resolver.cc
+  src/rule/rule_set.cc
   )
 
 add_library(nekit ${SOURCES})
