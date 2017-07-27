@@ -22,15 +22,16 @@
 
 #pragma once
 
-#include "../utils/endpoint.h"
+#include <boost/asio.hpp>
+
 #include "transport_interface.h"
 
 namespace nekit {
 namespace transport {
 class ConnectionInterface : public TransportInterface {
  public:
-  virtual utils::Endpoint localEndpoint() const = 0;
-  virtual utils::Endpoint remoteEndpoint() const = 0;
+  virtual boost::asio::ip::tcp::endpoint localEndpoint() const = 0;
+  virtual boost::asio::ip::tcp::endpoint remoteEndpoint() const = 0;
 };
 }  // namespace transport
 }  // namespace nekit

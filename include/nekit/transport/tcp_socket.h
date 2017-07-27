@@ -66,8 +66,8 @@ class TcpSocket final : public ConnectionInterface, private boost::noncopyable {
   bool IsWriteClosed() const override;
   bool IsClosed() const override;
 
-  utils::Endpoint localEndpoint() const override;
-  utils::Endpoint remoteEndpoint() const override;
+  boost::asio::ip::tcp::endpoint localEndpoint() const override;
+  boost::asio::ip::tcp::endpoint remoteEndpoint() const override;
 
   friend class TcpListener;
 

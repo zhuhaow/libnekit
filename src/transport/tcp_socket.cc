@@ -122,16 +122,16 @@ bool TcpSocket::IsWriteClosed() const { return write_closed_; }
 
 bool TcpSocket::IsClosed() const { return IsReadClosed() && IsWriteClosed(); }
 
-utils::Endpoint TcpSocket::localEndpoint() const {
+boost::asio::ip::tcp::endpoint TcpSocket::localEndpoint() const {
   boost::system::error_code ec;
-  utils::Endpoint endpoint = socket_.local_endpoint(ec);
+  boost::asio::ip::tcp::endpoint endpoint = socket_.local_endpoint(ec);
   assert(!ec);
   return endpoint;
 }
 
-utils::Endpoint TcpSocket::remoteEndpoint() const {
+boost::asio::ip::tcp::endpoint TcpSocket::remoteEndpoint() const {
   boost::system::error_code ec;
-  utils::Endpoint endpoint = socket_.remote_endpoint(ec);
+  boost::asio::ip::tcp::endpoint endpoint = socket_.remote_endpoint(ec);
   assert(!ec);
   return endpoint;
 }
