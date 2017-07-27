@@ -103,7 +103,7 @@ def install_path(target_platform):
 
 def download_repo(path, url, name, tag):
     git['-c', 'advice.detachedHead=false', 'clone', url, '--branch', tag,
-        '--depth', '1', '--single-branch',
+        '--depth', '1', '--shallow-submodules',
         os.path.join(path, name)] & FG
 
 
