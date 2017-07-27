@@ -69,6 +69,7 @@ set(SOURCES
   src/utils/system_resolver.cc
   src/utils/no_error.cc
   src/rule/rule_set.cc
+  src/transport/socks5_listener.cc
   )
 
 add_library(nekit ${SOURCES})
