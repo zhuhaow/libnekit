@@ -33,7 +33,8 @@ from plumbum import FG, local
 from plumbum.cmd import git, cmake, tar
 
 LIBRARIES = [('muflihun/easyloggingpp', 'v9.94.2', 'easyloggingpp'),
-             ('google/googletest', 'release-1.8.0', 'googletest')]
+             ('google/googletest', 'release-1.8.0',
+              'googletest'), ('openssl/openssl', 'OpenSSL_1_1_0f', 'openssl')]
 
 source_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 install_dir = os.path.abspath(os.path.join(source_dir, "deps"))
@@ -181,6 +182,42 @@ def build_boost(boost_dir, install_prefix, target_platform):
             shutil.rmtree(temp_dir, True)
 
 
+def build_openssl(openssl_dir, install_prefix, target_platform):
+    if target_platform == Platform.iOS:
+        with local.env(
+                CC="clang",
+                CROSS_TOP=
+                "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer",
+                CROSS_SDK="iPhoneOS.sdk",
+                PATH=""):
+            local.env.path.insert(
+                0,
+                "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin"
+            )
+            with local.cwd(openssl_dir):
+                local[local.cwd /
+                      "Configure"]["ios64-cross", "no-shared", "no-dso",
+                                   "no-hw", "no-engine", "--prefix={}".format(
+                                       install_prefix)] & FG
+                local["make"]["install_sw"] & FG
+
+    elif target_platform in [Platform.OSX]:
+        with local.cwd(openssl_dir):
+            local[local.cwd /
+                  "Configure"]["darwin64-x86_64-cc", "no-shared",
+                               "enable-ec_nistp_64_gcc_128", "no-comp",
+                               "--prefix={}".format(install_prefix)] & FG
+            local["make"]["install_sw"] & FG
+
+    elif target_platform in [Platform.Linux]:
+        with local.cwd(openssl_dir):
+            local[local.cwd /
+                  "Configure"]["linux-x86_64", "no-shared",
+                               "enable-ec_nistp_64_gcc_128", "no-comp",
+                               "--prefix={}".format(install_prefix)] & FG
+            local["make"]["install_sw"] & FG
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -214,6 +251,10 @@ def main():
         # Compile boost
         build_boost(
             os.path.join(tempdir, "boost"),
+            install_path(target_platform), target_platform)
+
+        build_openssl(
+            os.path.join(tempdir, "openssl"),
             install_path(target_platform), target_platform)
 
         # Compile easylogging++
