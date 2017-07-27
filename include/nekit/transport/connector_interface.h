@@ -41,9 +41,8 @@ class ConnectorInterface {
   using EventHandler = std::function<void(
       std::unique_ptr<ConnectionInterface>&&, std::error_code)>;
 
-  virtual void Connect(
-      std::unique_ptr<std::vector<boost::asio::ip::tcp::endpoint>>&&,
-      EventHandler&&) = 0;
+  virtual void Connect(std::vector<boost::asio::ip::address>& addresses,
+                       uint16_t port, EventHandler&& handler) = 0;
 
   virtual void Bind(std::shared_ptr<utils::DeviceInterface> device) = 0;
 };
