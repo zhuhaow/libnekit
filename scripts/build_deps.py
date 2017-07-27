@@ -188,8 +188,7 @@ def build_openssl(openssl_dir, install_prefix, target_platform):
                 CC="clang",
                 CROSS_TOP=
                 "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer",
-                CROSS_SDK="iPhoneOS.sdk",
-                PATH=""):
+                CROSS_SDK="iPhoneOS.sdk"):
             local.env.path.insert(
                 0,
                 "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin"

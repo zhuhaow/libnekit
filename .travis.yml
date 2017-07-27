@@ -16,6 +16,10 @@ addons:
       - g++-6
       - valgrind
       
+cache:
+  directories:
+    - deps
+
 matrix:
   include:
     - os: osx
@@ -44,7 +48,7 @@ install:
   - pip install --user plumbum
 
 before_script:
-  - scripts/build_deps.py $PLATFORM
+  - scripts/travis_check_deps.sh
 
 script:
   - scripts/travis.sh
