@@ -35,26 +35,17 @@ class ResolveResult final {
 
   const std::string& domain() const { return domain_; }
 
-  bool isIPv4() const { return !resolved_ipv4_addresses_.empty(); }
-  std::vector<boost::asio::ip::address>& ipv4Result() {
-    return resolved_ipv4_addresses_;
-  }
-  const std::vector<boost::asio::ip::address>& ipv4Result() const {
-    return resolved_ipv4_addresses_;
+  std::vector<boost::asio::ip::address>& result() {
+    return resolved_addresses_;
   }
 
-  bool isIPv6() const { return !resolved_ipv6_addresses_.empty(); }
-  std::vector<boost::asio::ip::address>& ipv6Result() {
-    return resolved_ipv6_addresses_;
-  }
-  const std::vector<boost::asio::ip::address>& ipv6Result() const {
-    return resolved_ipv4_addresses_;
+  const std::vector<boost::asio::ip::address>& result() const {
+    return resolved_addresses_;
   }
 
  private:
   std::string domain_;
-  std::vector<boost::asio::ip::address> resolved_ipv4_addresses_;
-  std::vector<boost::asio::ip::address> resolved_ipv6_addresses_;
+  std::vector<boost::asio::ip::address> resolved_addresses_;
 };
 }  // namespace utils
 }  // namespace nekit

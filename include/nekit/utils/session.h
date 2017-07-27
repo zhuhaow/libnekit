@@ -50,7 +50,6 @@ struct Session {
 
   bool isAddressAvailable() const;
 
-  // prefer ipv4 address
   const boost::asio::ip::address& GetBestAddress() const;
   const ResolveResult& resolveResult() const;
 

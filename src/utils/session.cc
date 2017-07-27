@@ -72,27 +72,17 @@ bool Session::isAddressAvailable() const {
     return true;
   }
 
-  return resolve_result_.isIPv4() || resolve_result_.isIPv6();
+  return !resolve_result_.result().empty();
 }
 
 const boost::asio::ip::address &Session::GetBestAddress() const {
+  assert(isAddressAvailable());
+
   if (type_ == Type::Address) {
     return address_;
   }
 
-  if (resolve_result_.isIPv4()) {
-    return resolve_result_.ipv4Result().front();
-  }
-
-  if (resolve_result_.isIPv6()) {
-    return resolve_result_.ipv6Result().front();
-  }
-
-  // There is no address available, this is wrong since one should check if
-  // address is available first. Theoretically, this method should also check
-  // this first for clarity, but that means we have to reevaluate all
-  // conditions again which is quite a waste.
-  assert(0);
+  return resolve_result_.result().front();
 }
 
 Session::Type Session::type() const { return type_; }
