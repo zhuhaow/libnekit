@@ -74,7 +74,7 @@ set(SOURCES
 
 add_library(nekit ${SOURCES})
 
-find_library(BOOST boost 
+find_library(BOOST boost
   NO_SYSTEM_ENVIROMENT_PATH)
 if(NOT BOOST)
   message(FATAL_ERROR "Boost not found. Build dependency first.")
