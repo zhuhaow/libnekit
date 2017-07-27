@@ -87,7 +87,7 @@ if(NOT EASY_LOGGING)
 endif()
 set(LIBS ${LIBS} ${EASY_LOGGING})
 
-find_library(OPENSSL openssl NO_SYSTEM_ENVIROMENT_PATH)
+find_library(OPENSSL crypto NO_SYSTEM_ENVIROMENT_PATH)
 if(NOT OPENSSL)
   message(FATAL_ERROR "OpenSSL not found. Build dependency first.")
 endif()
