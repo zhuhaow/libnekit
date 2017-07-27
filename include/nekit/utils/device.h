@@ -22,28 +22,19 @@
 
 #pragma once
 
-#include <functional>
 #include <memory>
-#include <system_error>
-#include <vector>
 
-#include "../utils/device.h"
-#include "../utils/endpoint.h"
-#include "connection_interface.h"
+#include <boost/asio/ip/address.hpp>
+#include <boost/noncopyable.hpp>
 
 namespace nekit {
-namespace transport {
-class ConnectorInterface {
+namespace utils {
+class DeviceInterface : private boost::noncopyable {
  public:
-  virtual ~ConnectorInterface() = default;
+  virtual ~DeviceInterface() = default;
 
-  using EventHandler = std::function<void(
-      std::unique_ptr<ConnectionInterface>&&, std::error_code)>;
-
-  virtual void Connect(std::unique_ptr<std::vector<utils::Endpoint>>&&,
-                       EventHandler&&) = 0;
-
-  virtual void Bind(std::shared_ptr<utils::DeviceInterface> device) = 0;
+  virtual boost::asio::ip::address FindSourceIpToBind(
+      const boost::asio::ip::address &target) = 0;
 };
-}  // namespace transport
+}  // namespace utils
 }  // namespace nekit
