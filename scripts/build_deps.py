@@ -147,7 +147,7 @@ def cmake_compile(source_dir,
 
 
 def build_boost(boost_dir, install_prefix, target_platform):
-    boost_module = "system"
+    boost_module = "core,system"
 
     if target_platform == Platform.iOS:
         # The script will convert the space delimiter back to comma.
