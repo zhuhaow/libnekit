@@ -34,7 +34,8 @@ from plumbum.cmd import git, cmake, tar
 
 LIBRARIES = [('muflihun/easyloggingpp', 'v9.94.2', 'easyloggingpp'),
              ('google/googletest', 'release-1.8.0',
-              'googletest'), ('openssl/openssl', 'OpenSSL_1_1_0f', 'openssl')]
+              'googletest'), ('openssl/openssl', 'OpenSSL_1_1_0f', 'openssl'),
+             ('boostorg/boost', 'boost-1.64.0', 'boost')]
 
 source_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 install_dir = os.path.abspath(os.path.join(source_dir, "deps"))
@@ -238,10 +239,6 @@ def main():
         for library in LIBRARIES:
             download_repo(tempdir, "https://github.com/" + library[0] + ".git",
                           library[2], library[1])
-
-        # Extract boost source to build temp folder
-        with local.cwd(tempdir):
-            tar["xvpzf", os.path.join(source_dir, "boost.tar.gz")] & FG
 
         # Remove built binaries and headers.
         shutil.rmtree(install_path(target_platform), True)
