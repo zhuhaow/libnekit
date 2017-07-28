@@ -7,7 +7,7 @@ if [ -z $PLATFORM ]; then
     exit 1
 fi
 
-cmake -H. -Bbuild -DPLATFORM=$PLATFORM
+cmake -H. -Bbuild -DPLATFORM=$PLATFORM -DCONVERAGE=$COVERAGE
 cmake --build build
 
 # Test on iOS is still unsupported.
