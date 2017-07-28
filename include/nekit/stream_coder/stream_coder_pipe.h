@@ -26,8 +26,6 @@
 #include <memory>
 #include <system_error>
 
-#include <boost/config.hpp>
-
 #include "stream_coder_interface.h"
 
 namespace nekit {
