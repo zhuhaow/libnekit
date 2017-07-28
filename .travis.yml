@@ -51,6 +51,7 @@ before_script:
   - scripts/travis_check_deps.sh
 
 script:
+  - set -e
   - scripts/travis.sh
 
 after_success:
