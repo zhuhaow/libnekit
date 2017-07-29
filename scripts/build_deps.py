@@ -149,12 +149,13 @@ def cmake_compile(source_dir,
 
 def build_boost(boost_dir, install_prefix, target_platform):
     boost_build_module = "system"
-    boost_module = "core,asio,system"
+    boost_module = "core,boost/asio.hpp,system"
 
     if Platform.current_platform() in [Platform.OSX, Platform.Linux]:
         with local.cwd(boost_dir):
             # build bcp first
             local[os.path.join(boost_dir, "bootstrap.sh")] & FG
+            local[os.path.join(boost_dir, "b2")]["headers"] & FG
             local[os.path.join(boost_dir, "b2")]["tools/bcp"] & FG
             shutil.copy(os.path.join(boost_dir, "dist/bin/bcp"), boost_dir)
             # copy headers
