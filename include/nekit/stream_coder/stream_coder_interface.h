@@ -29,6 +29,7 @@
 
 #include "../utils/buffer.h"
 #include "../utils/buffer_reserve_size.h"
+#include "../utils/session.h"
 #include "action_request.h"
 
 namespace nekit {
@@ -55,7 +56,8 @@ class StreamCoderFactoryInterface {
  public:
   virtual ~StreamCoderFactoryInterface() = default;
 
-  virtual std::unique_ptr<StreamCoderInterface> Build() = 0;
+  virtual std::unique_ptr<StreamCoderInterface> Build(
+      const utils::Session& session) = 0;
 };
 }  // namespace stream_coder
 }  // namespace nekit
