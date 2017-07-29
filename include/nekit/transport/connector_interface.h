@@ -45,5 +45,17 @@ class ConnectorInterface {
 
   virtual void Bind(std::shared_ptr<utils::DeviceInterface> device) = 0;
 };
+
+class ConnectorFactoryInterface {
+ public:
+  virtual ~ConnectorFactoryInterface() = default;
+
+  virtual std::unique_ptr<ConnectorInterface> Build(
+      const boost::asio::ip::address& address, uint16_t port) = 0;
+
+  virtual std::unique_ptr<ConnectorInterface> Build(
+      std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses,
+      uint16_t port) = 0;
+};
 }  // namespace transport
 }  // namespace nekit

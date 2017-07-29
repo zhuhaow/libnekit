@@ -32,7 +32,7 @@ TcpConnector::TcpConnector(const boost::asio::ip::address& address,
     : socket_{io}, address_{address}, port_{port} {}
 
 TcpConnector::TcpConnector(
-    std::shared_ptr<std::vector<boost::asio::ip::address>> addresses,
+    std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses,
     uint16_t port, boost::asio::io_service& io)
     : socket_{io}, addresses_{addresses}, port_{port} {}
 
