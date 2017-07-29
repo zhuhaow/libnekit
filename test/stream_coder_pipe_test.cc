@@ -22,12 +22,8 @@
 
 #include <gtest/gtest.h>
 
-#include <easylogging++.h>
-
 #include <mock/stream_coder.h>
 #include <nekit/stream_coder/stream_coder_pipe.h>
-
-INITIALIZE_EASYLOGGINGPP
 
 using namespace nekit::stream_coder;
 using namespace nekit::utils;

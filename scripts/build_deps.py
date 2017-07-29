@@ -33,8 +33,7 @@ import logging
 from plumbum import FG, local
 from plumbum.cmd import git, cmake
 
-LIBRARIES = [('muflihun/easyloggingpp', 'v9.94.2', 'easyloggingpp'),
-             ('google/googletest', 'release-1.8.0',
+LIBRARIES = [('google/googletest', 'release-1.8.0',
               'googletest'), ('openssl/openssl', 'OpenSSL_1_1_0f', 'openssl'),
              ('boostorg/boost', 'boost-1.64.0', 'boost')]
 
@@ -270,12 +269,6 @@ def main():
         build_openssl(
             os.path.join(tempdir, "openssl"),
             install_path(target_platform), target_platform)
-
-        # Compile easylogging++
-        cmake_compile(
-            os.path.join(tempdir, "easyloggingpp"),
-            install_path(target_platform), target_platform,
-            "-Dbuild_static_lib=ON")
 
         # Compile GoogleTest
         cmake_compile(

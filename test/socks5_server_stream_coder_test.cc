@@ -22,11 +22,7 @@
 
 #include <gtest/gtest.h>
 
-#include <easylogging++.h>
-
 #include "nekit/stream_coder/socks5_server_stream_coder.h"
-
-INITIALIZE_EASYLOGGINGPP
 
 using namespace nekit::stream_coder;
 using namespace nekit::utils;
