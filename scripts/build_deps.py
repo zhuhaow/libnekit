@@ -147,13 +147,25 @@ def cmake_compile(source_dir,
 
 
 def build_boost(boost_dir, install_prefix, target_platform):
-    boost_module = "core,system"
+    boost_build_module = "system"
+    boost_module = "asio,system"
+
+    if Platform.current_platform in [Platform.OSX, Platform.Linux]:
+        with local.cwd(boost_dir):
+            # build bcp first
+            local[os.path.join(boost_dir, "bootstrap.sh")] & FG
+            local[os.path.join(boost_dir, "b2")]["tools/bcp"] & FG
+            shutil.copy(os.path.join(boost_dir, "dist/bin/bcp"), boost_dir)
+            # copy headers
+            args = boost_module.split(',')
+            args.append(os.path.join(install_prefix, "include"))
+            local[os.path.join(boost_dir, "bcp")][args] & FG
 
     if target_platform == Platform.iOS:
         # The script will convert the space delimiter back to comma.
         with local.env(
                 BOOST_SRC=boost_dir,
-                BOOST_LIBS=boost_module.replace(",", " "),
+                BOOST_LIBS=boost_build_module.replace(",", " "),
                 OUTPUT_DIR=install_path(target_platform)):
             with local.cwd(os.path.join(source_dir, "scripts")):
                 local[local.cwd / "build_boost_ios.sh"] & FG
@@ -164,7 +176,8 @@ def build_boost(boost_dir, install_prefix, target_platform):
 
             local[os.path.join(boost_dir, "bootstrap.sh")]["--prefix={}".format(
                 install_prefix), "--libdir={}".format(
-                    temp_dir), "--with-libraries={}".format(boost_module)] & FG
+                    temp_dir), "--with-libraries={}".format(
+                        boost_build_module)] & FG
             local[os.path.join(boost_dir, "b2")]["install"] & FG
 
             # Linking all modules into one binary file
