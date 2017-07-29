@@ -45,16 +45,11 @@ class RuleSet : private boost::noncopyable {
 
   void Match(std::shared_ptr<utils::Session> session, EventHandler&& handler);
 
-  std::shared_ptr<utils::ResolverInterface> resolver() const;
-  utils::ResolverInterface::AddressPreference resolvePreference() const;
-
  private:
   void MatchIterator(
       std::vector<std::shared_ptr<RuleInterface>>::const_iterator iter,
       std::shared_ptr<utils::Session> session, EventHandler&& handler);
 
-  std::shared_ptr<utils::ResolverInterface> resolver_;
-  utils::ResolverInterface::AddressPreference resolve_preference_;
   std::vector<std::shared_ptr<RuleInterface>> rules_;
 };
 

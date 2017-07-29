@@ -44,9 +44,7 @@ struct Session {
   Session(std::string host, uint16_t port = 0);
   Session(boost::asio::ip::address ip, uint16_t port = 0);
 
-  void Resolve(std::shared_ptr<ResolverInterface> resolver,
-               ResolverInterface::AddressPreference preference,
-               EventHandler&& handler);
+  void Resolve(EventHandler&& handler);
 
   bool isAddressAvailable() const;
   bool isResolved() const;

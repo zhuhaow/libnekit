@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 #include "nekit/rule/rule_set.h"
+#include "nekit/utils/runtime.h"
 
 namespace nekit {
 namespace rule {
@@ -46,29 +47,20 @@ void RuleSet::MatchIterator(
         iter++;
         break;
       case MatchResult::ResolveNeeded:
-        session->Resolve(resolver(), resolvePreference(),
-                         [ this, handler{std::move(handler)}, session,
+        session->Resolve([ this, handler{std::move(handler)}, session,
                            iter ](std::error_code ec) mutable {
-                           if (ec) {
-                             handler(nullptr, ec);
-                             return;
-                           }
+          if (ec) {
+            handler(nullptr, ec);
+            return;
+          }
 
-                           MatchIterator(iter, session, std::move(handler));
-                         });
+          MatchIterator(iter, session, std::move(handler));
+        });
         return;
     }
   }
 
   handler(nullptr, ErrorCode::NoMatch);
-}
-
-std::shared_ptr<utils::ResolverInterface> RuleSet::resolver() const {
-  return resolver_;
-}
-
-utils::ResolverInterface::AddressPreference RuleSet::resolvePreference() const {
-  return resolve_preference_;
 }
 
 namespace {

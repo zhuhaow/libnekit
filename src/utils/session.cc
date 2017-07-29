@@ -22,6 +22,7 @@
 
 #include <system_error>
 
+#include "nekit/utils/runtime.h"
 #include "nekit/utils/session.h"
 
 namespace nekit {
@@ -45,28 +46,27 @@ Session::Session(boost::asio::ip::address ip, uint16_t port)
       port_{port},
       resolve_result_{ip.to_string()} {}
 
-void Session::Resolve(std::shared_ptr<ResolverInterface> resolver,
-                      ResolverInterface::AddressPreference preference,
-                      EventHandler &&handler) {
+void Session::Resolve(EventHandler &&handler) {
   if (isAddressAvailable()) {
     handler(std::error_code(0, std::generic_category()));
     return;
   }
 
-  resolver->Resolve(domain_, preference, [
-    this, handler{std::move(handler)}
-  ](std::unique_ptr<ResolveResult> && result, std::error_code ec) {
-    resolved_ = true;
+  utils::Runtime::CurrentRuntime().Resolver()->Resolve(
+      domain_, ResolverInterface::AddressPreference::Any,
+      [ this, handler{std::move(handler)} ](
+          std::unique_ptr<ResolveResult> && result, std::error_code ec) {
+        resolved_ = true;
 
-    if (ec) {
-      handler(ec);
-      return;
-    }
+        if (ec) {
+          handler(ec);
+          return;
+        }
 
-    resolve_result_ = std::move(*result);
-    handler(ec);
-    return;
-  });
+        resolve_result_ = std::move(*result);
+        handler(ec);
+        return;
+      });
 }
 
 bool Session::isAddressAvailable() const {
