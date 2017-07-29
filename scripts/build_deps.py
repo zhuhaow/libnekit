@@ -149,7 +149,7 @@ def cmake_compile(source_dir,
 
 def build_boost(boost_dir, install_prefix, target_platform):
     boost_build_module = "system"
-    boost_module = "asio,system"
+    boost_module = "core,asio,system"
 
     logging.info("Begin building boost for type %s on type %s",
                  target_platform, Platform.current_platform)
