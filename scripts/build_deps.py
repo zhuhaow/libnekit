@@ -151,9 +151,6 @@ def build_boost(boost_dir, install_prefix, target_platform):
     boost_build_module = "system"
     boost_module = "core,asio,system"
 
-    logging.info("Begin building boost for type %s on type %s",
-                 target_platform, Platform.current_platform)
-
     if Platform.current_platform() in [Platform.OSX, Platform.Linux]:
         with local.cwd(boost_dir):
             # build bcp first
