@@ -49,6 +49,7 @@ struct Session {
                EventHandler&& handler);
 
   bool isAddressAvailable() const;
+  bool isResolved() const;
 
   const boost::asio::ip::address& GetBestAddress() const;
   const ResolveResult& resolveResult() const;
@@ -66,6 +67,7 @@ struct Session {
   boost::asio::ip::address address_;
   uint16_t port_;
   IPProtocol ip_protocol_{IPProtocol::TCP};
+  bool resolved_;
 
   ResolveResult resolve_result_;
 };

@@ -56,6 +56,8 @@ void Session::Resolve(std::shared_ptr<ResolverInterface> resolver,
   resolver->Resolve(domain_, preference, [
     this, handler{std::move(handler)}
   ](std::unique_ptr<ResolveResult> && result, std::error_code ec) {
+    resolved_ = true;
+
     if (ec) {
       handler(ec);
       return;
@@ -72,8 +74,10 @@ bool Session::isAddressAvailable() const {
     return true;
   }
 
-  return !resolve_result_.result().empty();
+  return !resolve_result_.result()->empty();
 }
+
+bool Session::isResolved() const { return resolved_; }
 
 const boost::asio::ip::address &Session::GetBestAddress() const {
   assert(isAddressAvailable());
@@ -82,7 +86,7 @@ const boost::asio::ip::address &Session::GetBestAddress() const {
     return address_;
   }
 
-  return resolve_result_.result().front();
+  return resolve_result_.result()->front();
 }
 
 Session::Type Session::type() const { return type_; }

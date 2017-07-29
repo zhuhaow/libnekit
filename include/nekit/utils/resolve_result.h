@@ -31,21 +31,23 @@ namespace nekit {
 namespace utils {
 class ResolveResult final {
  public:
-  ResolveResult(std::string domain) : domain_{domain} {};
+  ResolveResult(std::string domain)
+      : domain_{domain},
+        resolved_addresses_{new std::vector<boost::asio::ip::address>()} {};
 
   const std::string& domain() const { return domain_; }
 
-  std::vector<boost::asio::ip::address>& result() {
+  std::shared_ptr<std::vector<boost::asio::ip::address>> result() {
     return resolved_addresses_;
   }
 
-  const std::vector<boost::asio::ip::address>& result() const {
+  std::shared_ptr<const std::vector<boost::asio::ip::address>> result() const {
     return resolved_addresses_;
   }
 
  private:
   std::string domain_;
-  std::vector<boost::asio::ip::address> resolved_addresses_;
+  std::shared_ptr<std::vector<boost::asio::ip::address>> resolved_addresses_;
 };
 }  // namespace utils
 }  // namespace nekit

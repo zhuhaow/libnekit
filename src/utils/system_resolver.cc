@@ -46,7 +46,7 @@ void SystemResolver::Resolve(std::string domain, AddressPreference preference,
 
         auto result = std::make_unique<utils::ResolveResult>(domain);
         while (iter != decltype(iter)()) {
-          result->result().emplace_back(iter->endpoint().address());
+          result->result()->emplace_back(iter->endpoint().address());
         }
 
         handler(std::move(result), std::make_error_code(ec));
