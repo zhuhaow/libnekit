@@ -178,7 +178,7 @@ def build_boost(boost_dir, install_prefix, target_platform):
             temp_dir = tempfile.mkdtemp()
 
             local[os.path.join(boost_dir, "bootstrap.sh")]["--prefix={}".format(
-                install_prefix), "--libdir={}".format(
+                os.path.join(temp_dir, "boost_tmp")), "--libdir={}".format(
                     temp_dir), "--with-libraries={}".format(
                         boost_build_module)] & FG
             local[os.path.join(boost_dir, "b2")]["install"] & FG
