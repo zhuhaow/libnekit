@@ -30,7 +30,7 @@ import platform
 import errno
 
 from plumbum import FG, local
-from plumbum.cmd import git, cmake, tar
+from plumbum.cmd import git, cmake
 
 LIBRARIES = [('muflihun/easyloggingpp', 'v9.94.2', 'easyloggingpp'),
              ('google/googletest', 'release-1.8.0',
