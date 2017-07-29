@@ -68,6 +68,7 @@ set(SOURCES
   src/utils/session.cc
   src/utils/system_resolver.cc
   src/utils/no_error.cc
+  src/utils/runtime.cc
   src/rule/rule_set.cc
   src/transport/socks5_listener.cc
   )
