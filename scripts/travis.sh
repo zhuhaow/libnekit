@@ -11,7 +11,7 @@ if [ -z $COVERAGE ]; then
     COVERAGE=OFF
 fi
 
-cmake -H. -Bbuild -DPLATFORM=$PLATFORM -DCONVERAGE=$COVERAGE
+cmake -H. -Bbuild -DPLATFORM=$PLATFORM -DCOVERAGE=$COVERAGE
 cmake --build build
 
 # Test on iOS is still unsupported.
