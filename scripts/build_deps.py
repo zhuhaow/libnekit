@@ -154,7 +154,7 @@ def build_boost(boost_dir, install_prefix, target_platform):
     logging.info("Begin building boost for type %s on type %s",
                  target_platform, Platform.current_platform)
 
-    if Platform.current_platform in [Platform.OSX, Platform.Linux]:
+    if Platform.current_platform() in [Platform.OSX, Platform.Linux]:
         with local.cwd(boost_dir):
             # build bcp first
             local[os.path.join(boost_dir, "bootstrap.sh")] & FG
