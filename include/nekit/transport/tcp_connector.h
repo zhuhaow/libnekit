@@ -22,28 +22,41 @@
 
 #pragma once
 
-#include <functional>
-#include <memory>
-#include <system_error>
 #include <vector>
 
 #include <boost/asio.hpp>
 
-#include "../utils/device.h"
-#include "connection_interface.h"
+#include "connector_interface.h"
 
 namespace nekit {
 namespace transport {
-class ConnectorInterface {
+class TcpConnector : public ConnectorInterface {
  public:
-  virtual ~ConnectorInterface() = default;
+  TcpConnector(const boost::asio::ip::address& address, uint16_t port,
+               boost::asio::io_service& io);
 
-  using EventHandler = std::function<void(
-      std::unique_ptr<ConnectionInterface>&&, std::error_code)>;
+  TcpConnector(std::shared_ptr<std::vector<boost::asio::ip::address>> addresses,
+               uint16_t port, boost::asio::io_service& io);
 
-  virtual void Connect(EventHandler&& handler) = 0;
+  void Connect(EventHandler&& handler) override;
 
-  virtual void Bind(std::shared_ptr<utils::DeviceInterface> device) = 0;
+  void Bind(std::shared_ptr<utils::DeviceInterface> device) override;
+
+ private:
+  void DoConnect();
+
+  boost::asio::ip::tcp::socket socket_;
+  boost::asio::ip::address address_;
+  std::shared_ptr<std::vector<boost::asio::ip::address>> addresses_;
+  uint16_t port_;
+  EventHandler handler_;
+  std::shared_ptr<utils::DeviceInterface> device_;
+
+  std::error_code last_error_;
+
+  std::size_t current_ind_;
+
+  bool connecting_;
 };
 }  // namespace transport
 }  // namespace nekit
