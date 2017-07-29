@@ -236,6 +236,8 @@ def build_openssl(openssl_dir, install_prefix, target_platform):
 
 
 def main():
+    logging.getLogger().setLevel(logging.DEBUG)
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         'platform_name',
