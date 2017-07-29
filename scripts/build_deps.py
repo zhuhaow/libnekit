@@ -160,6 +160,7 @@ def build_boost(boost_dir, install_prefix, target_platform):
             # copy headers
             args = boost_module.split(',')
             args.append(os.path.join(install_prefix, "include"))
+            ensure_path_exist(os.path.join(install_prefix, "include"))
             local[os.path.join(boost_dir, "bcp")][args] & FG
 
     if target_platform == Platform.iOS:
