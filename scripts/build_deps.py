@@ -170,7 +170,7 @@ def build_boost(boost_dir, install_prefix, target_platform):
         with local.env(
                 BOOST_SRC=boost_dir,
                 BOOST_LIBS=boost_build_module.replace(",", " "),
-                OUTPUT_DIR=install_path(target_platform)):
+                OUTPUT_DIR=install_prefix):
             with local.cwd(os.path.join(source_dir, "scripts")):
                 local[local.cwd / "build_boost_ios.sh"] & FG
 
