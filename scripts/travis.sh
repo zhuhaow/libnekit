@@ -2,14 +2,7 @@
 
 set -euo pipefail
 
-if [ -z $PLATFORM ]; then
-    echo "PLATFORM must be set."
-    exit 1
-fi
-
-if [ -z $COVERAGE ]; then
-    COVERAGE=OFF
-fi
+[[ "${COVERAGE:-}" ]] || COVERAGE=OFF
 
 cmake -H. -Bbuild -DPLATFORM=$PLATFORM -DCOVERAGE=$COVERAGE
 cmake --build build
