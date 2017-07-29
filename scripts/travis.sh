@@ -7,6 +7,10 @@ if [ -z $PLATFORM ]; then
     exit 1
 fi
 
+if [ -z $COVERAGE ]; then
+    COVERAGE=OFF
+fi
+
 cmake -H. -Bbuild -DPLATFORM=$PLATFORM -DCONVERAGE=$COVERAGE
 cmake --build build
 
