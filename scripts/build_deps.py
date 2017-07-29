@@ -28,6 +28,7 @@ import shutil
 import argparse
 import platform
 import errno
+import logging
 
 from plumbum import FG, local
 from plumbum.cmd import git, cmake
@@ -149,6 +150,9 @@ def cmake_compile(source_dir,
 def build_boost(boost_dir, install_prefix, target_platform):
     boost_build_module = "system"
     boost_module = "asio,system"
+
+    logging.info("Begin building boost for type %s on type %s",
+                 target_platform, Platform.current_platform)
 
     if Platform.current_platform in [Platform.OSX, Platform.Linux]:
         with local.cwd(boost_dir):
