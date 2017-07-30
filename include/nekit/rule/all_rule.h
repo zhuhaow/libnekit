@@ -31,6 +31,7 @@
 namespace nekit {
 namespace rule {
 class AllRule : public RuleInterface {
+public:
   AllRule(std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory);
 
   MatchResult Match(std::shared_ptr<utils::Session> session) override;

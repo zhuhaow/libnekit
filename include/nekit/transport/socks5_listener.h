@@ -29,6 +29,7 @@
 namespace nekit {
 namespace transport {
 class Socks5Listener : public ServerListenerInterface {
+public:
   Socks5Listener(boost::asio::io_service& io,
                  stream_coder::Socks5ServerStreamCoderFactory&& factory);
 
