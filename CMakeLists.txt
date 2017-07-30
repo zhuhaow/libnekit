@@ -72,6 +72,7 @@ set(SOURCES
   src/utils/domain.cc
   src/rule/rule_set.cc
   src/rule/all_rule.cc
+  src/transport/direct_adapter.cc
   src/transport/socks5_listener.cc
   )
 
