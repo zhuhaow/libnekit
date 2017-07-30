@@ -44,12 +44,13 @@ void SystemResolver::Resolve(std::string domain, AddressPreference preference,
           return;
         }
 
-        auto result = std::make_unique<utils::ResolveResult>(domain);
+        auto addresses =
+            std::make_shared<std::vector<boost::asio::ip::address>>();
         while (iter != decltype(iter)()) {
-          result->result()->emplace_back(iter->endpoint().address());
+          addresses->emplace_back(iter->endpoint().address());
         }
 
-        handler(std::move(result), std::make_error_code(ec));
+        handler(addresses, std::make_error_code(ec));
         return;
       });
 }

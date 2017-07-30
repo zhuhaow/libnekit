@@ -27,15 +27,15 @@
 #include <system_error>
 
 #include <boost/noncopyable.hpp>
-
-#include "resolve_result.h"
+#include <boost/asio.hpp>
 
 namespace nekit {
 namespace utils {
 class ResolverInterface : private boost::noncopyable {
  public:
-  using EventHandler =
-      std::function<void(std::unique_ptr<ResolveResult>&&, std::error_code)>;
+  using EventHandler = std::function<void(
+      std::shared_ptr<std::vector<boost::asio::ip::address>> addresses,
+      std::error_code)>;
 
   enum class AddressPreference {
     IPv4Only,
