@@ -57,7 +57,7 @@ class StreamCoderFactoryInterface {
   virtual ~StreamCoderFactoryInterface() = default;
 
   virtual std::unique_ptr<StreamCoderInterface> Build(
-      const utils::Session& session) = 0;
+      std::shared_ptr<utils::Session> session) = 0;
 };
 }  // namespace stream_coder
 }  // namespace nekit

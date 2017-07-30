@@ -154,7 +154,7 @@ TEST(SOCKS5StreamCoderSessionNegotiation, CorrectDomainRequest) {
   *data = 53;  // 53
   EXPECT_EQ(coder.Decode(&buffer3), ActionRequest::Event);
   EXPECT_EQ(coder.session()->type(), Session::Type::Domain);
-  EXPECT_EQ(coder.session()->domain(), "example.com");
+  EXPECT_EQ(*coder.session()->domain(), "example.com");
   EXPECT_EQ(coder.session()->port(), 53);
 
   EXPECT_EQ(coder.Continue(), ActionRequest::WantWrite);

@@ -43,7 +43,8 @@ class DirectStreamCoder : public StreamCoderInterface {
 
 class DirectStreamCoderFactory : public StreamCoderFactoryInterface {
  public:
-  std::unique_ptr<StreamCoderInterface> Build(const utils::Session& session) override;
+  std::unique_ptr<StreamCoderInterface> Build(
+      std::shared_ptr<utils::Session> session) override;
 };
 }  // namespace stream_coder
 }  // namespace nekit
