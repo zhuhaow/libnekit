@@ -27,8 +27,7 @@
 
 #include <boost/noncopyable.hpp>
 
-#include "../stream_coder/stream_coder_interface.h"
-#include "../transport/connector_interface.h"
+#include "../transport/adapter_interface.h"
 #include "../utils/session.h"
 #include "match_result.h"
 
@@ -39,12 +38,8 @@ class RuleInterface : boost::noncopyable {
   virtual ~RuleInterface() = default;
 
   virtual MatchResult Match(std::shared_ptr<utils::Session> session) = 0;
-
-  virtual std::unique_ptr<transport::ConnectorFactoryInterface> GetTransport(
-      std::shared_ptr<const utils::Session> session) = 0;
-
-  virtual std::unique_ptr<stream_coder::StreamCoderInterface> GetStreamCoder(
-      std::shared_ptr<const utils::Session>) = 0;
+  virtual std::unique_ptr<transport::AdapterInterface> GetAdapter(
+      std::shared_ptr<utils::Session> session) = 0;
 };
 }  // namespace rule
 }  // namespace nekit
