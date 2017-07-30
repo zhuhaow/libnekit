@@ -31,23 +31,14 @@
 namespace nekit {
 namespace rule {
 class AllRule : public RuleInterface {
-  AllRule(
-      std::unique_ptr<stream_coder::StreamCoderFactoryInterface>&&
-          stream_coder_factory,
-      std::unique_ptr<transport::ConnectorFactoryInterface>&& connector_factory,
-      bool address_required);
+  AllRule(std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory);
 
-  MatchResult Match(std::shared_ptr<utils::Session> session);
-  std::unique_ptr<transport::ConnectorInterface> GetConnector(
-      std::shared_ptr<const utils::Session> session);
-  std::unique_ptr<stream_coder::StreamCoderInterface> GetStreamCoder(
-      std::shared_ptr<const utils::Session>);
+  MatchResult Match(std::shared_ptr<utils::Session> session) override;
+  std::unique_ptr<transport::AdapterInterface> GetAdapter(
+      std::shared_ptr<utils::Session> session) override;
 
  private:
-  std::unique_ptr<stream_coder::StreamCoderFactoryInterface>
-      stream_coder_factory_;
-  std::unique_ptr<transport::ConnectorFactoryInterface> connector_factory_;
-  bool address_required_;
+  std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory_;
 };
 }  // namespace rule
 }  // namespace nekit

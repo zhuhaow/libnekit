@@ -25,36 +25,17 @@
 namespace nekit {
 namespace rule {
 AllRule::AllRule(
-    std::unique_ptr<stream_coder::StreamCoderFactoryInterface>&&
-        stream_coder_factory,
-    std::unique_ptr<transport::ConnectorFactoryInterface>&& connector_factory,
-    bool address_required)
-    : stream_coder_factory_{std::move(stream_coder_factory)},
-      connector_factory_{std::move(connector_factory)},
-      address_required_{address_required} {}
+    std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory)
+    : adapter_factory_{adapter_factory} {}
 
 MatchResult AllRule::Match(std::shared_ptr<utils::Session> session) {
-  if (!address_required_) {
-    return MatchResult::Match;
-  }
-
-  if (session->isAddressAvailable()) {
-    return MatchResult::Match;
-  } else if (session->isResolved()) {
-    return MatchResult::NotMatch;
-  }
-  return MatchResult::ResolveNeeded;
+  (void)session;
+  return MatchResult::Match;
 }
 
-std::unique_ptr<transport::ConnectorInterface> AllRule::GetConnector(
-    std::shared_ptr<const utils::Session> session) {
-  return connector_factory_->Build(*session);
-}
-
-std::unique_ptr<stream_coder::StreamCoderInterface>
-AllRule::AllRule::GetStreamCoder(
-    std::shared_ptr<const utils::Session> session) {
-  return stream_coder_factory_->Build(*session);
+std::unique_ptr<transport::AdapterInterface> AllRule::GetAdapter(
+    std::shared_ptr<utils::Session> session) {
+  return adapter_factory_->Build(session);
 }
 
 }  // namespace rule
