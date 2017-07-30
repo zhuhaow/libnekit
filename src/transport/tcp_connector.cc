@@ -21,26 +21,61 @@
 // SOFTWARE.
 
 #include "nekit/transport/tcp_connector.h"
+
 #include "nekit/transport/tcp_socket.h"
 #include "nekit/utils/boost_error.h"
 #include "nekit/utils/no_error.h"
+#include "nekit/utils/runtime.h"
 
 namespace nekit {
 namespace transport {
 TcpConnector::TcpConnector(const boost::asio::ip::address& address,
                            uint16_t port, boost::asio::io_service& io)
-    : socket_{io}, address_{address}, port_{port} {}
+    : socket_{io},
+      addresses_{
+          std::make_shared<std::vector<boost::asio::ip::address>>(address)},
+      port_{port} {}
 
 TcpConnector::TcpConnector(
     std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses,
     uint16_t port, boost::asio::io_service& io)
-    : socket_{io}, addresses_{addresses}, port_{port} {}
+    : socket_{io}, addresses_{addresses}, port_{port} {
+  assert(!addresses_->empty());
+}
+
+TcpConnector::TcpConnector(std::shared_ptr<utils::Domain> domain, uint16_t port,
+                           boost::asio::io_service& io)
+    : socket_{io}, domain_{domain}, port_{port} {}
+
+TcpConnector::TcpConnector(std::string domain, uint16_t port,
+                           boost::asio::io_service& io)
+    : TcpConnector(std::make_shared<utils::Domain>(domain), port, io) {}
 
 void TcpConnector::Connect(EventHandler&& handler) {
   assert(!connecting_);
 
   handler_ = std::move(handler);
-  current_ind_ = 0;
+
+  if (!addresses_) {
+    if (domain_->isAddressAvailable()) {
+      addresses_ = domain_->addresses();
+    } else {
+      if (domain_->isResolved()) {
+        handler_(nullptr, domain_->error());
+        return;
+      } else {
+        domain_->Resolve([this](std::error_code ec) {
+          if (ec) {
+            handler_(nullptr, ec);
+            return;
+          }
+
+          addresses_ = domain_->addresses();
+          DoConnect();
+        });
+      }
+    }
+  }
 
   DoConnect();
 }
@@ -48,18 +83,13 @@ void TcpConnector::Connect(EventHandler&& handler) {
 void TcpConnector::DoConnect() {
   connecting_ = true;
 
-  const boost::asio::ip::address* address;
-  if (current_ind_ == 0 && addresses_->size() == 0) {
-    address = &address_;
-  } else {
-    if (current_ind_ >= addresses_->size()) {
-      handler_(nullptr, last_error_);
-      return;
-    }
-    address = &addresses_->at(current_ind_);
+  if (current_ind_ >= addresses_->size()) {
+    handler_(nullptr, last_error_);
+    return;
   }
 
-  socket_.async_connect(boost::asio::ip::tcp::endpoint(*address, port_),
+  const auto& address = addresses_->at(current_ind_);
+  socket_.async_connect(boost::asio::ip::tcp::endpoint(address, port_),
                         [this](const boost::system::error_code& ec) {
                           if (ec) {
                             last_error_ = std::make_error_code(ec);

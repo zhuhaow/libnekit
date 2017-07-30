@@ -39,6 +39,11 @@ class TcpConnector : public ConnectorInterface {
       std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses,
       uint16_t port, boost::asio::io_service& io);
 
+  TcpConnector(std::shared_ptr<utils::Domain> domain, uint16_t port,
+               boost::asio::io_service& io);
+
+  TcpConnector(std::string domain, uint16_t port, boost::asio::io_service& io);
+
   void Connect(EventHandler&& handler) override;
 
   void Bind(std::shared_ptr<utils::DeviceInterface> device) override;
@@ -47,15 +52,16 @@ class TcpConnector : public ConnectorInterface {
   void DoConnect();
 
   boost::asio::ip::tcp::socket socket_;
-  boost::asio::ip::address address_;
   std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses_;
+  std::shared_ptr<utils::Domain> domain_;
+
   uint16_t port_;
   EventHandler handler_;
   std::shared_ptr<utils::DeviceInterface> device_;
 
   std::error_code last_error_;
 
-  std::size_t current_ind_;
+  std::size_t current_ind_{0};
 
   bool connecting_;
 };

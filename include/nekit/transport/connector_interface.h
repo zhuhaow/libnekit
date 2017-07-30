@@ -30,6 +30,7 @@
 #include <boost/asio.hpp>
 
 #include "../utils/device.h"
+#include "../utils/domain.h"
 #include "connection_interface.h"
 
 namespace nekit {
@@ -56,6 +57,9 @@ class ConnectorFactoryInterface {
   virtual std::unique_ptr<ConnectorInterface> Build(
       std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses,
       uint16_t port) = 0;
+
+  virtual std::unique_ptr<ConnectorInterface> Build(
+      std::shared_ptr<utils::Domain> domain, uint16_t port) = 0;
 };
 }  // namespace transport
 }  // namespace nekit
