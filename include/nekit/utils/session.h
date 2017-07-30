@@ -30,8 +30,8 @@
 
 #include <boost/asio.hpp>
 
+#include "domain.h"
 #include "ip_protocol.h"
-#include "resolver_interface.h"
 
 namespace nekit {
 namespace utils {
@@ -47,13 +47,11 @@ struct Session {
   void Resolve(EventHandler&& handler);
 
   bool isAddressAvailable() const;
-  bool isResolved() const;
 
   const boost::asio::ip::address& GetBestAddress() const;
-  const ResolveResult& resolveResult() const;
 
   Type type() const;
-  const std::string& domain() const;
+  std::shared_ptr<Domain> domain();
   const boost::asio::ip::address& address() const;
   uint16_t port() const;
   void setPort(uint16_t port);
@@ -61,13 +59,10 @@ struct Session {
 
  private:
   Type type_;
-  std::string domain_;
+  std::shared_ptr<Domain> domain_;
   boost::asio::ip::address address_;
   uint16_t port_;
   IPProtocol ip_protocol_{IPProtocol::TCP};
-  bool resolved_;
-
-  ResolveResult resolve_result_;
 };
 }  // namespace utils
 }  // namespace nekit

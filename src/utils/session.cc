@@ -29,11 +29,11 @@ namespace nekit {
 namespace utils {
 
 Session::Session(std::string host, uint16_t port)
-    : port_{port}, resolve_result_(host) {
+    : domain_{std::make_shared<Domain>(host)}, port_{port} {
   boost::system::error_code ec;
   address_ = boost::asio::ip::address::from_string(host, ec);
+
   if (ec) {
-    domain_ = host;
     type_ = Type::Domain;
   } else {
     type_ = Type::Address;
@@ -42,42 +42,17 @@ Session::Session(std::string host, uint16_t port)
 
 Session::Session(boost::asio::ip::address ip, uint16_t port)
     : type_{Type::Address},
+      domain_{std::make_shared<Domain>(ip.to_string())},
       address_{ip},
-      port_{port},
-      resolve_result_{ip.to_string()} {}
-
-void Session::Resolve(EventHandler &&handler) {
-  if (isAddressAvailable()) {
-    handler(std::error_code(0, std::generic_category()));
-    return;
-  }
-
-  utils::Runtime::CurrentRuntime().Resolver()->Resolve(
-      domain_, ResolverInterface::AddressPreference::Any,
-      [ this, handler{std::move(handler)} ](
-          std::unique_ptr<ResolveResult> && result, std::error_code ec) {
-        resolved_ = true;
-
-        if (ec) {
-          handler(ec);
-          return;
-        }
-
-        resolve_result_ = std::move(*result);
-        handler(ec);
-        return;
-      });
-}
+      port_{port} {}
 
 bool Session::isAddressAvailable() const {
   if (type_ == Type::Address) {
     return true;
   }
 
-  return !resolve_result_.result()->empty();
+  return domain_->isAddressAvailable();
 }
-
-bool Session::isResolved() const { return resolved_; }
 
 const boost::asio::ip::address &Session::GetBestAddress() const {
   assert(isAddressAvailable());
@@ -86,12 +61,12 @@ const boost::asio::ip::address &Session::GetBestAddress() const {
     return address_;
   }
 
-  return resolve_result_.result()->front();
+  return domain_->addresses()->front();
 }
 
 Session::Type Session::type() const { return type_; }
 
-const std::string &Session::domain() const { return domain_; }
+std::shared_ptr<Domain> Session::domain() { return domain_; }
 
 const boost::asio::ip::address &Session::address() const { return address_; }
 
