@@ -48,6 +48,7 @@ void SystemResolver::Resolve(std::string domain, AddressPreference preference,
             std::make_shared<std::vector<boost::asio::ip::address>>();
         while (iter != decltype(iter)()) {
           addresses->emplace_back(iter->endpoint().address());
+            iter++;
         }
 
         handler(addresses, std::make_error_code(ec));
