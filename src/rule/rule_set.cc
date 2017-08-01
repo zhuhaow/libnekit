@@ -47,8 +47,9 @@ void RuleSet::MatchIterator(
         iter++;
         break;
       case MatchResult::ResolveNeeded:
-        session->Resolve([ this, handler{std::move(handler)}, session,
-                           iter ](std::error_code ec) mutable {
+        session->domain()->Resolve([
+          this, handler{std::move(handler)}, session, iter
+        ](std::error_code ec) mutable {
           if (ec) {
             handler(nullptr, ec);
             return;
