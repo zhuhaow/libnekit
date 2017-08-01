@@ -75,6 +75,7 @@ set(SOURCES
   src/rule/rule_set.cc
   src/rule/all_rule.cc
   src/transport/direct_adapter.cc
+  src/instance.cc
   src/transport/socks5_listener.cc
   )
 
