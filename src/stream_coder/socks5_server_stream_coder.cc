@@ -212,6 +212,8 @@ ActionRequest Socks5ServerStreamCoder::Encode(utils::Buffer *buffer) {
       *(data + 3) = type;
       std::memset(data + 4, 0, len - 4);
 
+      status_ = Status::Forwarding;
+
       return ActionRequest::Ready;
     }
   }
