@@ -45,7 +45,7 @@ void DirectAdapter::Open(EventHandler &&handler) {
 
 void DirectAdapter::DoConnect() {
   connector_->Connect(
-      [this](std::unique_ptr<ConnectionInterface> &&conn, std::error_code ec) {
+      [this, handler_{std::move(handler_)}](std::unique_ptr<ConnectionInterface> &&conn, std::error_code ec) {
         if (ec) {
           handler_(nullptr, nullptr, ec);
           return;
