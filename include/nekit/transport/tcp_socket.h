@@ -32,6 +32,7 @@
 #include "connector_interface.h"
 #include "listener_interface.h"
 #include "tcp_listener.h"
+#include "tcp_connector.h"
 
 namespace nekit {
 namespace transport {
@@ -70,6 +71,7 @@ class TcpSocket final : public ConnectionInterface, private boost::noncopyable {
   boost::asio::ip::tcp::endpoint remoteEndpoint() const override;
 
   friend class TcpListener;
+  friend class TcpConnector;
 
  private:
   TcpSocket(boost::asio::ip::tcp::socket&& socket);
