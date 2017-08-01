@@ -23,8 +23,13 @@
 #define BOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS
 
 #include "nekit/transport/tcp_listener.h"
+
 #include "nekit/transport/tcp_socket.h"
 #include "nekit/utils/boost_error.h"
+#include "nekit/utils/log.h"
+
+#undef NECHANNEL
+#define NECHANNEL "TCP Listener"
 
 namespace nekit {
 namespace transport {
@@ -37,7 +42,10 @@ std::error_code TcpListener::Bind(std::string ip, uint16_t port) {
 
 std::error_code TcpListener::Bind(boost::asio::ip::address ip, uint16_t port) {
   boost::system::error_code ec;
+  std::error_code sec;
   boost::asio::ip::tcp::endpoint endpoint(ip, port);
+
+  NEDEBUG << "Trying to bind listener to " << endpoint << ".";
 
   acceptor_.open(endpoint.protocol(), ec);
   if (ec) {
@@ -59,19 +67,27 @@ std::error_code TcpListener::Bind(boost::asio::ip::address ip, uint16_t port) {
     return std::make_error_code(ec);
   }
 
+  NEINFO << "Successfully bind TCP listener to " << endpoint << ".";
   return ErrorCode::NoError;
 }
 
 void TcpListener::Accept(EventHandler &&handler) {
+  NEDEBUG << "Start accepting new socket.";
   acceptor_.async_accept(socket_, [ this, handler{std::move(handler)} ](
                                       const boost::system::error_code &ec) {
     if (ec) {
-      handler(nullptr, std::make_error_code(ec));
+      std::error_code sec = std::make_error_code(ec);
+      NEERROR << "Failed to accept new socket due to " << sec << ".";
+
+      handler(nullptr, sec);
       return;
     }
 
+    NEINFO << "Accepted new TCP socket.";
+
     // Can't use `make_unique` since the constructor is a private friend.
     TcpSocket *socket = new TcpSocket(std::move(socket_));
+
     handler(std::unique_ptr<TcpSocket>(socket),
             TcpListener::ErrorCode::NoError);
   });
