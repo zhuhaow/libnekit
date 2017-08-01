@@ -29,13 +29,20 @@ import argparse
 import platform
 import errno
 import logging
+import tarfile
+from contextlib import contextmanager
 
 from plumbum import FG, local
 from plumbum.cmd import git, cmake
+from clint.textui import progress
+import requests
 
-LIBRARIES = [('google/googletest', 'release-1.8.0',
-              'googletest'), ('openssl/openssl', 'OpenSSL_1_1_0f', 'openssl'),
-             ('boostorg/boost', 'boost-1.64.0', 'boost')]
+LIBRARIES = [('google/googletest', 'release-1.8.0', 'googletest'),
+             ('openssl/openssl', 'OpenSSL_1_1_0f', 'openssl')]
+
+DOWNLOAD_LIBRARIES = [(
+    'https://dl.bintray.com/boostorg/release/1.64.0/source/boost_1_64_0.tar.gz',
+    'boost', 'boost_1_64_0')]
 
 source_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 install_dir = os.path.abspath(os.path.join(source_dir, "deps"))
@@ -47,6 +54,13 @@ def ensure_path_exist(path):
     except OSError as e:
         if e.errno != errno.EEXIST:
             raise
+
+
+@contextmanager
+def temp_dir():
+    tempd = tempfile.mkdtemp()
+    yield tempd
+    shutil.rmtree(tempd, True)
 
 
 class Platform:
@@ -109,53 +123,75 @@ def download_repo(path, url, name, tag):
         os.path.join(path, name)] & FG
 
 
+def download_library(path, url, name, content_dir):
+    logging.info("Downloading %s from %s", name, url)
+
+    with tempfile.TemporaryFile() as tempf:
+        r = requests.get(url, stream=True)
+        totol_length = int(r.headers.get('content-length'))
+        for chunk in progress.bar(
+                r.iter_content(chunk_size=1024),
+                expected_size=(totol_length / 1024) + 1):
+            if chunk:
+                tempf.write(chunk)
+                tempf.flush()
+        logging.info("Downloaded file")
+        with temp_dir() as tempd:
+            logging.info("Extracting to %s", tempd)
+            tempf.seek(0)
+            with tarfile.open(fileobj=tempf, mode='r:gz') as tar:
+                tar.extractall(tempd)
+                logging.info("Copying file from %s to %s",
+                             os.path.join(tempd, content_dir),
+                             os.path.join(path, name))
+                shutil.copytree(
+                    os.path.join(tempd, content_dir), os.path.join(path, name))
+
+
 def cmake_compile(source_dir,
                   install_prefix,
                   target_platform,
                   extra_config=None):
-    temp_dir = tempfile.mkdtemp()
+    with temp_dir() as tempd:
+        config = [
+            "-H{}".format(source_dir), "-B{}".format(tempd),
+            "-DCMAKE_BUILD_TYPE=Release",
+            "-DCMAKE_INSTALL_PREFIX={}".format(install_prefix)
+        ]
 
-    config = [
-        "-H{}".format(source_dir), "-B{}".format(temp_dir),
-        "-DCMAKE_BUILD_TYPE=Release",
-        "-DCMAKE_INSTALL_PREFIX={}".format(install_prefix)
-    ]
+        if target_platform in [Platform.iOS, Platform.OSX]:
+            config.extend([
+                "-GXcode", "-DCMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH=NO",
+                "-DCMAKE_IOS_INSTALL_COMBINED=YES",
+                "-DIOS_DEPLOYMENT_SDK_VERSION=9.0"
+            ])
 
-    if target_platform in [Platform.iOS, Platform.OSX]:
-        config.extend([
-            "-GXcode", "-DCMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH=NO",
-            "-DCMAKE_IOS_INSTALL_COMBINED=YES",
-            "-DIOS_DEPLOYMENT_SDK_VERSION=9.0"
-        ])
+        config.append("-DCMAKE_TOOLCHAIN_FILE={}".format(
+            toolchain_path(target_platform)))
 
-    config.append(
-        "-DCMAKE_TOOLCHAIN_FILE={}".format(toolchain_path(target_platform)))
+        if extra_config:
+            config.append(extra_config)
 
-    if extra_config:
-        config.append(extra_config)
+        cmake[config] & FG
 
-    cmake[config] & FG
-
-    if target_platform in [Platform.iOS, Platform.OSX]:
-        from plumbum.cmd import xcodebuild
-        with local.cwd(os.path.join(temp_dir)):
-            xcodebuild["-target", "install", "-configuration", "Release"] & FG
-    else:
-        cmake["--build", temp_dir, "--", "install"] & FG
-
-    shutil.rmtree(temp_dir, True)
+        if target_platform in [Platform.iOS, Platform.OSX]:
+            from plumbum.cmd import xcodebuild
+            with local.cwd(tempd):
+                xcodebuild["-target", "install", "-configuration",
+                           "Release"] & FG
+        else:
+            cmake["--build", tempd, "--", "-j4", "install"] & FG
 
 
 def build_boost(boost_dir, install_prefix, target_platform):
-    boost_build_module = "system"
-    boost_module = "core,boost/asio.hpp,system"
+    boost_build_module = "log,system"
+    boost_module = "core,boost/asio.hpp,system,log,phoenix"
 
     if Platform.current_platform() in [Platform.OSX, Platform.Linux]:
         with local.cwd(boost_dir):
             # build bcp first
             local[os.path.join(boost_dir, "bootstrap.sh")] & FG
-            local[os.path.join(boost_dir, "b2")]["headers"] & FG
-            local[os.path.join(boost_dir, "b2")]["tools/bcp"] & FG
+            local[os.path.join(boost_dir, "b2")]["-j4", "tools/bcp"] & FG
             shutil.copy(os.path.join(boost_dir, "dist/bin/bcp"), boost_dir)
             # copy headers
             args = boost_module.split(',')
@@ -174,28 +210,29 @@ def build_boost(boost_dir, install_prefix, target_platform):
 
     elif target_platform in [Platform.OSX, Platform.Linux]:
         with local.cwd(boost_dir):
-            temp_dir = tempfile.mkdtemp()
+            with temp_dir() as tempd:
+                local[os.path.join(boost_dir, "bootstrap.sh")][
+                    "--with-libraries={}".format(boost_build_module),
+                ] & FG
+                local[os.path.join(boost_dir, "b2")]["--stagedir={}".format(
+                    os.path.join(tempd, "boost_tmp")), "link=static",
+                                                     "variant=release", "-j4"
+                                                     "stage"] & FG
 
-            local[os.path.join(boost_dir, "bootstrap.sh")]["--prefix={}".format(
-                os.path.join(temp_dir, "boost_tmp")), "--libdir={}".format(
-                    temp_dir), "--with-libraries={}".format(
-                        boost_build_module)] & FG
-            local[os.path.join(boost_dir, "b2")]["install"] & FG
+                # Linking all modules into one binary file
+                with local.cwd(os.path.join(tempd, "boost_tmp", "lib")):
+                    lib_dir = local.path(
+                        os.path.join(tempd, "boost_tmp", "lib"))
+                    libs = lib_dir // "libboost_*.a"
+                    for lib in libs:
+                        local["ar"]["-x", lib] & FG
+                    object_files = lib_dir // "*.o"
+                    for ofile in object_files:
+                        local["ar"]["crus", "libboost.a", ofile] & FG
 
-            # Linking all modules into one binary file
-            with local.cwd(temp_dir):
-                lib_dir = local.path(temp_dir)
-                libs = lib_dir // "libboost_*.a"
-                for lib in libs:
-                    local["ar"]["-x", lib] & FG
-                object_files = lib_dir // "*.o"
-                local["ar"]["crus", "libboost.a", " ".join(object_files)] & FG
-
-                lib_install_dir = os.path.join(install_prefix, "lib")
-                ensure_path_exist(lib_install_dir)
-                shutil.copy("libboost.a", lib_install_dir)
-
-            shutil.rmtree(temp_dir, True)
+                    lib_install_dir = os.path.join(install_prefix, "lib")
+                    ensure_path_exist(lib_install_dir)
+                    shutil.copy("libboost.a", lib_install_dir)
 
 
 def build_openssl(openssl_dir, install_prefix, target_platform):
@@ -251,10 +288,12 @@ def main():
         target_platform
     ), "Can't compile dependency for target platform on current platform."
 
-    tempdir = tempfile.mkdtemp()
-    try:
+    with temp_dir() as tempd:
+        for library in DOWNLOAD_LIBRARIES:
+            download_library(tempd, library[0], library[1], library[2])
+
         for library in LIBRARIES:
-            download_repo(tempdir, "https://github.com/" + library[0] + ".git",
+            download_repo(tempd, "https://github.com/" + library[0] + ".git",
                           library[2], library[1])
 
         # Remove built binaries and headers.
@@ -263,20 +302,17 @@ def main():
 
         # Compile boost
         build_boost(
-            os.path.join(tempdir, "boost"),
+            os.path.join(tempd, "boost"),
             install_path(target_platform), target_platform)
 
         build_openssl(
-            os.path.join(tempdir, "openssl"),
+            os.path.join(tempd, "openssl"),
             install_path(target_platform), target_platform)
 
         # Compile GoogleTest
         cmake_compile(
-            os.path.join(tempdir, "googletest"),
+            os.path.join(tempd, "googletest"),
             install_path(target_platform), target_platform)
-
-    finally:
-        shutil.rmtree(tempdir, True)
 
 
 if __name__ == "__main__":
