@@ -52,27 +52,36 @@ std::error_code TcpListener::Bind(boost::asio::ip::address ip, uint16_t port) {
     return std::make_error_code(ec);
   }
 
-  acceptor_.bind(endpoint, ec);
-  if (ec) {
-    return std::make_error_code(ec);
-  }
-
   acceptor_.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true), ec);
   if (ec) {
-    return std::make_error_code(ec);
+    sec = std::make_error_code(ec);
+    NEERROR << "Failed to set listener to reuse address due to " << sec << ".";
+    return sec;
+  }
+
+  acceptor_.bind(endpoint, ec);
+  if (ec) {
+    sec = std::make_error_code(ec);
+    NEERROR << "Failed to bind listener to " << endpoint << " due to " << sec
+            << ".";
+    return sec;
   }
 
   acceptor_.listen(8, ec);
   if (ec) {
-    return std::make_error_code(ec);
+    sec = std::make_error_code(ec);
+    NEERROR << "Failed to set listener to listen state due to " << sec << ".";
+    return sec;
   }
 
   NEINFO << "Successfully bind TCP listener to " << endpoint << ".";
+
   return ErrorCode::NoError;
 }
 
 void TcpListener::Accept(EventHandler &&handler) {
   NEDEBUG << "Start accepting new socket.";
+
   acceptor_.async_accept(socket_, [ this, handler{std::move(handler)} ](
                                       const boost::system::error_code &ec) {
     if (ec) {
