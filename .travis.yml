@@ -45,7 +45,7 @@ before_install:
   - eval "${MATRIX_EVAL}"
 
 install:
-  - pip install --user plumbum
+  - pip install --user plumbum clint requests
 
 before_script:
   - scripts/travis_check_deps.sh
