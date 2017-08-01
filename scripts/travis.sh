@@ -4,7 +4,7 @@ set -euo pipefail
 
 [[ "${COVERAGE:-}" ]] || COVERAGE=OFF
 
-cmake -H. -Bbuild -DPLATFORM=$PLATFORM -DCOVERAGE=$COVERAGE
+cmake -H. -Bbuild -DPLATFORM=$PLATFORM -DCOVERAGE=$COVERAGE -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${PLATFORM}.cmake
 cmake --build build
 
 # Test on iOS is still unsupported.
