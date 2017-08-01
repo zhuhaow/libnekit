@@ -28,6 +28,7 @@
 
 #include "nekit/stream_coder/server_stream_coder_interface.h"
 #include "nekit/stream_coder/stream_coder_interface.h"
+#include "nekit/transport/adapter_interface.h"
 #include "nekit/transport/transport_interface.h"
 #include "nekit/utils/session.h"
 
@@ -42,11 +43,16 @@ class Tunnel final : private boost::noncopyable {
   void Open();
 
  private:
-  void ProcessNegotiation(stream_coder::ActionRequest action_request);
+  void ProcessLocalNegotiation(stream_coder::ActionRequest action_request);
+  void ProcessRemoteNegotiation(stream_coder::ActionRequest action_request);
+  void BeginForward();
+  void ForwardLocal();
+  void ForwardRemote();
   void HandleError(std::error_code ec);
   void ProcessSession();
 
   std::shared_ptr<utils::Session> session_;
+  std::unique_ptr<AdapterInterface> adapter_;
   std::unique_ptr<TransportInterface> local_transport_, remote_transport_;
   std::unique_ptr<stream_coder::StreamCoderInterface> remote_stream_coder_;
   std::unique_ptr<stream_coder::ServerStreamCoderInterface> local_stream_coder_;
