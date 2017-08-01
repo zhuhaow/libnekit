@@ -32,8 +32,8 @@ namespace transport {
 TcpConnector::TcpConnector(const boost::asio::ip::address& address,
                            uint16_t port, boost::asio::io_service& io)
     : socket_{io},
-      addresses_{
-          std::make_shared<std::vector<boost::asio::ip::address>>(address)},
+      addresses_{std::make_shared<std::vector<boost::asio::ip::address>>(
+          std::vector<boost::asio::ip::address>{address})},
       port_{port} {}
 
 TcpConnector::TcpConnector(
@@ -73,11 +73,16 @@ void TcpConnector::Connect(EventHandler&& handler) {
           addresses_ = domain_->addresses();
           DoConnect();
         });
+          return;
       }
     }
   }
 
   DoConnect();
+}
+
+void TcpConnector::Bind(std::shared_ptr<utils::DeviceInterface> device) {
+  device_ = device;
 }
 
 void TcpConnector::DoConnect() {
@@ -89,21 +94,40 @@ void TcpConnector::DoConnect() {
   }
 
   const auto& address = addresses_->at(current_ind_);
-  socket_.async_connect(boost::asio::ip::tcp::endpoint(address, port_),
-                        [this](const boost::system::error_code& ec) {
-                          if (ec) {
-                            last_error_ = std::make_error_code(ec);
-                            current_ind_++;
-                            DoConnect();
-                            return;
-                          }
+  socket_.async_connect(
+      boost::asio::ip::tcp::endpoint(address, port_),
+      [this](const boost::system::error_code& ec) {
+        if (ec) {
+          last_error_ = std::make_error_code(ec);
+          current_ind_++;
+          DoConnect();
+          return;
+        }
 
-                          connecting_ = false;
-                          handler_(
-                              std::make_unique<TcpSocket>(std::move(socket_)),
-                              utils::NEKitErrorCode::NoError);
-                          return;
-                        });
+        connecting_ = false;
+        handler_(std::unique_ptr<TcpSocket>(new TcpSocket(std::move(socket_))),
+                 std::make_error_code(utils::NEKitErrorCode::NoError));
+        return;
+      });
+}
+
+TcpConnectorFactory::TcpConnectorFactory(boost::asio::io_service& io)
+    : io_{&io} {}
+
+std::unique_ptr<ConnectorInterface> TcpConnectorFactory::Build(
+    const boost::asio::ip::address& address, uint16_t port) {
+  return std::make_unique<TcpConnector>(address, port, *io_);
+}
+
+std::unique_ptr<ConnectorInterface> TcpConnectorFactory::Build(
+    std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses,
+    uint16_t port) {
+  return std::make_unique<TcpConnector>(addresses, port, *io_);
+}
+
+std::unique_ptr<ConnectorInterface> TcpConnectorFactory::Build(
+    std::shared_ptr<utils::Domain> domain, uint16_t port) {
+  return std::make_unique<TcpConnector>(domain, port, *io_);
 }
 }  // namespace transport
 }  // namespace nekit

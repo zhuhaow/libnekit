@@ -63,7 +63,25 @@ class TcpConnector : public ConnectorInterface {
 
   std::size_t current_ind_{0};
 
-  bool connecting_;
+  bool connecting_{false};
+};
+
+class TcpConnectorFactory : public ConnectorFactoryInterface {
+ public:
+  TcpConnectorFactory(boost::asio::io_service& io);
+
+  std::unique_ptr<ConnectorInterface> Build(
+      const boost::asio::ip::address& address, uint16_t port);
+
+  std::unique_ptr<ConnectorInterface> Build(
+      std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses,
+      uint16_t port);
+
+  std::unique_ptr<ConnectorInterface> Build(
+      std::shared_ptr<utils::Domain> domain, uint16_t port);
+
+ private:
+  boost::asio::io_service* io_;
 };
 }  // namespace transport
 }  // namespace nekit
