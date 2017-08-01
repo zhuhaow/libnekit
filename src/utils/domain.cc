@@ -60,6 +60,7 @@ void Domain::ForceResolve(EventHandler&& handler) {
         }
 
         addresses_ = addresses;
+        handler(ec);
       });
 }
 
