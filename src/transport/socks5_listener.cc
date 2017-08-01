@@ -22,6 +22,11 @@
 
 #include "nekit/transport/socks5_listener.h"
 
+#include "nekit/utils/log.h"
+
+#undef NECHANNEL
+#define NECHANNEL "Socks5 Listener"
+
 namespace nekit {
 namespace transport {
 Socks5Listener::Socks5Listener(
@@ -39,14 +44,21 @@ std::error_code Socks5Listener::Bind(boost::asio::ip::address ip,
 }
 
 void Socks5Listener::Accept(EventHandler&& handler) {
-  listener_.Accept([ this, handler{std::move(handler)} ](
-      std::unique_ptr<ConnectionInterface> && conn, std::error_code ec) {
+  NEDEBUG << "Start accepting new SOCKS5 socket.";
+
+  listener_.Accept([
+    this, handler{std::move(handler)}
+  ](std::unique_ptr<ConnectionInterface> && conn, std::error_code ec) mutable {
     if (ec) {
+      NEERROR << "Failed to accept SOCKS5 socket due to " << ec << ".";
       handler(nullptr, nullptr, ec);
       return;
     }
 
+    NEINFO << "Accepted new SOCKS5 socket.";
+
     handler(std::move(conn), stream_coder_factory_.Build(), ec);
+    Accept(std::move(handler));
     return;
   });
 }
