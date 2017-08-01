@@ -97,7 +97,9 @@ set(LIBS ${LIBS} ${OPENSSL})
 
 target_link_libraries(nekit ${LIBS})
 
-enable_testing()
-add_subdirectory(test)
+if (NOT IOS AND NOT ANDROID)
+  enable_testing()
+  add_subdirectory(test)
 
-add_subdirectory(app)
+  add_subdirectory(app)
+endif()
