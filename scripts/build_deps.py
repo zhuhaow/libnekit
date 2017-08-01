@@ -130,8 +130,8 @@ def download_library(path, url, name, content_dir):
         r = requests.get(url, stream=True)
         totol_length = int(r.headers.get('content-length'))
         for chunk in progress.bar(
-                r.iter_content(chunk_size=1024),
-                expected_size=(totol_length / 1024) + 1):
+                r.iter_content(chunk_size=1024 * 1024),
+                expected_size=(totol_length / 1024 / 1024) + 1):
             if chunk:
                 tempf.write(chunk)
                 tempf.flush()
