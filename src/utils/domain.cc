@@ -49,7 +49,7 @@ void Domain::Resolve(EventHandler&& handler) {
 void Domain::ForceResolve(EventHandler&& handler) {
   assert(!resolving_);
 
-  NEDEBUG << "Start resolving domain " << domain_ << "now.";
+  NEDEBUG << "Start resolving domain " << domain_ << ".";
 
   resolving_ = true;
   Runtime::CurrentRuntime().Resolver()->Resolve(
