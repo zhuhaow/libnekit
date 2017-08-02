@@ -43,7 +43,7 @@ if(COVERAGE)
 endif()
 
 include_directories("include")
-include_directories("deps/${PLATFORM}/include")
+include_directories(SYSTEM "deps/${PLATFORM}/include")
 
 set(CMAKE_FIND_ROOT_PATH "${PROJECT_SOURCE_DIR}/deps/${PLATFORM}")
 
