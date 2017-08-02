@@ -116,6 +116,9 @@ void TcpConnector::DoConnect(EventHandler&& handler) {
     return;
   }
 
+  boost::system::error_code ec;
+  socket_.close(ec);
+
   const auto& address = addresses_->at(current_ind_);
   socket_.async_connect(boost::asio::ip::tcp::endpoint(address, port_), [
     this, handler{std::move(handler)}
