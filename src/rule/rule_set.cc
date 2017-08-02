@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 #include "nekit/rule/rule_set.h"
+
 #include "nekit/utils/runtime.h"
 
 namespace nekit {
@@ -32,7 +33,8 @@ void RuleSet::AppendRule(std::shared_ptr<RuleInterface> rule) {
 
 utils::Cancelable& RuleSet::Match(std::shared_ptr<utils::Session> session,
                                   EventHandler&& handler) {
-  auto cancelable = std::make_unique<utils::Cancelable>();
+  std::unique_ptr<utils::Cancelable> cancelable =
+      std::make_unique<utils::Cancelable>();
   auto* cancel = cancelable.get();
   MatchIterator(rules_.cbegin(), session, std::move(cancelable),
                 std::move(handler));
