@@ -58,6 +58,8 @@ if(WIN32)
   add_definitions(-DELPP_WINSOCK2 -DWIN32_LEAN_AND_MEAN)
 endif()
 
+add_definitions(-DBOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS)
+
 set(SOURCES
   src/stream_coder/stream_coder_pipe.cc
   src/stream_coder/socks5_server_stream_coder.cc

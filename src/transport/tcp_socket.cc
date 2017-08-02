@@ -22,8 +22,6 @@
 
 #include <cassert>
 
-#define BOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS
-
 #include "nekit/transport/tcp_socket.h"
 #include "nekit/utils/auto.h"
 #include "nekit/utils/boost_error.h"
