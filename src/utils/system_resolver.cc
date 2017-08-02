@@ -21,7 +21,13 @@
 // SOFTWARE.
 
 #include "nekit/utils/system_resolver.h"
+
 #include "nekit/utils/boost_error.h"
+#include "nekit/utils/error.h"
+#include "nekit/utils/log.h"
+
+#undef NECHANNEL
+#define NECHANNEL "System resolver"
 
 using namespace std;
 
@@ -35,12 +41,18 @@ void SystemResolver::Resolve(std::string domain, AddressPreference preference,
   (void)preference;
 
   decltype(resolver_)::query query(domain, "");
+
+  NEDEBUG << "Start resolving " << domain << ".";
+
   resolver_.async_resolve(
-      query, [ domain, handler{std::move(handler)} ](
+      query, [ this, domain, handler{std::move(handler)} ](
                  const boost::system::error_code& ec,
                  boost::asio::ip::tcp::resolver::iterator iter) {
         if (ec) {
-          handler(nullptr, std::make_error_code(ec));
+          auto error = ConvertBoostError(ec);
+          NEERROR << "Failed to resolve " << domain << " due to " << error
+                  << ".";
+          handler(nullptr, error);
           return;
         }
 
@@ -48,12 +60,25 @@ void SystemResolver::Resolve(std::string domain, AddressPreference preference,
             std::make_shared<std::vector<boost::asio::ip::address>>();
         while (iter != decltype(iter)()) {
           addresses->emplace_back(iter->endpoint().address());
-            iter++;
+          iter++;
         }
 
-        handler(addresses, std::make_error_code(ec));
+        NEINFO << "Successfully resolved domain " << domain << ".";
+
+        handler(addresses, NEKitErrorCode::NoError);
         return;
       });
+}
+
+std::error_code SystemResolver::ConvertBoostError(
+    const boost::system::error_code& ec) {
+  if (ec.category() == boost::asio::error::system_category) {
+    switch (ec.value()) {
+      case boost::asio::error::basic_errors::operation_aborted:
+        return NEKitErrorCode::Canceled;
+    }
+  }
+  return std::make_error_code(ec);
 }
 }  // namespace utils
 }  // namespace nekit

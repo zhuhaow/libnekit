@@ -36,6 +36,8 @@ class SystemResolver : public ResolverInterface {
                EventHandler&& handler) override;
 
  private:
+  std::error_code ConvertBoostError(const boost::system::error_code& ec);
+
   boost::asio::ip::tcp::resolver resolver_;
 };
 }  // namespace utils
