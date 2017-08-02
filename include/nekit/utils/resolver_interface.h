@@ -49,6 +49,7 @@ class ResolverInterface : private boost::noncopyable {
 
   virtual void Resolve(std::string domain, AddressPreference preference,
                        EventHandler&& handler) = 0;
+  virtual void Cancel() = 0;
 };
 
 class ResolverFactoryInterface : private boost::noncopyable {
