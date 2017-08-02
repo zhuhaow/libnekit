@@ -30,10 +30,10 @@ matrix:
       env: PLATFORM=mac COVERAGE=ON
     - os: osx
       osx_image: xcode9
-      env: PLATFORM=ios
+      env: PLATFORM=ios MATRIX_EVAL="CXX=clang++ CC=clang"
     - os: osx
       osx_image: xcode8.3
-      env: PLATFORM=ios
+      env: PLATFORM=ios MATRIC_EVAL="CXX=clang++ CC=clang"
 
     - os: linux
       env: PLATFORM=linux COVERAGE=ON MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
