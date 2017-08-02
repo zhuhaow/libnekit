@@ -33,10 +33,13 @@ rule::RuleSet* Runtime::RuleSet() { return rule_set_; }
 
 void Runtime::SetRuleSet(rule::RuleSet* rule_set) { rule_set_ = rule_set; }
 
-utils::ResolverInterface* Runtime::Resolver() { return resolver_; }
+utils::ResolverFactoryInterface* Runtime::ResolverFactory() {
+  return resolver_factory_;
+}
 
-void Runtime::SetResolver(utils::ResolverInterface* resolver) {
-  resolver_ = resolver;
+void Runtime::SetResolverFactory(
+    utils::ResolverFactoryInterface* resolver_factory) {
+  resolver_factory_ = resolver_factory;
 }
 
 boost::asio::io_service* Runtime::IoService() { return io_; }

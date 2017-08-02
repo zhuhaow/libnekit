@@ -38,7 +38,7 @@ class Domain final {
  public:
   using EventHandler = std::function<void(std::error_code)>;
 
-  Domain(std::string domain, std::unique_ptr<ResolverInterface>&& resolver);
+  Domain(std::string domain, std::unique_ptr<ResolverInterface>&& resolver = nullptr);
 
   bool operator==(const std::string& rhs) const;
 

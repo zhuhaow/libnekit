@@ -54,6 +54,10 @@ void Domain::ForceResolve(EventHandler&& handler) {
   NEDEBUG << "Start resolving domain " << domain_ << ".";
 
   resolving_ = true;
+  if (!resolver_) {
+    resolver_ = Runtime::CurrentRuntime().ResolverFactory()->Build();
+  }
+
   resolver_->Resolve(
       domain_, ResolverInterface::AddressPreference::Any,
       [ this, handler{std::move(handler)} ](

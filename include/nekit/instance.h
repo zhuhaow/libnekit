@@ -57,6 +57,6 @@ class Instance : private boost::noncopyable {
   std::unordered_map<void *, std::unique_ptr<transport::Tunnel>> tunnels_;
   std::unique_ptr<rule::RuleSet> rule_set_;
   std::vector<std::unique_ptr<transport::ServerListenerInterface>> listeners_;
-  std::unique_ptr<utils::ResolverInterface> resolver_;
+  std::unique_ptr<utils::ResolverFactoryInterface> resolver_factory_;
 };
 }  // namespace nekit

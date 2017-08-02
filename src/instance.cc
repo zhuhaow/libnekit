@@ -31,9 +31,7 @@
 namespace nekit {
 using nekit::utils::LogLevel;
 
-Instance::Instance(std::string name) : name_{name}, io_{} {
-  resolver_ = std::make_unique<utils::SystemResolver>(io_);
-}
+Instance::Instance(std::string name) : name_{name}, io_{} {}
 
 void Instance::SetRuleSet(std::unique_ptr<rule::RuleSet> &&rule_set) {
   rule_set_ = std::move(rule_set);
@@ -70,9 +68,9 @@ void Instance::Run() {
         });
   }
 
-  if (!resolver_) {
+  if (!resolver_factory_) {
     NEINFO << "No resolver is specified, using system default.";
-    resolver_ = std::make_unique<utils::SystemResolver>(io_);
+    resolver_factory_ = std::make_unique<utils::SystemResolverFactory>(io_);
   }
 
   NEDEBUG << "Setting up runtime information.";
@@ -94,7 +92,7 @@ boost::asio::io_service &Instance::io() { return io_; }
 
 void Instance::SetUpRuntime() {
   utils::Runtime::CurrentRuntime().SetRuleSet(rule_set_.get());
-  utils::Runtime::CurrentRuntime().SetResolver(resolver_.get());
+  utils::Runtime::CurrentRuntime().SetResolverFactory(resolver_factory_.get());
   utils::Runtime::CurrentRuntime().SetIoService(&io_);
 }
 }  // namespace nekit

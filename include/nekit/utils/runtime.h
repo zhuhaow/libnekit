@@ -36,18 +36,18 @@ class Runtime : private boost::noncopyable {
   static Runtime& CurrentRuntime();
 
   rule::RuleSet* RuleSet();
-  utils::ResolverInterface* Resolver();
+  utils::ResolverFactoryInterface* ResolverFactory();
   boost::asio::io_service* IoService();
 
   friend class nekit::Instance;
 
  private:
   void SetRuleSet(rule::RuleSet* rule_set);
-  void SetResolver(utils::ResolverInterface* resolver);
+  void SetResolverFactory(utils::ResolverFactoryInterface* resolver_factory_);
   void SetIoService(boost::asio::io_service* io);
 
   rule::RuleSet* rule_set_;
-  utils::ResolverInterface* resolver_;
+  utils::ResolverFactoryInterface* resolver_factory_;
   boost::asio::io_service* io_;
 };
 }  // namespace utils
