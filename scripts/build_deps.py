@@ -241,7 +241,7 @@ def build_openssl(openssl_dir, install_prefix, target_platform):
     if target_platform == Platform.iOS:
         with local.cwd(openssl_dir):
             local[local.cwd /
-                  "build-libssl.sh"]["--version=1.1.0f",
+                  "build-libssl.sh"]["--version=1.1.0f", "--verbose-on-error",
                                      "--targets=ios-sim-cross-x86_64 ios-sim-cross-i386 ios64-cross-arm64 ios-cross-armv7"] & FG
             shutil.copytree("lib", os.path.join(install_prefix, "lib"))
             shutil.copytree("include", os.path.join(install_prefix, "include"))
