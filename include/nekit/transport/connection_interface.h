@@ -32,6 +32,7 @@ class ConnectionInterface : public TransportInterface {
  public:
   enum class ErrorCode {
     NoError = 0,
+    Closed,
     ConnectionAborted,
     ConnectionReset,
     HostUnreachable,

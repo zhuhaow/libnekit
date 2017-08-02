@@ -38,6 +38,8 @@ std::string ConnectionInterfaceErrorCategory::message(int ev) const {
   switch (static_cast<ConnectionInterface::ErrorCode>(ev)) {
     case ConnectionInterface::ErrorCode::NoError:
       return "no error";
+    case ConnectionInterface::ErrorCode::Closed:
+      return "closed";
     case ConnectionInterface::ErrorCode::ConnectionAborted:
       return "connection aborted";
     case ConnectionInterface::ErrorCode::ConnectionReset:
