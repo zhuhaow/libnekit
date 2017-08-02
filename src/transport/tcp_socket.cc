@@ -48,12 +48,6 @@ void TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
           std::size_t bytes_transferred) mutable {
 
         if (ec) {
-          if (ec == boost::asio::error::basic_errors::operation_aborted) {
-            // Cancel request must be from the host class, thus there is no need
-            // to inform it.
-            return;
-          }
-
           auto error = ConvertBoostError(ec);
           if (error == ErrorCode::EndOfFile) {
             this->read_closed_ = true;
@@ -86,11 +80,6 @@ void TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
         assert(bytes_transferred == buffer->capacity());
 
         if (ec) {
-          if (ec.value() ==
-              boost::asio::error::basic_errors::operation_aborted) {
-            return;
-          }
-
           handler(std::move(buffer), ConvertBoostError(ec));
           return;
         }
@@ -149,6 +138,8 @@ std::error_code TcpSocket::ConvertBoostError(
     const boost::system::error_code &ec) const {
   if (ec.category() == boost::asio::error::system_category) {
     switch (ec.value()) {
+      case boost::asio::error::basic_errors::operation_aborted:
+        return ErrorCode::Cancelled;
       case boost::asio::error::basic_errors::connection_aborted:
         return ErrorCode::ConnectionAborted;
       case boost::asio::error::basic_errors::connection_reset:
