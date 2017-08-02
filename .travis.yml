@@ -55,4 +55,4 @@ script:
   - scripts/travis.sh
 
 after_success:
-  - if [ -n "$COVERAGE" ]; then bash <(curl -s https://codecov.io/bash); fi
+  - if [ "$COVERAGE" == "ON ]; then bash <(curl -s https://codecov.io/bash); fi
