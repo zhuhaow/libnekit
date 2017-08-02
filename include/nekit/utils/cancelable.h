@@ -31,8 +31,8 @@ namespace utils {
 class Cancelable {
  public:
   Cancelable();
-  Cancelable(const Cancelable& cancelable);
-  Cancelable& operator=(const Cancelable& cancelable);
+  Cancelable(const Cancelable& cancelable) = default;
+  Cancelable& operator=(const Cancelable& cancelable) = default;
 
   ~Cancelable();
 

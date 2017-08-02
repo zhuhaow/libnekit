@@ -29,7 +29,8 @@
 
 #include <boost/noncopyable.hpp>
 
-#include "nekit/utils/resolver_interface.h"
+#include "../utils/cancelable.h"
+#include "../utils/resolver_interface.h"
 #include "rule_interface.h"
 
 namespace nekit {
@@ -43,12 +44,14 @@ class RuleSet : private boost::noncopyable {
 
   void AppendRule(std::shared_ptr<RuleInterface> rule);
 
-  void Match(std::shared_ptr<utils::Session> session, EventHandler&& handler);
+  utils::Cancelable& Match(std::shared_ptr<utils::Session> session,
+                           EventHandler&& handler);
 
  private:
   void MatchIterator(
       std::vector<std::shared_ptr<RuleInterface>>::const_iterator iter,
-      std::shared_ptr<utils::Session> session, EventHandler&& handler);
+      std::shared_ptr<utils::Session> session,
+      std::unique_ptr<utils::Cancelable>&& cancelable, EventHandler&& handler);
 
   std::vector<std::shared_ptr<RuleInterface>> rules_;
 };

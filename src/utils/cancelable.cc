@@ -26,15 +26,6 @@ namespace nekit {
 namespace utils {
 Cancelable::Cancelable() : canceled_{std::make_shared<bool>(false)} {}
 
-Cancelable::Cancelable(const Cancelable& cancelable) {
-  this->canceled_ = cancelable.canceled_;
-}
-
-Cancelable& Cancelable::operator=(const Cancelable& cancelable) {
-  this->canceled_ = cancelable.canceled_;
-  return *this;
-}
-
 Cancelable::~Cancelable() { Cancel(); }
 
 void Cancelable::Cancel() { *canceled_ = true; }

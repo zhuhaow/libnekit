@@ -30,14 +30,23 @@ void RuleSet::AppendRule(std::shared_ptr<RuleInterface> rule) {
   rules_.push_back(rule);
 }
 
-void RuleSet::Match(std::shared_ptr<utils::Session> session,
-                    EventHandler&& handler) {
-  MatchIterator(rules_.cbegin(), session, std::move(handler));
+utils::Cancelable& RuleSet::Match(std::shared_ptr<utils::Session> session,
+                                  EventHandler&& handler) {
+  auto cancelable = std::make_unique<utils::Cancelable>();
+  auto* cancel = cancelable.get();
+  MatchIterator(rules_.cbegin(), session, std::move(cancelable),
+                std::move(handler));
+  return *cancel;
 }
 
 void RuleSet::MatchIterator(
     std::vector<std::shared_ptr<RuleInterface>>::const_iterator iter,
-    std::shared_ptr<utils::Session> session, EventHandler&& handler) {
+    std::shared_ptr<utils::Session> session,
+    std::unique_ptr<utils::Cancelable>&& cancelable, EventHandler&& handler) {
+  if (cancelable->canceled()) {
+    return;
+  }
+
   while (iter != rules_.cend()) {
     switch ((*iter)->Match(session)) {
       case MatchResult::Match:
@@ -48,14 +57,19 @@ void RuleSet::MatchIterator(
         break;
       case MatchResult::ResolveNeeded:
         session->domain()->Resolve([
-          this, handler{std::move(handler)}, session, iter
+          this, handler{std::move(handler)}, cancelable{std::move(cancelable)},
+          session, iter
         ](std::error_code ec) mutable {
           if (ec) {
+            if (cancelable->canceled()) {
+              return;
+            }
             handler(nullptr, ec);
             return;
           }
 
-          MatchIterator(iter, session, std::move(handler));
+          MatchIterator(iter, session, std::move(cancelable),
+                        std::move(handler));
         });
         return;
     }
