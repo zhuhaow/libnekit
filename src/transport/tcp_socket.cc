@@ -36,6 +36,13 @@ void TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
                      TransportInterface::EventHandler &&handler) {
   // read_buffer_ = std::move(buffer);
   // read_handler_ = std::move(handler);
+  if (read_closed_) {
+    socket_.get_io_service().post([
+      buffer{std::move(buffer)}, handler{std::move(handler)}
+    ]() mutable { handler(std::move(buffer), ErrorCode::Closed); });
+    return;
+  }
+
   socket_.async_read_some(
       boost::asio::mutable_buffers_1(buffer->buffer(), buffer->capacity()),
       [ this, buffer{std::move(buffer)}, handler{std::move(handler)} ](
@@ -65,6 +72,13 @@ void TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
 
 void TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
                       TransportInterface::EventHandler &&handler) {
+  if (write_closed_) {
+    socket_.get_io_service().post([
+      buffer{std::move(buffer)}, handler{std::move(handler)}
+    ]() mutable { handler(std::move(buffer), ErrorCode::Closed); });
+    return;
+  }
+
   boost::asio::async_write(
       socket_,
       boost::asio::const_buffers_1(buffer->buffer(), buffer->capacity()),
