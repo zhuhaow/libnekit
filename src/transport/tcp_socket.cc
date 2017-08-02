@@ -34,8 +34,6 @@ TcpSocket::TcpSocket(boost::asio::ip::tcp::socket &&socket)
 
 void TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
                      TransportInterface::EventHandler &&handler) {
-  // read_buffer_ = std::move(buffer);
-  // read_handler_ = std::move(handler);
   if (read_closed_) {
     socket_.get_io_service().post([
       buffer{std::move(buffer)}, handler{std::move(handler)}
@@ -50,9 +48,9 @@ void TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
           std::size_t bytes_transferred) mutable {
 
         if (ec) {
-          if (ec.category() == boost::asio::error::system_category &&
-              ec.value() ==
-                  boost::asio::error::basic_errors::operation_aborted) {
+          if (ec == boost::asio::error::basic_errors::operation_aborted) {
+            // Cancel request must be from the host class, thus there is no need
+            // to inform it.
             return;
           }
 
@@ -88,9 +86,8 @@ void TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
         assert(bytes_transferred == buffer->capacity());
 
         if (ec) {
-          if (ec.category() == boost::asio::error::system_category &&
-              ec.value() ==
-                  boost::asio::error::basic_errors::operation_aborted) {
+          if (ec.value() ==
+              boost::asio::error::basic_errors::operation_aborted) {
             return;
           }
 
@@ -172,6 +169,10 @@ std::error_code TcpSocket::ConvertBoostError(
       return ErrorCode::EndOfFile;
     }
   }
+
+  // Semantically we should return UnknownError, but ideally, UnknownError
+  // should never occur, we should treat every error carefully, and this
+  // provides us the necessary information to handle the origin error.
   return std::make_error_code(ec);
 }
 }  // namespace transport
