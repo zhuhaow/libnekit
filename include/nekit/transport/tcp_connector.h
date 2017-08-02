@@ -49,14 +49,13 @@ class TcpConnector : public ConnectorInterface {
   void Bind(std::shared_ptr<utils::DeviceInterface> device) override;
 
  private:
-  void DoConnect();
+  void DoConnect(EventHandler&& handler);
 
   boost::asio::ip::tcp::socket socket_;
   std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses_;
   std::shared_ptr<utils::Domain> domain_;
 
   uint16_t port_;
-  EventHandler handler_;
   std::shared_ptr<utils::DeviceInterface> device_;
 
   std::error_code last_error_;

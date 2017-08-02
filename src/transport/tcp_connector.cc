@@ -25,7 +25,11 @@
 #include "nekit/transport/tcp_socket.h"
 #include "nekit/utils/boost_error.h"
 #include "nekit/utils/error.h"
+#include "nekit/utils/log.h"
 #include "nekit/utils/runtime.h"
+
+#undef NECHANNEL
+#define NECHANNEL "TCP connector"
 
 namespace nekit {
 namespace transport {
@@ -54,61 +58,82 @@ TcpConnector::TcpConnector(std::string domain, uint16_t port,
 void TcpConnector::Connect(EventHandler&& handler) {
   assert(!connecting_);
 
-  handler_ = std::move(handler);
+  NEDEBUG << "Begin connecting to remote.";
 
   if (!addresses_) {
     if (domain_->isAddressAvailable()) {
       addresses_ = domain_->addresses();
+      NEDEBUG << "Address is available, connect directly.";
+      DoConnect(std::move(handler));
     } else {
       if (domain_->isResolved()) {
-        handler_(nullptr, domain_->error());
+        NEERROR << "Can not connect since resolve is failed due to "
+                << domain_->error() << ".";
+
+        socket_.get_io_service().post([ this, handler{std::move(handler)} ]() {
+          handler(nullptr, domain_->error());
+        });
         return;
       } else {
-        domain_->Resolve([this](std::error_code ec) {
-          if (ec) {
-            handler_(nullptr, ec);
-            return;
-          }
+        domain_->Resolve(
+            [ this, handler{std::move(handler)} ](std::error_code ec) mutable {
+              if (ec) {
+                NEERROR << "Can not connect since resolve is failed due to "
+                        << domain_->error() << ".";
+                handler(nullptr, ec);
+                return;
+              }
 
-          addresses_ = domain_->addresses();
-          DoConnect();
-        });
-          return;
+              NEDEBUG << "Domain resolved, connect now.";
+              addresses_ = domain_->addresses();
+              DoConnect(std::move(handler));
+            });
+        return;
       }
     }
+    return;
   }
 
-  DoConnect();
+  NEDEBUG << "Connect request made by addresses, connect directly.";
+
+  DoConnect(std::move(handler));
 }
 
 void TcpConnector::Bind(std::shared_ptr<utils::DeviceInterface> device) {
   device_ = device;
 }
 
-void TcpConnector::DoConnect() {
+void TcpConnector::DoConnect(EventHandler&& handler) {
+  assert(!addresses_->empty());
   connecting_ = true;
 
+  // Not this will never be called directly, so the handler will definite have
+  // been moved into some block. So there is no need to worry.
   if (current_ind_ >= addresses_->size()) {
-    handler_(nullptr, last_error_);
+    NEERROR << "Fail to connect to all addresses, the last known error is "
+            << last_error_ << ".";
+    handler(nullptr, last_error_);
     return;
   }
 
   const auto& address = addresses_->at(current_ind_);
-  socket_.async_connect(
-      boost::asio::ip::tcp::endpoint(address, port_),
-      [this](const boost::system::error_code& ec) {
-        if (ec) {
-          last_error_ = std::make_error_code(ec);
-          current_ind_++;
-          DoConnect();
-          return;
-        }
+  socket_.async_connect(boost::asio::ip::tcp::endpoint(address, port_), [
+    this, handler{std::move(handler)}
+  ](const boost::system::error_code& ec) mutable {
+    if (ec) {
+      NEDEBUG << "Connect failed due to " << ec << ", trying next address.";
+      last_error_ = std::make_error_code(ec);
+      current_ind_++;
+      DoConnect(std::move(handler));
+      return;
+    }
 
-        connecting_ = false;
-        handler_(std::unique_ptr<TcpSocket>(new TcpSocket(std::move(socket_))),
-                 utils::NEKitErrorCode::NoError);
-        return;
-      });
+    NEINFO << "Successfully connected to remote.";
+    connecting_ = false;
+    handler(std::unique_ptr<TcpSocket>(new TcpSocket(std::move(socket_))),
+            utils::NEKitErrorCode::NoError);
+    return;
+  });
 }
 
 TcpConnectorFactory::TcpConnectorFactory(boost::asio::io_service& io)
