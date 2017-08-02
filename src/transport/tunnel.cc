@@ -30,7 +30,7 @@ namespace transport {
 
 using stream_coder::ActionRequest;
 
-Tunnel::Tunnel(std::unique_ptr<TransportInterface>&& local_transport,
+Tunnel::Tunnel(std::unique_ptr<ConnectionInterface>&& local_transport,
                std::unique_ptr<stream_coder::ServerStreamCoderInterface>&&
                    local_stream_coder)
     : local_transport_{std::move(local_transport)},
@@ -261,7 +261,7 @@ void Tunnel::ProcessSession() {
 
         adapter_ = rule->GetAdapter(session_);
         adapter_->Open(
-            [this](std::unique_ptr<TransportInterface>&& conn,
+            [this](std::unique_ptr<ConnectionInterface>&& conn,
                    std::unique_ptr<stream_coder::StreamCoderInterface>&&
                        stream_coder,
                    std::error_code ec) {

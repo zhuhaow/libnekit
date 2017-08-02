@@ -36,7 +36,7 @@ namespace nekit {
 namespace transport {
 class Tunnel final : private boost::noncopyable {
  public:
-  Tunnel(std::unique_ptr<TransportInterface>&& local_transport,
+  Tunnel(std::unique_ptr<ConnectionInterface>&& local_transport,
          std::unique_ptr<stream_coder::ServerStreamCoderInterface>&&
              local_stream_coder);
 
@@ -53,7 +53,7 @@ class Tunnel final : private boost::noncopyable {
 
   std::shared_ptr<utils::Session> session_;
   std::unique_ptr<AdapterInterface> adapter_;
-  std::unique_ptr<TransportInterface> local_transport_, remote_transport_;
+  std::unique_ptr<ConnectionInterface> local_transport_, remote_transport_;
   std::unique_ptr<stream_coder::StreamCoderInterface> remote_stream_coder_;
   std::unique_ptr<stream_coder::ServerStreamCoderInterface> local_stream_coder_;
 };
