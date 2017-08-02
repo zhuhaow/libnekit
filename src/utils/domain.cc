@@ -23,7 +23,11 @@
 #include "nekit/utils/domain.h"
 
 #include "nekit/utils/error.h"
+#include "nekit/utils/log.h"
 #include "nekit/utils/runtime.h"
+
+#undef NECHANNEL
+#define NECHANNEL "Domain"
 
 namespace nekit {
 namespace utils {
@@ -33,7 +37,9 @@ bool Domain::operator==(const std::string& rhs) const { return domain_ == rhs; }
 
 void Domain::Resolve(EventHandler&& handler) {
   if (resolved_) {
-    handler(NEKitErrorCode::NoError);
+    NEDEBUG << "Already resolved, does nothing.";
+    Runtime::CurrentRuntime().IoService()->post([handler{
+        std::move(handler)}]() { handler(NEKitErrorCode::NoError); });
     return;
   }
 
@@ -42,6 +48,9 @@ void Domain::Resolve(EventHandler&& handler) {
 
 void Domain::ForceResolve(EventHandler&& handler) {
   assert(!resolving_);
+
+  NEDEBUG << "Start resolving domain " << domain_ << "now.";
+
   resolving_ = true;
   Runtime::CurrentRuntime().Resolver()->Resolve(
       domain_, ResolverInterface::AddressPreference::Any,
@@ -53,11 +62,14 @@ void Domain::ForceResolve(EventHandler&& handler) {
         resolved_ = true;
 
         if (ec) {
+          NEERROR << "Failed to resolve " << domain_ << " due to " << ec << ".";
           error_ = ec;
           addresses_ = nullptr;
           handler(ec);
           return;
         }
+
+        NEINFO << "Successfully resolved domain " << domain_ << ".";
 
         addresses_ = addresses;
         handler(ec);
