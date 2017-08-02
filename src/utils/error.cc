@@ -22,7 +22,7 @@
 
 #include <string>
 
-#include "nekit/utils/no_error.h"
+#include "nekit/utils/error.h"
 
 namespace {
 class NEKitErrorCategory : public std::error_category {
@@ -32,6 +32,8 @@ class NEKitErrorCategory : public std::error_category {
     switch (static_cast<nekit::utils::NEKitErrorCode>(error_code)) {
       case nekit::utils::NEKitErrorCode::NoError:
         return "no error";
+      case nekit::utils::NEKitErrorCode::Canceled:
+        return "canceled";
     }
   }
 };

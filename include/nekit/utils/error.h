@@ -26,7 +26,7 @@
 
 namespace nekit {
 namespace utils {
-enum class NEKitErrorCode { NoError };
+enum class NEKitErrorCode { NoError, Canceled };
 }
 }  // namespace nekit
 

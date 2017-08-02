@@ -72,7 +72,7 @@ set(SOURCES
   src/utils/boost_error.cc
   src/utils/session.cc
   src/utils/system_resolver.cc
-  src/utils/no_error.cc
+  src/utils/error.cc
   src/utils/runtime.cc
   src/utils/domain.cc
   src/utils/logger.cc

@@ -22,7 +22,7 @@
 
 #include "nekit/utils/domain.h"
 
-#include "nekit/utils/no_error.h"
+#include "nekit/utils/error.h"
 #include "nekit/utils/runtime.h"
 
 namespace nekit {

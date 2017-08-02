@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 #include "nekit/stream_coder/direct_stream_coder.h"
-#include "nekit/utils/no_error.h"
+#include "nekit/utils/error.h"
 
 namespace nekit {
 namespace stream_coder {
