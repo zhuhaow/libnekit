@@ -177,7 +177,7 @@ std::error_code TcpSocket::ConvertBoostError(
   if (ec.category() == boost::asio::error::system_category) {
     switch (ec.value()) {
       case boost::asio::error::basic_errors::operation_aborted:
-        return ErrorCode::Cancelled;
+        return nekit::utils::NEKitErrorCode::Canceled;
       case boost::asio::error::basic_errors::connection_aborted:
         return ErrorCode::ConnectionAborted;
       case boost::asio::error::basic_errors::connection_reset:
