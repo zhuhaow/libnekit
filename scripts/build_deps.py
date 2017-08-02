@@ -37,8 +37,10 @@ from plumbum.cmd import git, cmake
 from clint.textui import progress
 import requests
 
-LIBRARIES = [('google/googletest', 'release-1.8.0', 'googletest'),
-             ('openssl/openssl', 'OpenSSL_1_1_0f', 'openssl')]
+LIBRARIES = [('google/googletest', 'release-1.8.0', 'googletest')]
+
+OPENSSL_IOS = ('x2on/OpenSSL-for-iPhone', 'master', 'openssl')
+OPENSSL_LIB = ('openssl/openssl', 'OpenSSL_1_1_0f', 'openssl')
 
 DOWNLOAD_LIBRARIES = [(
     'https://dl.bintray.com/boostorg/release/1.64.0/source/boost_1_64_0.tar.gz',
@@ -237,21 +239,12 @@ def build_boost(boost_dir, install_prefix, target_platform):
 
 def build_openssl(openssl_dir, install_prefix, target_platform):
     if target_platform == Platform.iOS:
-        with local.env(
-                CC="clang",
-                CROSS_TOP=
-                "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer",
-                CROSS_SDK="iPhoneOS.sdk"):
-            local.env.path.insert(
-                0,
-                "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin"
-            )
-            with local.cwd(openssl_dir):
-                local[local.cwd /
-                      "Configure"]["ios64-cross", "no-shared", "no-dso",
-                                   "no-hw", "no-engine", "--prefix={}".format(
-                                       install_prefix)] & FG
-                local["make"]["install_sw"] & FG
+        with local.cwd(openssl_dir):
+            local[local.cwd /
+                  "build-libssl.sh"]["--version=1.1.0f",
+                                     "--targets=ios-sim-cross-x86_64 ios-sim-cross-i386 ios64-cross-arm64 ios-cross-armv7"] & FG
+            shutil.copytree("lib", os.path.join(install_prefix, "lib"))
+            shutil.copytree("include", os.path.join(install_prefix, "include"))
 
     elif target_platform in [Platform.OSX]:
         with local.cwd(openssl_dir):
@@ -289,8 +282,10 @@ def main():
     ), "Can't compile dependency for target platform on current platform."
 
     with temp_dir() as tempd:
-        for library in DOWNLOAD_LIBRARIES:
-            download_library(tempd, library[0], library[1], library[2])
+        if target_platform == Platform.iOS:
+            LIBRARIES.append(OPENSSL_IOS)
+        else:
+            LIBRARIES.append(OPENSSL_LIB)
 
         for library in LIBRARIES:
             download_repo(tempd, "https://github.com/" + library[0] + ".git",
@@ -300,19 +295,23 @@ def main():
         shutil.rmtree(install_path(target_platform), True)
         ensure_path_exist(install_path(target_platform))
 
+        build_openssl(
+            os.path.join(tempd, "openssl"),
+            install_path(target_platform), target_platform)
+
+        for library in DOWNLOAD_LIBRARIES:
+            download_library(tempd, library[0], library[1], library[2])
+
         # Compile boost
         build_boost(
             os.path.join(tempd, "boost"),
             install_path(target_platform), target_platform)
 
-        build_openssl(
-            os.path.join(tempd, "openssl"),
-            install_path(target_platform), target_platform)
-
-        # Compile GoogleTest
-        cmake_compile(
-            os.path.join(tempd, "googletest"),
-            install_path(target_platform), target_platform)
+        if target_platform not in [Platform.iOS, Platform.Android]:
+            # Compile GoogleTest
+            cmake_compile(
+                os.path.join(tempd, "googletest"),
+                install_path(target_platform), target_platform)
 
 
 if __name__ == "__main__":
