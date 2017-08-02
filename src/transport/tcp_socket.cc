@@ -94,7 +94,6 @@ void TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
       [ this, buffer{std::move(buffer)}, handler{std::move(handler)} ](
           const boost::system::error_code &ec,
           std::size_t bytes_transferred) mutable {
-        assert(bytes_transferred == buffer->capacity());
 
         if (ec) {
           auto error = ConvertBoostError(ec);
@@ -102,6 +101,8 @@ void TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
           handler(std::move(buffer), error);
           return;
         }
+
+        assert(bytes_transferred == buffer->capacity());
 
         NEDEBUG << "Successfully write " << bytes_transferred
                 << " bytes to socket.";
