@@ -25,6 +25,10 @@
 #include "nekit/transport/tcp_socket.h"
 #include "nekit/utils/auto.h"
 #include "nekit/utils/boost_error.h"
+#include "nekit/utils/log.h"
+
+#undef NECHANNEL
+#define NECHANNEL "TCP Socket"
 
 namespace nekit {
 namespace transport {
@@ -34,7 +38,10 @@ TcpSocket::TcpSocket(boost::asio::ip::tcp::socket &&socket)
 
 void TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
                      TransportInterface::EventHandler &&handler) {
+  NEDEBUG << "Start reading data.";
+
   if (read_closed_) {
+    NEERROR << "Socket reading is already closed.";
     socket_.get_io_service().post([
       buffer{std::move(buffer)}, handler{std::move(handler)}
     ]() mutable { handler(std::move(buffer), ErrorCode::Closed); });
@@ -51,11 +58,17 @@ void TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
           auto error = ConvertBoostError(ec);
           if (error == ErrorCode::EndOfFile) {
             this->read_closed_ = true;
+            NEDEBUG << "Socket got EOF.";
+          } else {
+            NEERROR << "Reading from socket failed due to " << error << ".";
           }
+
           handler(std::move(buffer), error);
           return;
         }
 
+        NEDEBUG << "Successfully read " << bytes_transferred
+                << " bytes from socket.";
         buffer->ReserveBack(buffer->capacity() - bytes_transferred);
         handler(std::move(buffer), ErrorCode::NoError);
         return;
@@ -64,7 +77,10 @@ void TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
 
 void TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
                       TransportInterface::EventHandler &&handler) {
+  NEDEBUG << "Start writing data.";
+
   if (write_closed_) {
+    NEERROR << "Socket write is already closed.";
     socket_.get_io_service().post([
       buffer{std::move(buffer)}, handler{std::move(handler)}
     ]() mutable { handler(std::move(buffer), ErrorCode::Closed); });
@@ -80,36 +96,58 @@ void TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
         assert(bytes_transferred == buffer->capacity());
 
         if (ec) {
-          handler(std::move(buffer), ConvertBoostError(ec));
+          auto error = ConvertBoostError(ec);
+          NEERROR << "Write to socket failed due to " << error << ".";
+          handler(std::move(buffer), error);
           return;
         }
 
+        NEDEBUG << "Successfully write " << bytes_transferred
+                << " bytes to socket.";
         handler(std::move(buffer), ErrorCode::NoError);
         return;
       });
 }
 
 void TcpSocket::CloseRead() {
-  if (read_closed_) return;
+  NEDEBUG << "Closing socket reading.";
+  if (read_closed_) {
+    NEDEBUG << "Socket reading is already closed, nothing happened.";
+    return;
+  }
 
   boost::system::error_code ec;
   socket_.shutdown(socket_.shutdown_receive, ec);
   // It is not likely there will be any error other than those related to SSL.
   // But SSL is never used in TcpSocket.
+  if (ec) {
+    NEERROR << "Failed to close socket reading due to " << ec << ".";
+  }
   assert(!ec);
+
   read_closed_ = true;
+  NEDEBUG << "Socket reading closed.";
 }
 
 void TcpSocket::CloseWrite() {
-  if (write_closed_) return;
+  NEDEBUG << "Closing socket writing.";
+  if (write_closed_) {
+    NEDEBUG << "Socket writing is already closed, nothing happened.";
+    return;
+  }
 
   boost::system::error_code ec;
   socket_.shutdown(socket_.shutdown_send, ec);
+  if (ec) {
+    NEERROR << "Failed to close socket writing due to " << ec << ".";
+  }
   assert(!ec);
   write_closed_ = true;
+  NEDEBUG << "Socket writing closed.";
 }
 
 void TcpSocket::Close() {
+  NEDEBUG << "Closing socket.";
   CloseRead();
   CloseWrite();
 }
