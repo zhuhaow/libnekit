@@ -70,6 +70,8 @@ void SystemResolver::Resolve(std::string domain, AddressPreference preference,
       });
 }
 
+void SystemResolver::Cancel() { resolver_.cancel(); }
+
 std::error_code SystemResolver::ConvertBoostError(
     const boost::system::error_code& ec) {
   if (ec.category() == boost::asio::error::system_category) {

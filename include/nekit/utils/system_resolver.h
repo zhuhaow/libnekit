@@ -35,6 +35,8 @@ class SystemResolver : public ResolverInterface {
   void Resolve(std::string domain, AddressPreference preference,
                EventHandler&& handler) override;
 
+  void Cancel() override;
+
  private:
   std::error_code ConvertBoostError(const boost::system::error_code& ec);
 
