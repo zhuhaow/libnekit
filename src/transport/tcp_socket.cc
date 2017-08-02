@@ -161,49 +161,6 @@ std::error_code TcpSocket::ConvertBoostError(
     }
   }
   return std::make_error_code(ec);
-}  // namespace transport
-
-namespace {
-struct TcpSocketErrorCategory : std::error_category {
-  const char *name() const noexcept override;
-  std::string message(int) const override;
-};
-
-const char *TcpSocketErrorCategory::name() const noexcept {
-  return "TCP socket";
-}
-
-std::string TcpSocketErrorCategory::message(int ev) const {
-  switch (static_cast<TcpSocket::ErrorCode>(ev)) {
-    case TcpSocket::ErrorCode::NoError:
-      return "no error";
-    case TcpSocket::ErrorCode::ConnectionAborted:
-      return "connection aborted";
-    case TcpSocket::ErrorCode::ConnectionReset:
-      return "connection reset";
-    case TcpSocket::ErrorCode::HostUnreachable:
-      return "host unreachable";
-    case TcpSocket::ErrorCode::NetworkDown:
-      return "network down";
-    case TcpSocket::ErrorCode::NetworkReset:
-      return "network reset";
-    case TcpSocket::ErrorCode::NetworkUnreachable:
-      return "network unreachable";
-    case TcpSocket::ErrorCode::TimedOut:
-      return "timeout";
-    case TcpSocket::ErrorCode::EndOfFile:
-      return "end of file";
-    case TcpSocket::ErrorCode::UnknownError:
-      return "unknown error";
-  }
-}
-
-const TcpSocketErrorCategory tcpSocketErrorCategory{};
-
-}  // namespace
-
-std::error_code make_error_code(TcpSocket::ErrorCode e) {
-  return {static_cast<int>(e), tcpSocketErrorCategory};
 }
 }  // namespace transport
 }  // namespace nekit

@@ -30,8 +30,29 @@ namespace nekit {
 namespace transport {
 class ConnectionInterface : public TransportInterface {
  public:
+  enum class ErrorCode {
+    NoError = 0,
+    ConnectionAborted,
+    ConnectionReset,
+    HostUnreachable,
+    NetworkDown,
+    NetworkReset,
+    NetworkUnreachable,
+    TimedOut,
+    EndOfFile,
+    UnknownError
+  };
+
   virtual boost::asio::ip::tcp::endpoint localEndpoint() const = 0;
   virtual boost::asio::ip::tcp::endpoint remoteEndpoint() const = 0;
 };
+
+std::error_code make_error_code(ConnectionInterface::ErrorCode e);
 }  // namespace transport
 }  // namespace nekit
+
+namespace std {
+template <>
+struct is_error_code_enum<nekit::transport::ConnectionInterface::ErrorCode>
+    : true_type {};
+}  // namespace std

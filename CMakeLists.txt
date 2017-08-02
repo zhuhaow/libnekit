@@ -66,6 +66,7 @@ set(SOURCES
   src/transport/tcp_listener.cc
   src/transport/tunnel.cc
   src/transport/tcp_connector.cc
+  src/transport/connection_interface.cc
   src/utils/boost_error.cc
   src/utils/session.cc
   src/utils/system_resolver.cc

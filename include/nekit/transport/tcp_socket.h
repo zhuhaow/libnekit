@@ -31,27 +31,14 @@
 #include "connection_interface.h"
 #include "connector_interface.h"
 #include "listener_interface.h"
-#include "tcp_listener.h"
 #include "tcp_connector.h"
+#include "tcp_listener.h"
 
 namespace nekit {
 namespace transport {
 
 class TcpSocket final : public ConnectionInterface, private boost::noncopyable {
  public:
-  enum class ErrorCode {
-    NoError = 0,
-    ConnectionAborted,
-    ConnectionReset,
-    HostUnreachable,
-    NetworkDown,
-    NetworkReset,
-    NetworkUnreachable,
-    TimedOut,
-    EndOfFile,
-    UnknownError
-  };
-
   ~TcpSocket() = default;
 
   void Read(std::unique_ptr<utils::Buffer>&&,
@@ -80,14 +67,6 @@ class TcpSocket final : public ConnectionInterface, private boost::noncopyable {
   boost::asio::ip::tcp::socket socket_;
   bool read_closed_{false}, write_closed_{false};
 };
-
-std::error_code make_error_code(TcpSocket::ErrorCode e);
-
 }  // namespace transport
 }  // namespace nekit
 
-namespace std {
-template <>
-struct is_error_code_enum<nekit::transport::TcpSocket::ErrorCode> : true_type {
-};
-}  // namespace std
