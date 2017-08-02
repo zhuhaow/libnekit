@@ -44,9 +44,10 @@ endif()
 
 include_directories("include")
 include_directories("deps/${PLATFORM}/include")
-list(APPEND CMAKE_LIBRARY_PATH "deps/${PLATFORM}/lib")
 
-if(APPLE)
+set(CMAKE_FIND_ROOT_PATH "${PROJECT_SOURCE_DIR}/deps/${PLATFORM}")
+
+if(APPLE AND NOT IOS)
   execute_process(COMMAND scripts/find_include_path.sh WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE INCLUDE_DIRS)
   string(REPLACE "\n" ";" INCLUDE_DIRS ${INCLUDE_DIRS})
   include_directories(${INCLUDE_DIRS})
