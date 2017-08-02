@@ -30,18 +30,21 @@
 
 #include <boost/asio.hpp>
 
+#include "resolver_interface.h"
+
 namespace nekit {
 namespace utils {
 class Domain final {
  public:
   using EventHandler = std::function<void(std::error_code)>;
 
-  Domain(std::string domain);
+  Domain(std::string domain, std::unique_ptr<ResolverInterface>&& resolver);
 
   bool operator==(const std::string& rhs) const;
 
   void Resolve(EventHandler&& handler);
   void ForceResolve(EventHandler&& handler);
+  void Cancel();
 
   // If the domain is ever resolved. The resolving may fail.
   bool isResolved() const;
@@ -59,6 +62,8 @@ class Domain final {
 
  private:
   std::string domain_;
+  std::unique_ptr<ResolverInterface> resolver_;
+
   std::shared_ptr<std::vector<boost::asio::ip::address>> addresses_;
   std::error_code error_;
   bool resolved_{false};

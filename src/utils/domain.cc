@@ -31,7 +31,9 @@
 
 namespace nekit {
 namespace utils {
-Domain::Domain(std::string domain) : domain_{domain} {}
+Domain::Domain(std::string domain,
+               std::unique_ptr<ResolverInterface>&& resolver)
+    : domain_{domain}, resolver_{std::move(resolver)} {}
 
 bool Domain::operator==(const std::string& rhs) const { return domain_ == rhs; }
 
@@ -52,7 +54,7 @@ void Domain::ForceResolve(EventHandler&& handler) {
   NEDEBUG << "Start resolving domain " << domain_ << ".";
 
   resolving_ = true;
-  Runtime::CurrentRuntime().Resolver()->Resolve(
+  resolver_->Resolve(
       domain_, ResolverInterface::AddressPreference::Any,
       [ this, handler{std::move(handler)} ](
           std::shared_ptr<std::vector<boost::asio::ip::address>> addresses,
@@ -74,6 +76,15 @@ void Domain::ForceResolve(EventHandler&& handler) {
         addresses_ = addresses;
         handler(ec);
       });
+}
+
+void Domain::Cancel() {
+  if (!resolving_) {
+    NEDEBUG << "Canceling a domain not resolving, do nothing.";
+    return;
+  }
+
+  resolver_->Cancel();
 }
 
 bool Domain::isResolved() const { return resolved_; }
