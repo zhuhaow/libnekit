@@ -27,12 +27,12 @@
 namespace nekit {
 namespace utils {
 enum class NEKitErrorCode { NoError, Canceled };
-}
+std::error_code make_error_code(NEKitErrorCode);
+}  // namespace utils
 }  // namespace nekit
 
 namespace std {
 template <>
 struct is_error_code_enum<nekit::utils::NEKitErrorCode> : true_type {};
 
-error_code make_error_code(nekit::utils::NEKitErrorCode);
 }  // namespace std

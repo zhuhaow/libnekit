@@ -46,7 +46,7 @@ ActionRequest DirectStreamCoder::Decode(utils::Buffer* buffer) {
 }
 
 std::error_code DirectStreamCoder::GetLastError() const {
-  return std::make_error_code(utils::NEKitErrorCode::NoError);
+  return utils::NEKitErrorCode::NoError;
 }
 
 bool DirectStreamCoder::forwarding() const { return true; }

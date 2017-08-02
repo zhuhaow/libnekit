@@ -24,6 +24,9 @@
 
 #include "nekit/utils/error.h"
 
+namespace nekit {
+namespace utils {
+
 namespace {
 class NEKitErrorCategory : public std::error_category {
   const char* name() const noexcept override { return "NEKit"; }
@@ -42,6 +45,8 @@ NEKitErrorCategory nekitErrorCategory{};
 
 }  // namespace
 
-std::error_code std::make_error_code(nekit::utils::NEKitErrorCode ec) {
+std::error_code make_error_code(nekit::utils::NEKitErrorCode ec) {
   return {static_cast<int>(ec), nekitErrorCategory};
 }
+}  // namespace utils
+}  // namespace nekit

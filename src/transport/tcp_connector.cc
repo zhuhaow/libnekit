@@ -106,7 +106,7 @@ void TcpConnector::DoConnect() {
 
         connecting_ = false;
         handler_(std::unique_ptr<TcpSocket>(new TcpSocket(std::move(socket_))),
-                 std::make_error_code(utils::NEKitErrorCode::NoError));
+                 utils::NEKitErrorCode::NoError);
         return;
       });
 }

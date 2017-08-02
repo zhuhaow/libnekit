@@ -25,6 +25,7 @@
 #include "nekit/transport/tcp_socket.h"
 #include "nekit/utils/auto.h"
 #include "nekit/utils/boost_error.h"
+#include "nekit/utils/error.h"
 #include "nekit/utils/log.h"
 
 #undef NECHANNEL

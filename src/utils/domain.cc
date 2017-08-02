@@ -33,7 +33,7 @@ bool Domain::operator==(const std::string& rhs) const { return domain_ == rhs; }
 
 void Domain::Resolve(EventHandler&& handler) {
   if (resolved_) {
-    handler(std::make_error_code(NEKitErrorCode::NoError));
+    handler(NEKitErrorCode::NoError);
     return;
   }
 
