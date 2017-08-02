@@ -80,5 +80,12 @@ std::error_code SystemResolver::ConvertBoostError(
   }
   return std::make_error_code(ec);
 }
+
+SystemResolverFactory::SystemResolverFactory(boost::asio::io_service& io)
+    : io_{&io} {}
+
+std::unique_ptr<ResolverInterface> SystemResolverFactory::Build() {
+  return std::make_unique<SystemResolver>(*io_);
+}
 }  // namespace utils
 }  // namespace nekit

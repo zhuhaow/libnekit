@@ -26,8 +26,8 @@
 #include <memory>
 #include <system_error>
 
-#include <boost/noncopyable.hpp>
 #include <boost/asio.hpp>
+#include <boost/noncopyable.hpp>
 
 namespace nekit {
 namespace utils {
@@ -49,6 +49,13 @@ class ResolverInterface : private boost::noncopyable {
 
   virtual void Resolve(std::string domain, AddressPreference preference,
                        EventHandler&& handler) = 0;
+};
+
+class ResolverFactoryInterface : private boost::noncopyable {
+ public:
+  virtual ~ResolverFactoryInterface() = default;
+
+  virtual std::unique_ptr<ResolverInterface> Build() = 0;
 };
 }  // namespace utils
 }  // namespace nekit

@@ -40,5 +40,15 @@ class SystemResolver : public ResolverInterface {
 
   boost::asio::ip::tcp::resolver resolver_;
 };
+
+class SystemResolverFactory : public ResolverFactoryInterface {
+ public:
+  SystemResolverFactory(boost::asio::io_service& io);
+
+  std::unique_ptr<ResolverInterface> Build() override;
+
+ private:
+  boost::asio::io_service* io_;
+};
 }  // namespace utils
 }  // namespace nekit
