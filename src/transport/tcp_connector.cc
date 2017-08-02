@@ -55,7 +55,7 @@ TcpConnector::TcpConnector(std::string domain, uint16_t port,
                            boost::asio::io_service& io)
     : TcpConnector(std::make_shared<utils::Domain>(domain), port, io) {}
 
-void TcpConnector::Connect(EventHandler&& handler) {
+void TcpConnector::Connect(EventHandler handler) {
   assert(!connecting_);
 
   NEDEBUG << "Begin connecting to remote.";
@@ -64,30 +64,28 @@ void TcpConnector::Connect(EventHandler&& handler) {
     if (domain_->isAddressAvailable()) {
       addresses_ = domain_->addresses();
       NEDEBUG << "Address is available, connect directly.";
-      DoConnect(std::move(handler));
+      DoConnect(handler);
     } else {
       if (domain_->isResolved()) {
         NEERROR << "Can not connect since resolve is failed due to "
                 << domain_->error() << ".";
 
-        socket_.get_io_service().post([ this, handler{std::move(handler)} ]() {
-          handler(nullptr, domain_->error());
-        });
+        socket_.get_io_service().post(
+            [this, handler]() { handler(nullptr, domain_->error()); });
         return;
       } else {
-        domain_->Resolve(
-            [ this, handler{std::move(handler)} ](std::error_code ec) mutable {
-              if (ec) {
-                NEERROR << "Can not connect since resolve is failed due to "
-                        << domain_->error() << ".";
-                handler(nullptr, ec);
-                return;
-              }
+        domain_->Resolve([this, handler](std::error_code ec) mutable {
+          if (ec) {
+            NEERROR << "Can not connect since resolve is failed due to "
+                    << domain_->error() << ".";
+            handler(nullptr, ec);
+            return;
+          }
 
-              NEDEBUG << "Domain resolved, connect now.";
-              addresses_ = domain_->addresses();
-              DoConnect(std::move(handler));
-            });
+          NEDEBUG << "Domain resolved, connect now.";
+          addresses_ = domain_->addresses();
+          DoConnect(handler);
+        });
         return;
       }
     }
@@ -96,14 +94,14 @@ void TcpConnector::Connect(EventHandler&& handler) {
 
   NEDEBUG << "Connect request made by addresses, connect directly.";
 
-  DoConnect(std::move(handler));
+  DoConnect(handler);
 }
 
 void TcpConnector::Bind(std::shared_ptr<utils::DeviceInterface> device) {
   device_ = device;
 }
 
-void TcpConnector::DoConnect(EventHandler&& handler) {
+void TcpConnector::DoConnect(EventHandler handler) {
   assert(!addresses_->empty());
   connecting_ = true;
 
@@ -120,23 +118,23 @@ void TcpConnector::DoConnect(EventHandler&& handler) {
   socket_.close(ec);
 
   const auto& address = addresses_->at(current_ind_);
-  socket_.async_connect(boost::asio::ip::tcp::endpoint(address, port_), [
-    this, handler{std::move(handler)}
-  ](const boost::system::error_code& ec) mutable {
-    if (ec) {
-      NEDEBUG << "Connect failed due to " << ec << ", trying next address.";
-      last_error_ = std::make_error_code(ec);
-      current_ind_++;
-      DoConnect(std::move(handler));
-      return;
-    }
+  socket_.async_connect(
+      boost::asio::ip::tcp::endpoint(address, port_),
+      [this, handler](const boost::system::error_code& ec) mutable {
+        if (ec) {
+          NEDEBUG << "Connect failed due to " << ec << ", trying next address.";
+          last_error_ = std::make_error_code(ec);
+          current_ind_++;
+          DoConnect(handler);
+          return;
+        }
 
-    NEINFO << "Successfully connected to remote.";
-    connecting_ = false;
-    handler(std::unique_ptr<TcpSocket>(new TcpSocket(std::move(socket_))),
-            utils::NEKitErrorCode::NoError);
-    return;
-  });
+        NEINFO << "Successfully connected to remote.";
+        connecting_ = false;
+        handler(std::unique_ptr<TcpSocket>(new TcpSocket(std::move(socket_))),
+                utils::NEKitErrorCode::NoError);
+        return;
+      });
 }
 
 TcpConnectorFactory::TcpConnectorFactory(boost::asio::io_service& io)

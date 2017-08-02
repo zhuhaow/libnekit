@@ -29,8 +29,8 @@ DirectAdapter::DirectAdapter(
     std::shared_ptr<ConnectorFactoryInterface> connector_factory)
     : session_{session}, connector_factory_{connector_factory} {}
 
-void DirectAdapter::Open(EventHandler &&handler) {
-  handler_ = std::move(handler);
+void DirectAdapter::Open(EventHandler handler) {
+  handler_ = handler;
 
   if (session_->type() == utils::Session::Type::Address) {
     connector_ =
@@ -45,7 +45,7 @@ void DirectAdapter::Open(EventHandler &&handler) {
 
 void DirectAdapter::DoConnect() {
   connector_->Connect(
-      [this, handler_{std::move(handler_)}](std::unique_ptr<ConnectionInterface> &&conn, std::error_code ec) {
+      [this](std::unique_ptr<ConnectionInterface>&& conn, std::error_code ec) {
         if (ec) {
           handler_(nullptr, nullptr, ec);
           return;

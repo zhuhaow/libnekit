@@ -39,12 +39,8 @@ struct Session {
  public:
   enum class Type { Domain, Address };
 
-  using EventHandler = std::function<void(std::error_code)>;
-
   Session(std::string host, uint16_t port = 0);
   Session(boost::asio::ip::address ip, uint16_t port = 0);
-
-  void Resolve(EventHandler&& handler);
 
   bool isAddressAvailable() const;
 

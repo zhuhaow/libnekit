@@ -36,7 +36,7 @@ public:
   std::error_code Bind(std::string ip, uint16_t port);
   std::error_code Bind(boost::asio::ip::address ip, uint16_t port);
 
-  void Accept(EventHandler&& handler) override;
+  void Accept(EventHandler handler) override;
 
  private:
   TcpListener listener_;

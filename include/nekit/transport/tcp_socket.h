@@ -42,9 +42,9 @@ class TcpSocket final : public ConnectionInterface, private boost::noncopyable {
   ~TcpSocket() = default;
 
   void Read(std::unique_ptr<utils::Buffer>&&,
-            TransportInterface::EventHandler&&) override;
+            TransportInterface::EventHandler) override;
   void Write(std::unique_ptr<utils::Buffer>&&,
-             TransportInterface::EventHandler&&) override;
+             TransportInterface::EventHandler) override;
 
   void CloseRead() override;
   void CloseWrite() override;

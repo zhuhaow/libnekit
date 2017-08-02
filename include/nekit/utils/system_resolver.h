@@ -33,7 +33,7 @@ class SystemResolver : public ResolverInterface {
   SystemResolver(boost::asio::io_service& io);
 
   void Resolve(std::string domain, AddressPreference preference,
-               EventHandler&& handler) override;
+               EventHandler handler) override;
 
   void Cancel() override;
 

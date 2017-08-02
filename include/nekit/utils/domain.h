@@ -42,8 +42,8 @@ class Domain final {
 
   bool operator==(const std::string& rhs) const;
 
-  void Resolve(EventHandler&& handler);
-  void ForceResolve(EventHandler&& handler);
+  void Resolve(EventHandler handler);
+  void ForceResolve(EventHandler handler);
   void Cancel();
 
   // If the domain is ever resolved. The resolving may fail.

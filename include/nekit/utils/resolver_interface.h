@@ -48,7 +48,7 @@ class ResolverInterface : private boost::noncopyable {
   virtual ~ResolverInterface() = default;
 
   virtual void Resolve(std::string domain, AddressPreference preference,
-                       EventHandler&& handler) = 0;
+                       EventHandler handler) = 0;
   virtual void Cancel() = 0;
 };
 

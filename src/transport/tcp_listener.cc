@@ -77,27 +77,27 @@ std::error_code TcpListener::Bind(boost::asio::ip::address ip, uint16_t port) {
   return ErrorCode::NoError;
 }
 
-void TcpListener::Accept(EventHandler &&handler) {
+void TcpListener::Accept(EventHandler handler) {
   NEDEBUG << "Start accepting new socket.";
 
-  acceptor_.async_accept(socket_, [ this, handler{std::move(handler)} ](
-                                      const boost::system::error_code &ec) {
-    if (ec) {
-      std::error_code sec = std::make_error_code(ec);
-      NEERROR << "Failed to accept new socket due to " << sec << ".";
+  acceptor_.async_accept(
+      socket_, [this, handler](const boost::system::error_code &ec) {
+        if (ec) {
+          std::error_code sec = std::make_error_code(ec);
+          NEERROR << "Failed to accept new socket due to " << sec << ".";
 
-      handler(nullptr, sec);
-      return;
-    }
+          handler(nullptr, sec);
+          return;
+        }
 
-    NEINFO << "Accepted new TCP socket.";
+        NEINFO << "Accepted new TCP socket.";
 
-    // Can't use `make_unique` since the constructor is a private friend.
-    TcpSocket *socket = new TcpSocket(std::move(socket_));
+        // Can't use `make_unique` since the constructor is a private friend.
+        TcpSocket *socket = new TcpSocket(std::move(socket_));
 
-    handler(std::unique_ptr<TcpSocket>(socket),
-            TcpListener::ErrorCode::NoError);
-  });
+        handler(std::unique_ptr<TcpSocket>(socket),
+                TcpListener::ErrorCode::NoError);
+      });
 }
 
 namespace {

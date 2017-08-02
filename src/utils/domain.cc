@@ -37,18 +37,18 @@ Domain::Domain(std::string domain,
 
 bool Domain::operator==(const std::string& rhs) const { return domain_ == rhs; }
 
-void Domain::Resolve(EventHandler&& handler) {
+void Domain::Resolve(EventHandler handler) {
   if (resolved_) {
     NEDEBUG << "Already resolved, does nothing.";
-    Runtime::CurrentRuntime().IoService()->post([handler{
-        std::move(handler)}]() { handler(NEKitErrorCode::NoError); });
+    Runtime::CurrentRuntime().IoService()->post(
+        [handler]() { handler(NEKitErrorCode::NoError); });
     return;
   }
 
-  ForceResolve(std::move(handler));
+  ForceResolve(handler);
 }
 
-void Domain::ForceResolve(EventHandler&& handler) {
+void Domain::ForceResolve(EventHandler handler) {
   assert(!resolving_);
 
   NEDEBUG << "Start resolving domain " << domain_ << ".";
@@ -60,7 +60,7 @@ void Domain::ForceResolve(EventHandler&& handler) {
 
   resolver_->Resolve(
       domain_, ResolverInterface::AddressPreference::Any,
-      [ this, handler{std::move(handler)} ](
+      [this, handler](
           std::shared_ptr<std::vector<boost::asio::ip::address>> addresses,
           std::error_code ec) {
 

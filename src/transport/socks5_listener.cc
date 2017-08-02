@@ -43,12 +43,11 @@ std::error_code Socks5Listener::Bind(boost::asio::ip::address ip,
   return listener_.Bind(ip, port);
 }
 
-void Socks5Listener::Accept(EventHandler&& handler) {
+void Socks5Listener::Accept(EventHandler handler) {
   NEDEBUG << "Start accepting new SOCKS5 socket.";
 
-  listener_.Accept([
-    this, handler{std::move(handler)}
-  ](std::unique_ptr<ConnectionInterface> && conn, std::error_code ec) mutable {
+  listener_.Accept([this, handler](std::unique_ptr<ConnectionInterface>&& conn,
+                                   std::error_code ec) mutable {
     if (ec) {
       NEERROR << "Failed to accept SOCKS5 socket due to " << ec << ".";
       handler(nullptr, nullptr, ec);
@@ -58,7 +57,7 @@ void Socks5Listener::Accept(EventHandler&& handler) {
     NEINFO << "Accepted new SOCKS5 socket.";
 
     handler(std::move(conn), stream_coder_factory_.Build(), ec);
-    Accept(std::move(handler));
+    Accept(handler);
     return;
   });
 }

@@ -36,7 +36,7 @@ class ListenerInterface {
 
   using EventHandler = std::function<void(
       std::unique_ptr<ConnectionInterface>&&, std::error_code)>;
-  virtual void Accept(EventHandler&&) = 0;
+  virtual void Accept(EventHandler) = 0;
 };
 }  // namespace transport
 }  // namespace nekit

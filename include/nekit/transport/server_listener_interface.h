@@ -39,7 +39,7 @@ class ServerListenerInterface {
 
   virtual ~ServerListenerInterface() = default;
 
-  virtual void Accept(EventHandler&& handler) = 0;
+  virtual void Accept(EventHandler handler) = 0;
 };
 }  // namespace transport
 }  // namespace nekit

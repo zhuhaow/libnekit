@@ -37,7 +37,7 @@ class DirectAdapter : public AdapterInterface {
   DirectAdapter(std::shared_ptr<utils::Session> session,
                 std::shared_ptr<ConnectorFactoryInterface> connector_factory);
 
-  void Open(EventHandler&& handler) override;
+  void Open(EventHandler handler) override;
 
  private:
   void DoConnect();

@@ -39,7 +39,7 @@ class AdapterInterface {
 
   virtual ~AdapterInterface() = default;
 
-  virtual void Open(EventHandler&& handler) = 0;
+  virtual void Open(EventHandler handler) = 0;
 };
 
 class AdapterFactoryInterface {

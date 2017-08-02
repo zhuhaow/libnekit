@@ -36,7 +36,7 @@ namespace utils {
 SystemResolver::SystemResolver(boost::asio::io_service& io) : resolver_{io} {}
 
 void SystemResolver::Resolve(std::string domain, AddressPreference preference,
-                             EventHandler&& handler) {
+                             EventHandler handler) {
   // Preference is ignored. Let the OS do the choice.
   (void)preference;
 
@@ -45,9 +45,9 @@ void SystemResolver::Resolve(std::string domain, AddressPreference preference,
   NEDEBUG << "Start resolving " << domain << ".";
 
   resolver_.async_resolve(
-      query, [ this, domain, handler{std::move(handler)} ](
-                 const boost::system::error_code& ec,
-                 boost::asio::ip::tcp::resolver::iterator iter) {
+      query,
+      [this, domain, handler](const boost::system::error_code& ec,
+                              boost::asio::ip::tcp::resolver::iterator iter) {
         if (ec) {
           auto error = ConvertBoostError(ec);
           NEERROR << "Failed to resolve " << domain << " due to " << error

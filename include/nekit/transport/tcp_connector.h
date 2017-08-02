@@ -44,12 +44,12 @@ class TcpConnector : public ConnectorInterface {
 
   TcpConnector(std::string domain, uint16_t port, boost::asio::io_service& io);
 
-  void Connect(EventHandler&& handler) override;
+  void Connect(EventHandler handler) override;
 
   void Bind(std::shared_ptr<utils::DeviceInterface> device) override;
 
  private:
-  void DoConnect(EventHandler&& handler);
+  void DoConnect(EventHandler handler);
 
   boost::asio::ip::tcp::socket socket_;
   std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses_;

@@ -37,8 +37,8 @@ class TransportInterface {
   using EventHandler =
       std::function<void(std::unique_ptr<utils::Buffer>&&, std::error_code)>;
 
-  virtual void Read(std::unique_ptr<utils::Buffer>&&, EventHandler&&) = 0;
-  virtual void Write(std::unique_ptr<utils::Buffer>&&, EventHandler&&) = 0;
+  virtual void Read(std::unique_ptr<utils::Buffer>&&, EventHandler) = 0;
+  virtual void Write(std::unique_ptr<utils::Buffer>&&, EventHandler) = 0;
 
   virtual void CloseRead() = 0;
   virtual void CloseWrite() = 0;
