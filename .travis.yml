@@ -21,7 +21,7 @@ addons:
       name: "zhuhaow/libnekit"
     notification_email: zhuhaow@gmail.com
     build_command_prepend: cmake -H. -Bbuild -DPLATFORM=$PLATFORM -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${PLATFORM}.cmake
-    build_command: cmake --build build
+    build_command: make -C build
     branch_pattern: coverity_scan
 
 cache:
