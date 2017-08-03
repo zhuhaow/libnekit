@@ -15,7 +15,15 @@ addons:
       - g++-5
       - g++-6
       - valgrind
-      
+
+  coverity_scan:
+    project:
+      name: "zhuhaow/libnekit"
+    notification_email: zhuhaow@gmail.com
+    build_command_prepend: cmake -H. -Bbuild -DPLATFORM=$PLATFORM -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${PLATFORM}.cmake
+    build_command: cmake --build build
+    branch_pattern: coverity_scan
+
 cache:
   directories:
     - deps
@@ -54,7 +62,7 @@ before_script:
 
 script:
   - set -e
-  - scripts/travis.sh
+  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then scripts/travis.sh; fi
 
 after_success:
   - if [ "$COVERAGE" == "ON" ]; then bash <(curl -s https://codecov.io/bash); fi
