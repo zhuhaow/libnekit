@@ -7,23 +7,6 @@ sudo:
 dist:
   - trusty
 
-addons:
-  apt:
-    sources:
-      - ubuntu-toolchain-r-test
-    packages:
-      - g++-5
-      - g++-6
-      - valgrind
-
-  coverity_scan:
-    project:
-      name: "zhuhaow/libnekit"
-    notification_email: zhuhaow@gmail.com
-    build_command_prepend: cmake -H. -Bbuild -DPLATFORM=$PLATFORM -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${PLATFORM}.cmake
-    build_command: make -C build
-    branch_pattern: coverity_scan
-
 cache:
   directories:
     - deps
@@ -47,9 +30,40 @@ matrix:
 
     - os: linux
       env: PLATFORM=linux COVERAGE=ON MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
+            - valgrind
+
+        coverity_scan:
+          project:
+            name: "zhuhaow/libnekit"
+          notification_email: zhuhaow@gmail.com
+          build_command_prepend: cmake -H. -Bbuild -DPLATFORM=$PLATFORM -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${PLATFORM}.cmake
+          build_command: make -C build
+          branch_pattern: coverity_scan
+
 
     - os: linux
       env: PLATFORM=linux COVERAGE=ON MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-6
+            - valgrind
+
+        coverity_scan:
+          project:
+            name: "zhuhaow/libnekit"
+          notification_email: zhuhaow@gmail.com
+          build_command_prepend: cmake -H. -Bbuild -DPLATFORM=$PLATFORM -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${PLATFORM}.cmake
+          build_command: make -C build
+          branch_pattern: coverity_scan
 
 before_install:
   - eval "${MATRIX_EVAL}"
