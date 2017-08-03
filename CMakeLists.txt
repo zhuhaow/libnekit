@@ -85,7 +85,9 @@ set(SOURCES
   src/transport/socks5_listener.cc
   )
 
+cmake_policy(SET CMP0063 NEW)
 add_library(nekit ${SOURCES})
+set_target_properties(nekit PROPERTIES CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN YES)
 
 find_library(BOOST boost
   NO_SYSTEM_ENVIROMENT_PATH)
