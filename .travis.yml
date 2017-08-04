@@ -42,8 +42,8 @@ matrix:
           project:
             name: "zhuhaow/libnekit"
           notification_email: zhuhaow@gmail.com
-          build_command_prepend: cmake -H. -Bbuild -DPLATFORM=$PLATFORM -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${PLATFORM}.cmake
-          build_command: make -C build
+          build_command_prepend: "cov-configure --comptype gcc --compiler `which gcc-5`; cmake -DPLATFORM=$PLATFORM -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${PLATFORM}.cmake ."
+          build_command: "make"
           branch_pattern: coverity_scan
 
 
@@ -61,8 +61,8 @@ matrix:
           project:
             name: "zhuhaow/libnekit"
           notification_email: zhuhaow@gmail.com
-          build_command_prepend: cmake -H. -Bbuild -DPLATFORM=$PLATFORM -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${PLATFORM}.cmake
-          build_command: make -C build
+          build_command_prepend: "cov-configure --comptype gcc --compiler `which gcc-6`;cmake -DPLATFORM=$PLATFORM -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${PLATFORM}.cmake ."
+          build_command: "make"
           branch_pattern: coverity_scan
 
 before_install:
