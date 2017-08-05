@@ -20,11 +20,51 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include <cassert>
+
 #include "nekit/utils/cancelable.h"
 
 namespace nekit {
 namespace utils {
-Cancelable::Cancelable() : canceled_{std::make_shared<bool>(false)} {}
+Cancelable::Cancelable()
+    : canceled_{std::make_shared<bool>(false)},
+      count_{std::make_shared<int>(1)} {}
+
+Cancelable::Cancelable(const Cancelable& cancelable) {
+  // This is definitely programming error.
+  assert(*cancelable.count_ == 1);
+
+  canceled_ = cancelable.canceled_;
+  count_ = cancelable.count_;
+  (*count_)++;
+}
+
+Cancelable& Cancelable::operator=(const Cancelable& cancelable) {
+  // This is definitely programming error.
+  assert(*cancelable.count_ == 1);
+
+  canceled_ = cancelable.canceled_;
+  count_ = cancelable.count_;
+  (*count_)++;
+  return *this;
+}
+
+Cancelable::Cancelable(Cancelable&& cancelable) {
+  // We can't move the original flag.
+  assert(*cancelable.count_ >= 2);
+
+  cancelable.canceled_.swap(canceled_);
+  cancelable.count_.swap(count_);
+}
+
+Cancelable& Cancelable::operator=(Cancelable&& cancelable) {
+  // We can't move the origin flag.
+  assert(*cancelable.count_ == 2);
+
+  cancelable.canceled_.swap(canceled_);
+  cancelable.count_.swap(count_);
+  return *this;
+}
 
 Cancelable::~Cancelable() { Cancel(); }
 

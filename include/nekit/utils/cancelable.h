@@ -31,8 +31,12 @@ namespace utils {
 class Cancelable {
  public:
   Cancelable();
-  Cancelable(const Cancelable& cancelable) = default;
-  Cancelable& operator=(const Cancelable& cancelable) = default;
+
+  Cancelable(const Cancelable& cancelable);
+  Cancelable& operator=(const Cancelable& cancelable);
+
+  Cancelable(Cancelable&& cancelable);
+  Cancelable& operator=(Cancelable&& cancelable);
 
   ~Cancelable();
 
@@ -41,6 +45,7 @@ class Cancelable {
 
  private:
   std::shared_ptr<bool> canceled_;
+  std::shared_ptr<int> count_;
 };
 }  // namespace utils
 }  // namespace nekit
