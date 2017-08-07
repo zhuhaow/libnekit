@@ -30,6 +30,20 @@
 
 #define NELOG(NELEVEL) NELOG_INTERNAL(NELOGGER, NECHANNEL, NELEVEL)
 
+class NullLogger {
+ public:
+  NullLogger(){};
+
+  template <typename Val>
+  NullLogger& operator<<(const Val&) {
+    return *this;
+  };
+};
+
+#define NENOLOG \
+  while (0) NullLogger()
+
+#define NETRACE NELOG(nekit::utils::LogLevel::Trace)
 #define NEDEBUG NELOG(nekit::utils::LogLevel::Debug)
 #define NEINFO NELOG(nekit::utils::LogLevel::Info)
 #define NEWARN NELOG(nekit::utils::LogLevel::Warning)

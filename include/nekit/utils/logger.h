@@ -24,7 +24,7 @@
 
 namespace nekit {
 namespace utils {
-enum class LogLevel { Debug, Info, Warning, Error, Fatal };
+enum class LogLevel { Trace, Debug, Info, Warning, Error, Fatal };
 std::ostream& operator<<(std::ostream& stream, LogLevel level);
 
 using Logger =
