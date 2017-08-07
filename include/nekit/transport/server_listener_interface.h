@@ -43,6 +43,8 @@ class ServerListenerInterface : public utils::AsyncIoInterface {
   virtual ~ServerListenerInterface() = default;
 
   virtual void Accept(EventHandler handler) = 0;
+
+  virtual void Close() = 0;
 };
 }  // namespace transport
 }  // namespace nekit
