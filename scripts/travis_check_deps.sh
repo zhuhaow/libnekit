@@ -1,4 +1,4 @@
-#/usr/bin bash
+#!/usr/bin bash
 
 if [ -z $PLATFORM ]; then
     echo "PLATFORM must be set."
