@@ -77,7 +77,7 @@ set(SOURCES
   src/utils/logger.cc
   src/utils/cancelable.cc
   src/init.cc
-  src/rule/rule_set.cc
+  src/rule/rule_manager.cc
   src/rule/all_rule.cc
   src/transport/direct_adapter.cc
   src/instance.cc

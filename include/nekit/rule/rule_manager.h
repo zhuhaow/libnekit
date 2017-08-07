@@ -27,6 +27,7 @@
 #include <system_error>
 #include <vector>
 
+#include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
 
 #include "../utils/cancelable.h"
@@ -35,17 +36,23 @@
 
 namespace nekit {
 namespace rule {
-class RuleSet : private boost::noncopyable {
+class RuleManager : private boost::noncopyable {
  public:
   using EventHandler =
       std::function<void(std::shared_ptr<RuleInterface>, std::error_code)>;
 
   enum class ErrorCode { NoError, NoMatch };
 
+  RuleManager(boost::asio::io_service& io);
+
   void AppendRule(std::shared_ptr<RuleInterface> rule);
 
+  std::unique_ptr<utils::ResolverInterface>& resolver();
+  void set_resolver(std::unique_ptr<utils::ResolverInterface> resolver);
+
   utils::Cancelable& Match(std::shared_ptr<utils::Session> session,
-                           EventHandler handler);
+                           EventHandler handler)
+      __attribute__((warn_unused_result));
 
  private:
   void MatchIterator(
@@ -54,13 +61,15 @@ class RuleSet : private boost::noncopyable {
       std::shared_ptr<utils::Cancelable> cancelable, EventHandler handler);
 
   std::vector<std::shared_ptr<RuleInterface>> rules_;
+  std::unique_ptr<utils::ResolverInterface> resolver_;
+  boost::asio::io_service* io_;
 };
 
-std::error_code make_error_code(RuleSet::ErrorCode ec);
+std::error_code make_error_code(RuleManager::ErrorCode ec);
 }  // namespace rule
 }  // namespace nekit
 
 namespace std {
 template <>
-struct is_error_code_enum<nekit::rule::RuleSet::ErrorCode> : true_type {};
+struct is_error_code_enum<nekit::rule::RuleManager::ErrorCode> : true_type {};
 }  // namespace std

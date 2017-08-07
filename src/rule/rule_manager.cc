@@ -20,26 +20,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "nekit/rule/rule_set.h"
-
-#include "nekit/utils/runtime.h"
+#include "nekit/rule/rule_manager.h"
 
 namespace nekit {
 namespace rule {
 
-void RuleSet::AppendRule(std::shared_ptr<RuleInterface> rule) {
+RuleManager::RuleManager(boost::asio::io_service& io) : io_{&io} {}
+
+void RuleManager::AppendRule(std::shared_ptr<RuleInterface> rule) {
   rules_.push_back(rule);
 }
 
-utils::Cancelable& RuleSet::Match(std::shared_ptr<utils::Session> session,
-                                  EventHandler handler) {
+std::unique_ptr<utils::ResolverInterface>& RuleManager::resolver() {
+  return resolver_;
+}
+
+void RuleManager::set_resolver(
+    std::unique_ptr<utils::ResolverInterface> resolver) {
+  resolver_ = std::move(resolver);
+}
+
+utils::Cancelable& RuleManager::Match(std::shared_ptr<utils::Session> session,
+                                      EventHandler handler) {
   std::shared_ptr<utils::Cancelable> cancelable =
       std::make_shared<utils::Cancelable>();
-  MatchIterator(rules_.cbegin(), session, cancelable, handler);
+  io_->post([this, session, cancelable, handler]() {
+    MatchIterator(rules_.cbegin(), session, cancelable, handler);
+  });
   return *cancelable;
 }
 
-void RuleSet::MatchIterator(
+void RuleManager::MatchIterator(
     std::vector<std::shared_ptr<RuleInterface>>::const_iterator iter,
     std::shared_ptr<utils::Session> session,
     std::shared_ptr<utils::Cancelable> cancelable, EventHandler handler) {
@@ -56,15 +67,25 @@ void RuleSet::MatchIterator(
         iter++;
         break;
       case MatchResult::ResolveNeeded:
-        session->domain()->Resolve([this, handler, cancelable, session,
-                                    iter](std::error_code ec) mutable {
+        // Ideally, the returned `Cancelable` should have the same lifetime as
+        // the caller, `RuleManager`. This can be achieved by saving the
+        // `Cancelable` in some container (`std::unordered_map` for example).
+        // However, it seems too much hassle since `RuleManager`'s lifetime is
+        // basically as long as the whole program. We just need to make sure the
+        // resolver is released before `RuleManager` then everything should be
+        // fine.
+        // There is no way to silence the warning in GCC.
+        (void)session->domain()->Resolve([this, handler, cancelable, session,
+                                          iter](std::error_code ec) mutable {
+          if (cancelable->canceled()) {
+            return;
+          }
+
           if (ec) {
-            if (cancelable->canceled()) {
-              return;
-            }
             handler(nullptr, ec);
             return;
           }
+
           MatchIterator(iter, session, cancelable, handler);
         });
         return;
@@ -74,23 +95,23 @@ void RuleSet::MatchIterator(
 }
 
 namespace {
-struct RuleSetErrorCategory : std::error_category {
-  const char* name() const noexcept override { return "Rule set"; }
+struct RuleManagerErrorCategory : std::error_category {
+  const char* name() const noexcept override { return "Rule manager"; }
 
   std::string message(int error_code) const override {
-    switch (static_cast<RuleSet::ErrorCode>(error_code)) {
-      case RuleSet::ErrorCode::NoError:
+    switch (static_cast<RuleManager::ErrorCode>(error_code)) {
+      case RuleManager::ErrorCode::NoError:
         return "no error";
-      case RuleSet::ErrorCode::NoMatch:
+      case RuleManager::ErrorCode::NoMatch:
         return "there is no rule match";
     }
   }
 };
 
-const RuleSetErrorCategory ruleSetErrorCategory{};
+const RuleManagerErrorCategory ruleSetErrorCategory{};
 }  // namespace
 
-std::error_code make_error_code(RuleSet::ErrorCode ec) {
+std::error_code make_error_code(RuleManager::ErrorCode ec) {
   return {static_cast<int>(ec), ruleSetErrorCategory};
 }
 }  // namespace rule
