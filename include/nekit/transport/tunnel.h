@@ -23,24 +23,33 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
 
 #include <boost/noncopyable.hpp>
 
-#include "nekit/stream_coder/server_stream_coder_interface.h"
-#include "nekit/stream_coder/stream_coder_interface.h"
-#include "nekit/transport/adapter_interface.h"
-#include "nekit/transport/transport_interface.h"
-#include "nekit/utils/session.h"
+#include "../rule/rule_manager.h"
+#include "../stream_coder/server_stream_coder_interface.h"
+#include "../stream_coder/stream_coder_interface.h"
+#include "../utils/cancelable.h"
+#include "../utils/session.h"
+#include "adapter_interface.h"
+#include "transport_interface.h"
 
 namespace nekit {
 namespace transport {
+
+class TunnelManager;
+
 class Tunnel final : private boost::noncopyable {
  public:
   Tunnel(std::unique_ptr<ConnectionInterface>&& local_transport,
          std::unique_ptr<stream_coder::ServerStreamCoderInterface>&&
-             local_stream_coder);
+             local_stream_coder,
+         rule::RuleManager* rule_manager);
 
   void Open();
+
+  friend class TunnelManager;
 
  private:
   void ProcessLocalNegotiation(stream_coder::ActionRequest action_request);
@@ -53,9 +62,35 @@ class Tunnel final : private boost::noncopyable {
 
   std::shared_ptr<utils::Session> session_;
   std::unique_ptr<AdapterInterface> adapter_;
+
+  rule::RuleManager* rule_manager_;
+  TunnelManager* tunnel_manager_;
+  utils::Cancelable match_cancelable_;
+
   std::unique_ptr<ConnectionInterface> local_transport_, remote_transport_;
   std::unique_ptr<stream_coder::StreamCoderInterface> remote_stream_coder_;
   std::unique_ptr<stream_coder::ServerStreamCoderInterface> local_stream_coder_;
+
+  utils::Cancelable cancelable_;
+  // Used by closure, is bind to `cancelable_`.
+  std::shared_ptr<utils::Cancelable> cancel_flag_;
+};
+
+class TunnelManager final : private boost::noncopyable {
+ public:
+  Tunnel& Build(std::unique_ptr<ConnectionInterface>&& local_transport,
+                std::unique_ptr<stream_coder::ServerStreamCoderInterface>&&
+                    local_stream_coder,
+                rule::RuleManager* rule_manager);
+
+  void CloseAll();
+
+  friend class Tunnel;
+
+ private:
+  void NotifyClosed(Tunnel* tunnel);
+
+  std::unordered_map<void*, std::unique_ptr<transport::Tunnel>> tunnels_;
 };
 }  // namespace transport
 }  // namespace nekit
