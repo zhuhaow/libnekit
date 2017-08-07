@@ -45,7 +45,6 @@ class Cancelable {
 
  private:
   std::shared_ptr<bool> canceled_;
-  std::shared_ptr<int> count_;
 };
 }  // namespace utils
 }  // namespace nekit
