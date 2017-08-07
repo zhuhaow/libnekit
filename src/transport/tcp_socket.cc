@@ -58,6 +58,9 @@ void TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
 
         if (ec) {
           auto error = ConvertBoostError(ec);
+
+          if (error == utils::NEKitErrorCode::Canceled) return;
+
           if (error == ErrorCode::EndOfFile) {
             this->read_closed_ = true;
             NEDEBUG << "Socket got EOF.";
@@ -99,6 +102,9 @@ void TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
         if (ec) {
           auto error = ConvertBoostError(ec);
           NEERROR << "Write to socket failed due to " << error << ".";
+
+          if (error == utils::NEKitErrorCode::Canceled) return;
+
           handler(std::move(buffer), error);
           return;
         }
