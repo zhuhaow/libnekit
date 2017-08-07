@@ -38,23 +38,27 @@ TcpSocket::TcpSocket(boost::asio::ip::tcp::socket &&socket)
     : ConnectionInterface{socket.get_io_service()},
       socket_{std::move(socket)} {}
 
-void TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
-                     TransportInterface::EventHandler handler) {
+utils::Cancelable &TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
+                                   TransportInterface::EventHandler handler) {
   NETRACE << "Start reading data.";
 
+  read_cancelable_ = utils::Cancelable();
+
   if (read_closed_) {
-    NEERROR << "Socket reading is already closed.";
-    socket_.get_io_service().post([
-      buffer{std::move(buffer)}, handler
-    ]() mutable { handler(std::move(buffer), ErrorCode::Closed); });
-    return;
+    NEERROR << "Socket reading is already closed. Do nothing.";
+    return read_cancelable_;
   }
 
   socket_.async_read_some(
       boost::asio::mutable_buffers_1(buffer->buffer(), buffer->capacity()),
-      [ this, buffer{std::move(buffer)}, handler ](
-          const boost::system::error_code &ec,
-          std::size_t bytes_transferred) mutable {
+      [
+        this, buffer{std::move(buffer)}, handler, cancelable{read_cancelable_}
+      ](const boost::system::error_code &ec,
+        std::size_t bytes_transferred) mutable {
+
+        if (cancelable.canceled() || IsReadClosed()) {
+          return;
+        }
 
         if (ec) {
           auto error = ConvertBoostError(ec);
@@ -80,26 +84,31 @@ void TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
         handler(std::move(buffer), ErrorCode::NoError);
         return;
       });
-};
+  return read_cancelable_;
+}
 
-void TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
-                      TransportInterface::EventHandler handler) {
+utils::Cancelable &TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
+                                    TransportInterface::EventHandler handler) {
   NETRACE << "Start writing data.";
 
+  write_cancelable_ = utils::Cancelable();
+
   if (write_closed_) {
-    NEERROR << "Socket write is already closed.";
-    socket_.get_io_service().post([
-      buffer{std::move(buffer)}, handler
-    ]() mutable { handler(std::move(buffer), ErrorCode::Closed); });
-    return;
+    NEERROR << "Socket write is already closed. Do nothing.";
+    return write_cancelable_;
   }
 
   boost::asio::async_write(
       socket_,
       boost::asio::const_buffers_1(buffer->buffer(), buffer->capacity()),
-      [ this, buffer{std::move(buffer)}, handler ](
-          const boost::system::error_code &ec,
-          std::size_t bytes_transferred) mutable {
+      [
+        this, buffer{std::move(buffer)}, handler, cancelable{write_cancelable_}
+      ](const boost::system::error_code &ec,
+        std::size_t bytes_transferred) mutable {
+
+        if (cancelable.canceled() || IsWriteClosed()) {
+          return;
+        }
 
         if (ec) {
           auto error = ConvertBoostError(ec);
@@ -120,6 +129,8 @@ void TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
         handler(std::move(buffer), ErrorCode::NoError);
         return;
       });
+
+  return write_cancelable_;
 }
 
 void TcpSocket::CloseRead() {

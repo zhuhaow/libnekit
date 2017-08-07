@@ -41,10 +41,12 @@ class TcpSocket final : public ConnectionInterface, private boost::noncopyable {
  public:
   ~TcpSocket() = default;
 
-  void Read(std::unique_ptr<utils::Buffer>&&,
-            TransportInterface::EventHandler) override;
-  void Write(std::unique_ptr<utils::Buffer>&&,
-             TransportInterface::EventHandler) override;
+  utils::Cancelable& Read(std::unique_ptr<utils::Buffer>&&,
+                          TransportInterface::EventHandler) override
+      __attribute__((warn_unused_result));
+  utils::Cancelable& Write(std::unique_ptr<utils::Buffer>&&,
+                           TransportInterface::EventHandler) override
+      __attribute__((warn_unused_result));
 
   void CloseRead() override;
   void CloseWrite() override;
@@ -66,7 +68,7 @@ class TcpSocket final : public ConnectionInterface, private boost::noncopyable {
 
   boost::asio::ip::tcp::socket socket_;
   bool read_closed_{false}, write_closed_{false};
+  utils::Cancelable read_cancelable_, write_cancelable_;
 };
 }  // namespace transport
 }  // namespace nekit
-

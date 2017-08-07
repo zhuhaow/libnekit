@@ -28,6 +28,7 @@
 
 #include "../utils/async_io_interface.h"
 #include "../utils/buffer.h"
+#include "../utils/cancelable.h"
 
 namespace nekit {
 namespace transport {
@@ -39,8 +40,12 @@ class TransportInterface : public utils::AsyncIoInterface {
   using EventHandler =
       std::function<void(std::unique_ptr<utils::Buffer>&&, std::error_code)>;
 
-  virtual void Read(std::unique_ptr<utils::Buffer>&&, EventHandler) = 0;
-  virtual void Write(std::unique_ptr<utils::Buffer>&&, EventHandler) = 0;
+  virtual utils::Cancelable& Read(std::unique_ptr<utils::Buffer>&&,
+                                  EventHandler)
+      __attribute__((warn_unused_result)) = 0;
+  virtual utils::Cancelable& Write(std::unique_ptr<utils::Buffer>&&,
+                                   EventHandler)
+      __attribute__((warn_unused_result)) = 0;
 
   virtual void CloseRead() = 0;
   virtual void CloseWrite() = 0;
