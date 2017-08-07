@@ -26,24 +26,28 @@
 #include <memory>
 
 #include "../stream_coder/stream_coder_interface.h"
+#include "../utils/async_io_interface.h"
 #include "../utils/session.h"
 #include "connection_interface.h"
 
 namespace nekit {
 namespace transport {
-class AdapterInterface {
+class AdapterInterface : public utils::AsyncIoInterface {
  public:
   using EventHandler = std::function<void(
-      std::unique_ptr<ConnectionInterface>&&,
+      std::unique_ptr<ConnectionInterface> &&,
       std::unique_ptr<stream_coder::StreamCoderInterface>, std::error_code)>;
+
+  AdapterInterface(boost::asio::io_service &io) : AsyncIoInterface{io} {}
 
   virtual ~AdapterInterface() = default;
 
   virtual void Open(EventHandler handler) = 0;
 };
 
-class AdapterFactoryInterface {
+class AdapterFactoryInterface : public utils::AsyncIoInterface {
  public:
+  AdapterFactoryInterface(boost::asio::io_service &io) : AsyncIoInterface{io} {}
   virtual ~AdapterFactoryInterface() = default;
 
   virtual std::unique_ptr<AdapterInterface> Build(

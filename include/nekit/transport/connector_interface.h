@@ -29,14 +29,16 @@
 
 #include <boost/asio.hpp>
 
+#include "../utils/async_io_interface.h"
 #include "../utils/device.h"
 #include "../utils/domain.h"
 #include "connection_interface.h"
 
 namespace nekit {
 namespace transport {
-class ConnectorInterface {
+class ConnectorInterface : public utils::AsyncIoInterface {
  public:
+  ConnectorInterface(boost::asio::io_service& io) : AsyncIoInterface{io} {}
   virtual ~ConnectorInterface() = default;
 
   using EventHandler = std::function<void(
@@ -47,8 +49,10 @@ class ConnectorInterface {
   virtual void Bind(std::shared_ptr<utils::DeviceInterface> device) = 0;
 };
 
-class ConnectorFactoryInterface {
+class ConnectorFactoryInterface : public utils::AsyncIoInterface {
  public:
+  ConnectorFactoryInterface(boost::asio::io_service& io)
+      : AsyncIoInterface{io} {}
   virtual ~ConnectorFactoryInterface() = default;
 
   virtual std::unique_ptr<ConnectorInterface> Build(

@@ -26,16 +26,19 @@
 #include <system_error>
 
 #include "../stream_coder/server_stream_coder_interface.h"
+#include "../utils/async_io_interface.h"
 #include "listener_interface.h"
 
 namespace nekit {
 namespace transport {
-class ServerListenerInterface {
+class ServerListenerInterface : public utils::AsyncIoInterface {
  public:
   using EventHandler = std::function<void(
       std::unique_ptr<ConnectionInterface>,
       std::unique_ptr<stream_coder::ServerStreamCoderInterface>,
       std::error_code)>;
+
+  ServerListenerInterface(boost::asio::io_service& io) : AsyncIoInterface{io} {}
 
   virtual ~ServerListenerInterface() = default;
 

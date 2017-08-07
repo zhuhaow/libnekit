@@ -26,12 +26,14 @@
 #include <memory>
 #include <system_error>
 
+#include "../utils/async_io_interface.h"
 #include "../utils/buffer.h"
 
 namespace nekit {
 namespace transport {
-class TransportInterface {
+class TransportInterface : public utils::AsyncIoInterface {
  public:
+  TransportInterface(boost::asio::io_service& io) : AsyncIoInterface{io} {};
   virtual ~TransportInterface() = default;
 
   using EventHandler =

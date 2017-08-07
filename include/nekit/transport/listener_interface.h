@@ -26,17 +26,23 @@
 #include <memory>
 #include <system_error>
 
+#include "../utils/async_io_interface.h"
 #include "connection_interface.h"
 
 namespace nekit {
 namespace transport {
-class ListenerInterface {
+class ListenerInterface : public utils::AsyncIoInterface {
  public:
-  virtual ~ListenerInterface() = default;
-
   using EventHandler = std::function<void(
       std::unique_ptr<ConnectionInterface>&&, std::error_code)>;
+
+  ListenerInterface(boost::asio::io_service& io) : AsyncIoInterface{io} {}
+
+  virtual ~ListenerInterface() = default;
+
   virtual void Accept(EventHandler) = 0;
+
+  virtual void Close() = 0;
 };
 }  // namespace transport
 }  // namespace nekit

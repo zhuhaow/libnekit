@@ -44,6 +44,10 @@ class ConnectionInterface : public TransportInterface {
     UnknownError
   };
 
+  ConnectionInterface(boost::asio::io_service &io) : TransportInterface{io} {}
+
+  virtual ~ConnectionInterface() = default;
+
   virtual boost::asio::ip::tcp::endpoint localEndpoint() const = 0;
   virtual boost::asio::ip::tcp::endpoint remoteEndpoint() const = 0;
 };
