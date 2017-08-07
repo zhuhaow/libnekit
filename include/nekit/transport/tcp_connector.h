@@ -42,8 +42,6 @@ class TcpConnector : public ConnectorInterface {
   TcpConnector(std::shared_ptr<utils::Domain> domain, uint16_t port,
                boost::asio::io_service& io);
 
-  TcpConnector(std::string domain, uint16_t port, boost::asio::io_service& io);
-
   void Connect(EventHandler handler) override;
 
   void Bind(std::shared_ptr<utils::DeviceInterface> device) override;
@@ -57,6 +55,7 @@ class TcpConnector : public ConnectorInterface {
 
   uint16_t port_;
   std::shared_ptr<utils::DeviceInterface> device_;
+  utils::Cancelable cancelable_;
 
   std::error_code last_error_;
 
@@ -70,17 +69,14 @@ class TcpConnectorFactory : public ConnectorFactoryInterface {
   TcpConnectorFactory(boost::asio::io_service& io);
 
   std::unique_ptr<ConnectorInterface> Build(
-      const boost::asio::ip::address& address, uint16_t port);
+      const boost::asio::ip::address& address, uint16_t port) override;
 
   std::unique_ptr<ConnectorInterface> Build(
       std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses,
-      uint16_t port);
+      uint16_t port) override;
 
   std::unique_ptr<ConnectorInterface> Build(
-      std::shared_ptr<utils::Domain> domain, uint16_t port);
-
- private:
-  boost::asio::io_service* io_;
+      std::shared_ptr<utils::Domain> domain, uint16_t port) override;
 };
 }  // namespace transport
 }  // namespace nekit

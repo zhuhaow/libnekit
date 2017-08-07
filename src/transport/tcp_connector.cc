@@ -34,7 +34,8 @@ namespace nekit {
 namespace transport {
 TcpConnector::TcpConnector(const boost::asio::ip::address& address,
                            uint16_t port, boost::asio::io_service& io)
-    : socket_{io},
+    : ConnectorInterface{io},
+      socket_{io},
       addresses_{std::make_shared<std::vector<boost::asio::ip::address>>(
           std::vector<boost::asio::ip::address>{address})},
       port_{port} {}
@@ -42,17 +43,13 @@ TcpConnector::TcpConnector(const boost::asio::ip::address& address,
 TcpConnector::TcpConnector(
     std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses,
     uint16_t port, boost::asio::io_service& io)
-    : socket_{io}, addresses_{addresses}, port_{port} {
+    : ConnectorInterface{io}, socket_{io}, addresses_{addresses}, port_{port} {
   assert(!addresses_->empty());
 }
 
 TcpConnector::TcpConnector(std::shared_ptr<utils::Domain> domain, uint16_t port,
                            boost::asio::io_service& io)
-    : socket_{io}, domain_{domain}, port_{port} {}
-
-TcpConnector::TcpConnector(std::string domain, uint16_t port,
-                           boost::asio::io_service& io)
-    : TcpConnector(std::make_shared<utils::Domain>(domain), port, io) {}
+    : ConnectorInterface{io}, socket_{io}, domain_{domain}, port_{port} {}
 
 void TcpConnector::Connect(EventHandler handler) {
   assert(!connecting_);
@@ -69,22 +66,22 @@ void TcpConnector::Connect(EventHandler handler) {
         NEERROR << "Can not connect since resolve is failed due to "
                 << domain_->error() << ".";
 
-        socket_.get_io_service().post(
-            [this, handler]() { handler(nullptr, domain_->error()); });
+        io().post([this, handler]() { handler(nullptr, domain_->error()); });
         return;
       } else {
-        domain_->Resolve([this, handler](std::error_code ec) mutable {
-          if (ec) {
-            NEERROR << "Can not connect since resolve is failed due to "
-                    << domain_->error() << ".";
-            handler(nullptr, ec);
-            return;
-          }
+        cancelable_ =
+            domain_->Resolve([this, handler](std::error_code ec) mutable {
+              if (ec) {
+                NEERROR << "Can not connect since resolve is failed due to "
+                        << domain_->error() << ".";
+                handler(nullptr, ec);
+                return;
+              }
 
-          NEDEBUG << "Domain resolved, connect now.";
-          addresses_ = domain_->addresses();
-          DoConnect(handler);
-        });
+              NEDEBUG << "Domain resolved, connect now.";
+              addresses_ = domain_->addresses();
+              DoConnect(handler);
+            });
         return;
       }
     }
@@ -115,6 +112,7 @@ void TcpConnector::DoConnect(EventHandler handler) {
 
   boost::system::error_code ec;
   socket_.close(ec);
+  assert(!ec);
 
   const auto& address = addresses_->at(current_ind_);
   socket_.async_connect(
@@ -122,6 +120,9 @@ void TcpConnector::DoConnect(EventHandler handler) {
       [this, handler](const boost::system::error_code& ec) mutable {
         if (ec) {
           NEDEBUG << "Connect failed due to " << ec << ", trying next address.";
+
+          if (ec.value() == boost::asio::error::operation_aborted) return;
+
           last_error_ = std::make_error_code(ec);
           current_ind_++;
           DoConnect(handler);
@@ -137,22 +138,22 @@ void TcpConnector::DoConnect(EventHandler handler) {
 }
 
 TcpConnectorFactory::TcpConnectorFactory(boost::asio::io_service& io)
-    : io_{&io} {}
+    : ConnectorFactoryInterface{io} {}
 
 std::unique_ptr<ConnectorInterface> TcpConnectorFactory::Build(
     const boost::asio::ip::address& address, uint16_t port) {
-  return std::make_unique<TcpConnector>(address, port, *io_);
+  return std::make_unique<TcpConnector>(address, port, io());
 }
 
 std::unique_ptr<ConnectorInterface> TcpConnectorFactory::Build(
     std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses,
     uint16_t port) {
-  return std::make_unique<TcpConnector>(addresses, port, *io_);
+  return std::make_unique<TcpConnector>(addresses, port, io());
 }
 
 std::unique_ptr<ConnectorInterface> TcpConnectorFactory::Build(
     std::shared_ptr<utils::Domain> domain, uint16_t port) {
-  return std::make_unique<TcpConnector>(domain, port, *io_);
+  return std::make_unique<TcpConnector>(domain, port, io());
 }
 }  // namespace transport
 }  // namespace nekit
