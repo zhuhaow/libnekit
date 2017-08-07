@@ -55,7 +55,9 @@ void Tunnel::ProcessLocalNegotiation(ActionRequest request) {
       local_transport_->Read(std::move(buffer), [
         this, cancelable{cancel_flag_}
       ](std::unique_ptr<utils::Buffer> && buffer, std::error_code ec) {
-        if (cancelable->canceled()) return;
+        if (cancelable->canceled()) {
+          return;
+        }
 
         if (ec) {
           HandleError(ec);
@@ -74,7 +76,9 @@ void Tunnel::ProcessLocalNegotiation(ActionRequest request) {
       ](std::unique_ptr<utils::Buffer> && buffer, std::error_code ec) {
         (void)buffer;
 
-        if (cancelable->canceled()) return;
+        if (cancelable->canceled()) {
+          return;
+        }
 
         if (ec) {
           HandleError(ec);
@@ -109,7 +113,9 @@ void Tunnel::ProcessRemoteNegotiation(ActionRequest request) {
       remote_transport_->Read(std::move(buffer), [
         this, cancelable{cancel_flag_}
       ](std::unique_ptr<utils::Buffer> && buffer, std::error_code ec) {
-        if (cancelable->canceled()) return;
+        if (cancelable->canceled()) {
+          return;
+        }
 
         if (ec) {
           HandleError(ec);
@@ -128,7 +134,9 @@ void Tunnel::ProcessRemoteNegotiation(ActionRequest request) {
       ](std::unique_ptr<utils::Buffer> && buffer, std::error_code ec) {
         (void)buffer;
 
-        if (cancelable->canceled()) return;
+        if (cancelable->canceled()) {
+          return;
+        }
 
         if (ec) {
           HandleError(ec);
@@ -165,7 +173,9 @@ void Tunnel::ForwardLocal() {
     this, cancelable{cancel_flag_}
   ](std::unique_ptr<utils::Buffer> && buffer, std::error_code ec) mutable {
 
-    if (cancelable->canceled()) return;
+    if (cancelable->canceled()) {
+      return;
+    }
 
     if (ec) {
       HandleError(ec);
@@ -181,7 +191,9 @@ void Tunnel::ForwardLocal() {
             ](std::unique_ptr<utils::Buffer> && buffer, std::error_code ec) {
               (void)buffer;
 
-              if (cancelable->canceled()) return;
+              if (cancelable->canceled()) {
+                return;
+              }
 
               if (ec) {
                 HandleError(ec);
@@ -216,7 +228,9 @@ void Tunnel::ForwardRemote() {
   remote_transport_->Read(std::move(buffer), [
     this, cancelable{cancel_flag_}
   ](std::unique_ptr<utils::Buffer> && buffer, std::error_code ec) mutable {
-    if (cancelable->canceled()) return;
+    if (cancelable->canceled()) {
+      return;
+    }
 
     if (ec) {
       HandleError(ec);
@@ -233,7 +247,9 @@ void Tunnel::ForwardRemote() {
             ](std::unique_ptr<utils::Buffer> && buffer, std::error_code ec) {
               (void)buffer;
 
-              if (cancelable->canceled()) return;
+              if (cancelable->canceled()) {
+                return;
+              }
 
               if (ec) {
                 HandleError(ec);
@@ -282,7 +298,9 @@ void Tunnel::ProcessSession() {
             std::unique_ptr<stream_coder::StreamCoderInterface> && stream_coder,
             std::error_code ec) {
 
-          if (cancelable->canceled()) return;
+          if (cancelable->canceled()) {
+            return;
+          }
 
           if (ec) {
             HandleError(ec);

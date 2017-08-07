@@ -121,7 +121,9 @@ void TcpConnector::DoConnect(EventHandler handler) {
         if (ec) {
           NEDEBUG << "Connect failed due to " << ec << ", trying next address.";
 
-          if (ec.value() == boost::asio::error::operation_aborted) return;
+          if (ec.value() == boost::asio::error::operation_aborted) {
+            return;
+          }
 
           last_error_ = std::make_error_code(ec);
           current_ind_++;
