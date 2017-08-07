@@ -25,13 +25,12 @@
 #include <functional>
 #include <memory>
 #include <string>
-#include <system_error>
-#include <vector>
 
 #include <boost/asio.hpp>
 
 #include "domain.h"
 #include "ip_protocol.h"
+#include "resolver_interface.h"
 
 namespace nekit {
 namespace utils {
