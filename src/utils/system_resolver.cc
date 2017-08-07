@@ -29,29 +29,40 @@
 #undef NECHANNEL
 #define NECHANNEL "System resolver"
 
-using namespace std;
-
 namespace nekit {
 namespace utils {
-SystemResolver::SystemResolver(boost::asio::io_service& io) : resolver_{io} {}
 
-void SystemResolver::Resolve(std::string domain, AddressPreference preference,
-                             EventHandler handler) {
+SystemResolver::SystemResolver(boost::asio::io_service& io)
+    : ResolverInterface{io}, resolver_{io} {}
+
+Cancelable& SystemResolver::Resolve(std::string domain,
+                                    AddressPreference preference,
+                                    EventHandler handler) {
   // Preference is ignored. Let the OS do the choice.
   (void)preference;
 
   decltype(resolver_)::query query(domain, "");
 
-  NEDEBUG << "Start resolving " << domain << ".";
+  NETRACE << "Start resolving " << domain << ".";
+
+  auto cancelable = std::make_unique<Cancelable>();
+  auto cancelable_ptr = cancelable.get();
 
   resolver_.async_resolve(
-      query,
-      [this, domain, handler](const boost::system::error_code& ec,
-                              boost::asio::ip::tcp::resolver::iterator iter) {
+      query, [ this, domain, handler, cancelable{std::move(cancelable)} ](
+                 const boost::system::error_code& ec,
+                 boost::asio::ip::tcp::resolver::iterator iter) {
+        if (cancelable->canceled()) {
+          return;
+        }
+
         if (ec) {
           auto error = ConvertBoostError(ec);
           NEERROR << "Failed to resolve " << domain << " due to " << error
                   << ".";
+
+          if (error == NEKitErrorCode::Canceled) return;
+
           handler(nullptr, error);
           return;
         }
@@ -68,6 +79,8 @@ void SystemResolver::Resolve(std::string domain, AddressPreference preference,
         handler(addresses, NEKitErrorCode::NoError);
         return;
       });
+
+  return *cancelable_ptr;
 }
 
 void SystemResolver::Cancel() { resolver_.cancel(); }
@@ -83,11 +96,5 @@ std::error_code SystemResolver::ConvertBoostError(
   return std::make_error_code(ec);
 }
 
-SystemResolverFactory::SystemResolverFactory(boost::asio::io_service& io)
-    : io_{&io} {}
-
-std::unique_ptr<ResolverInterface> SystemResolverFactory::Build() {
-  return std::make_unique<SystemResolver>(*io_);
-}
 }  // namespace utils
 }  // namespace nekit

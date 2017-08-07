@@ -32,8 +32,9 @@ class SystemResolver : public ResolverInterface {
  public:
   SystemResolver(boost::asio::io_service& io);
 
-  void Resolve(std::string domain, AddressPreference preference,
-               EventHandler handler) override;
+  Cancelable& Resolve(std::string domain, AddressPreference preference,
+                      EventHandler handler) override
+      __attribute__((warn_unused_result));
 
   void Cancel() override;
 
@@ -41,16 +42,6 @@ class SystemResolver : public ResolverInterface {
   std::error_code ConvertBoostError(const boost::system::error_code& ec);
 
   boost::asio::ip::tcp::resolver resolver_;
-};
-
-class SystemResolverFactory : public ResolverFactoryInterface {
- public:
-  SystemResolverFactory(boost::asio::io_service& io);
-
-  std::unique_ptr<ResolverInterface> Build() override;
-
- private:
-  boost::asio::io_service* io_;
 };
 }  // namespace utils
 }  // namespace nekit
