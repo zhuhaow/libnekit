@@ -29,7 +29,7 @@
 namespace nekit {
 namespace transport {
 class Socks5Listener : public ServerListenerInterface {
-public:
+ public:
   Socks5Listener(boost::asio::io_service& io,
                  stream_coder::Socks5ServerStreamCoderFactory&& factory);
 
@@ -37,6 +37,8 @@ public:
   std::error_code Bind(boost::asio::ip::address ip, uint16_t port);
 
   void Accept(EventHandler handler) override;
+
+  void Close() override;
 
  private:
   TcpListener listener_;

@@ -32,7 +32,9 @@ namespace transport {
 Socks5Listener::Socks5Listener(
     boost::asio::io_service& io,
     stream_coder::Socks5ServerStreamCoderFactory&& factory)
-    : listener_{io}, stream_coder_factory_{std::move(factory)} {}
+    : ServerListenerInterface{io},
+      listener_{io},
+      stream_coder_factory_{std::move(factory)} {}
 
 std::error_code Socks5Listener::Bind(std::string ip, uint16_t port) {
   return listener_.Bind(ip, port);
@@ -61,6 +63,8 @@ void Socks5Listener::Accept(EventHandler handler) {
     return;
   });
 }
+
+void Socks5Listener::Close() { listener_.Close(); }
 
 }  // namespace transport
 }  // namespace nekit
