@@ -61,7 +61,9 @@ Cancelable& SystemResolver::Resolve(std::string domain,
           NEERROR << "Failed to resolve " << domain << " due to " << error
                   << ".";
 
-          if (error == NEKitErrorCode::Canceled) return;
+          if (error == NEKitErrorCode::Canceled) {
+            return;
+          }
 
           handler(nullptr, error);
           return;
