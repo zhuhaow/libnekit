@@ -43,6 +43,8 @@ class TcpListener : public ListenerInterface, private boost::noncopyable {
 
   void Accept(EventHandler handler) override;
 
+  void Close() override;
+
  private:
   boost::asio::ip::tcp::acceptor acceptor_;
   boost::asio::ip::tcp::socket socket_;

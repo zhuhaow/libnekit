@@ -32,7 +32,7 @@
 namespace nekit {
 namespace transport {
 TcpListener::TcpListener(boost::asio::io_service &io)
-    : acceptor_(io), socket_(io) {}
+    : ListenerInterface{io}, acceptor_(io), socket_(io) {}
 
 std::error_code TcpListener::Bind(std::string ip, uint16_t port) {
   return Bind(boost::asio::ip::address::from_string(ip), port);
@@ -99,6 +99,8 @@ void TcpListener::Accept(EventHandler handler) {
                 TcpListener::ErrorCode::NoError);
       });
 }
+
+void TcpListener::Close() { acceptor_.close(); }
 
 namespace {
 struct TcpListenerErrorCategory : std::error_category {
