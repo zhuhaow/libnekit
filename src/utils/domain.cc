@@ -24,7 +24,6 @@
 
 #include "nekit/utils/error.h"
 #include "nekit/utils/log.h"
-#include "nekit/utils/runtime.h"
 
 #undef NECHANNEL
 #define NECHANNEL "Domain"
@@ -40,9 +39,6 @@ bool Domain::operator==(const std::string& rhs) const { return domain_ == rhs; }
 void Domain::Resolve(EventHandler handler) {
   if (resolved_) {
     NEDEBUG << "Already resolved, does nothing.";
-    Runtime::CurrentRuntime().IoService()->post(
-        [handler]() { handler(NEKitErrorCode::NoError); });
-    return;
   }
 
   ForceResolve(handler);
@@ -54,9 +50,6 @@ void Domain::ForceResolve(EventHandler handler) {
   NEDEBUG << "Start resolving domain " << domain_ << ".";
 
   resolving_ = true;
-  if (!resolver_) {
-    resolver_ = Runtime::CurrentRuntime().ResolverFactory()->Build();
-  }
 
   resolver_->Resolve(
       domain_, ResolverInterface::AddressPreference::Any,

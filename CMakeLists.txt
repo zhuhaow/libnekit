@@ -73,7 +73,6 @@ set(SOURCES
   src/utils/session.cc
   src/utils/system_resolver.cc
   src/utils/error.cc
-  src/utils/runtime.cc
   src/utils/domain.cc
   src/utils/logger.cc
   src/utils/cancelable.cc

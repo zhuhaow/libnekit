@@ -26,7 +26,6 @@
 #include "nekit/utils/boost_error.h"
 #include "nekit/utils/error.h"
 #include "nekit/utils/log.h"
-#include "nekit/utils/runtime.h"
 
 #undef NECHANNEL
 #define NECHANNEL "TCP connector"

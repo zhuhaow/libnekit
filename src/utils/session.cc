@@ -22,7 +22,6 @@
 
 #include <system_error>
 
-#include "nekit/utils/runtime.h"
 #include "nekit/utils/session.h"
 
 namespace nekit {

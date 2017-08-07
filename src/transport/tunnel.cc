@@ -23,7 +23,6 @@
 #include "nekit/transport/tunnel.h"
 
 #include "nekit/config.h"
-#include "nekit/utils/runtime.h"
 
 namespace nekit {
 namespace transport {

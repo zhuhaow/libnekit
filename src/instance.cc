@@ -22,7 +22,6 @@
 #include "nekit/instance.h"
 
 #include "nekit/utils/log.h"
-#include "nekit/utils/runtime.h"
 #include "nekit/utils/system_resolver.h"
 
 #undef NECHANNEL
@@ -73,9 +72,6 @@ void Instance::Run() {
     resolver_factory_ = std::make_unique<utils::SystemResolverFactory>(io_);
   }
 
-  NEDEBUG << "Setting up runtime information.";
-  SetUpRuntime();
-
   NEINFO << "Start running instance.";
   io_.run();
 
@@ -90,9 +86,5 @@ void Instance::Reset() {
 
 boost::asio::io_service &Instance::io() { return io_; }
 
-void Instance::SetUpRuntime() {
-  utils::Runtime::CurrentRuntime().SetRuleSet(rule_set_.get());
-  utils::Runtime::CurrentRuntime().SetResolverFactory(resolver_factory_.get());
-  utils::Runtime::CurrentRuntime().SetIoService(&io_);
 }
 }  // namespace nekit
