@@ -35,7 +35,8 @@ namespace nekit {
 namespace transport {
 
 TcpSocket::TcpSocket(boost::asio::ip::tcp::socket &&socket)
-    : socket_{std::move(socket)} {}
+    : ConnectionInterface{socket.get_io_service()},
+      socket_{std::move(socket)} {}
 
 void TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
                      TransportInterface::EventHandler handler) {
