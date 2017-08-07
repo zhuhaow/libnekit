@@ -25,9 +25,11 @@
 namespace nekit {
 namespace transport {
 DirectAdapter::DirectAdapter(
-    std::shared_ptr<utils::Session> session,
+    boost::asio::io_service& io, std::shared_ptr<utils::Session> session,
     std::shared_ptr<ConnectorFactoryInterface> connector_factory)
-    : session_{session}, connector_factory_{connector_factory} {}
+    : AdapterInterface{io},
+      session_{session},
+      connector_factory_{connector_factory} {}
 
 void DirectAdapter::Open(EventHandler handler) {
   handler_ = handler;
@@ -57,12 +59,14 @@ void DirectAdapter::DoConnect() {
 }
 
 DirectAdapterFactory::DirectAdapterFactory(
+    boost::asio::io_service& io,
     std::shared_ptr<ConnectorFactoryInterface> connector_factory)
-    : connector_factory_{std::move(connector_factory)} {}
+    : AdapterFactoryInterface{io},
+      connector_factory_{std::move(connector_factory)} {}
 
 std::unique_ptr<AdapterInterface> DirectAdapterFactory::Build(
     std::shared_ptr<utils::Session> session) {
-  return std::make_unique<DirectAdapter>(session, connector_factory_);
+  return std::make_unique<DirectAdapter>(io(), session, connector_factory_);
 }
 }  // namespace transport
 }  // namespace nekit

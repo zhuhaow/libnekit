@@ -34,7 +34,8 @@ class DirectAdapter : public AdapterInterface {
  public:
   enum class ErrorCode { NoError, NoAddress };
 
-  DirectAdapter(std::shared_ptr<utils::Session> session,
+  DirectAdapter(boost::asio::io_service& io,
+                std::shared_ptr<utils::Session> session,
                 std::shared_ptr<ConnectorFactoryInterface> connector_factory);
 
   void Open(EventHandler handler) override;
@@ -53,6 +54,7 @@ class DirectAdapter : public AdapterInterface {
 class DirectAdapterFactory : public AdapterFactoryInterface {
  public:
   DirectAdapterFactory(
+      boost::asio::io_service& io,
       std::shared_ptr<ConnectorFactoryInterface> connector_factory);
 
   std::unique_ptr<AdapterInterface> Build(
