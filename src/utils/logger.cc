@@ -26,6 +26,9 @@ namespace nekit {
 namespace utils {
 std::ostream& operator<<(std::ostream& stream, LogLevel level) {
   switch (level) {
+    case LogLevel::Trace:
+      stream << "Trace";
+      break;
     case LogLevel::Debug:
       stream << "Debug";
       break;
