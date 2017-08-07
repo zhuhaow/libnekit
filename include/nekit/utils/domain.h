@@ -38,15 +38,18 @@ class Domain final {
  public:
   using EventHandler = std::function<void(std::error_code)>;
 
-  Domain(std::string domain, std::unique_ptr<ResolverInterface>&& resolver = nullptr);
+  Domain(std::string domain);
 
   bool operator==(const std::string& rhs) const;
 
-  void Resolve(EventHandler handler);
-  void ForceResolve(EventHandler handler);
+  void set_resolver(ResolverInterface* resolver);
+
+  Cancelable& Resolve(EventHandler handler) __attribute__((warn_unused_result));
+  Cancelable& ForceResolve(EventHandler handler)
+      __attribute__((warn_unused_result));
   void Cancel();
 
-  // If the domain is ever resolved. The resolving may fail.
+  // If the domain is ever resolved. The resolving may have failed.
   bool isResolved() const;
   // If the domain is resolving.
   bool isResolving() const;
@@ -62,12 +65,13 @@ class Domain final {
 
  private:
   std::string domain_;
-  std::unique_ptr<ResolverInterface> resolver_;
 
   std::shared_ptr<std::vector<boost::asio::ip::address>> addresses_;
   std::error_code error_;
+  ResolverInterface* resolver_;
   bool resolved_{false};
   bool resolving_{false};
+  Cancelable resolve_cancelable_;
 };
 }  // namespace utils
 }  // namespace nekit

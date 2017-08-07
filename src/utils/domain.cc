@@ -30,32 +30,53 @@
 
 namespace nekit {
 namespace utils {
-Domain::Domain(std::string domain,
-               std::unique_ptr<ResolverInterface>&& resolver)
-    : domain_{domain}, resolver_{std::move(resolver)} {}
+Domain::Domain(std::string domain) : domain_{domain} {}
 
 bool Domain::operator==(const std::string& rhs) const { return domain_ == rhs; }
 
-void Domain::Resolve(EventHandler handler) {
-  if (resolved_) {
-    NEDEBUG << "Already resolved, does nothing.";
-  }
-
-  ForceResolve(handler);
+void Domain::set_resolver(nekit::utils::ResolverInterface* resolver) {
+  resolver_ = resolver;
 }
 
-void Domain::ForceResolve(EventHandler handler) {
+Cancelable& Domain::Resolve(EventHandler handler) {
+  assert(resolver_);
+
+  if (resolved_) {
+    NEDEBUG << "Already resolved, does nothing.";
+
+    auto cancelable = std::make_unique<Cancelable>();
+    auto cancelable_ptr = cancelable.get();
+    resolver_->io().post([ handler, cancelable{std::move(cancelable)} ]() {
+      if (cancelable->canceled()) {
+        return;
+      }
+
+      handler(NEKitErrorCode::NoError);
+    });
+    return *cancelable_ptr;
+  }
+
+  return ForceResolve(handler);
+}
+
+Cancelable& Domain::ForceResolve(EventHandler handler) {
+  assert(resolver_);
   assert(!resolving_);
 
-  NEDEBUG << "Start resolving domain " << domain_ << ".";
+  NETRACE << "Start resolving domain " << domain_ << ".";
 
   resolving_ = true;
 
-  resolver_->Resolve(
+  auto cancelable = std::make_shared<Cancelable>();
+
+  resolve_cancelable_ = resolver_->Resolve(
       domain_, ResolverInterface::AddressPreference::Any,
-      [this, handler](
+      [this, handler, cancelable](
           std::shared_ptr<std::vector<boost::asio::ip::address>> addresses,
           std::error_code ec) {
+        if (cancelable->canceled()) {
+          return;
+        }
 
         resolving_ = false;
         resolved_ = true;
@@ -73,6 +94,8 @@ void Domain::ForceResolve(EventHandler handler) {
         addresses_ = addresses;
         handler(ec);
       });
+
+  return *cancelable;
 }
 
 void Domain::Cancel() {
@@ -81,7 +104,7 @@ void Domain::Cancel() {
     return;
   }
 
-  resolver_->Cancel();
+  resolve_cancelable_.Cancel();
 }
 
 bool Domain::isResolved() const { return resolved_; }
