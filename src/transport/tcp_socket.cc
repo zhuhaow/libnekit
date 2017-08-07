@@ -40,7 +40,7 @@ TcpSocket::TcpSocket(boost::asio::ip::tcp::socket &&socket)
 
 void TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
                      TransportInterface::EventHandler handler) {
-  NEDEBUG << "Start reading data.";
+  NETRACE << "Start reading data.";
 
   if (read_closed_) {
     NEERROR << "Socket reading is already closed.";
@@ -69,7 +69,7 @@ void TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
           return;
         }
 
-        NEDEBUG << "Successfully read " << bytes_transferred
+        NETRACE << "Successfully read " << bytes_transferred
                 << " bytes from socket.";
         buffer->ReserveBack(buffer->capacity() - bytes_transferred);
         handler(std::move(buffer), ErrorCode::NoError);
@@ -79,7 +79,7 @@ void TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
 
 void TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
                       TransportInterface::EventHandler handler) {
-  NEDEBUG << "Start writing data.";
+  NETRACE << "Start writing data.";
 
   if (write_closed_) {
     NEERROR << "Socket write is already closed.";
@@ -105,7 +105,7 @@ void TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
 
         assert(bytes_transferred == buffer->capacity());
 
-        NEDEBUG << "Successfully write " << bytes_transferred
+        NETRACE << "Successfully write " << bytes_transferred
                 << " bytes to socket.";
         handler(std::move(buffer), ErrorCode::NoError);
         return;
