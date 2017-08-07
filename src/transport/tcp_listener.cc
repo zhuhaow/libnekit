@@ -83,10 +83,12 @@ void TcpListener::Accept(EventHandler handler) {
   acceptor_.async_accept(
       socket_, [this, handler](const boost::system::error_code &ec) {
         if (ec) {
-          std::error_code sec = std::make_error_code(ec);
-          NEERROR << "Failed to accept new socket due to " << sec << ".";
+          if (ec.value() == boost::asio::error::operation_aborted) return;
 
-          handler(nullptr, sec);
+          std::error_code error = std::make_error_code(ec);
+          NEERROR << "Failed to accept new socket due to " << error << ".";
+
+          handler(nullptr, error);
           return;
         }
 
