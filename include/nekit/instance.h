@@ -22,41 +22,37 @@
 
 #pragma once
 
-#include <unordered_map>
 #include <vector>
 
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
 
-#include "rule/rule_set.h"
+#include "rule/rule_manager.h"
 #include "transport/server_listener_interface.h"
 #include "transport/tunnel.h"
+#include "utils/async_io_interface.h"
 #include "utils/resolver_interface.h"
 
 namespace nekit {
-class Instance : private boost::noncopyable {
+class Instance : public utils::AsyncIoInterface, private boost::noncopyable {
  public:
   Instance(std::string name);
-  void SetRuleSet(std::unique_ptr<rule::RuleSet> &&rule_set);
+  void SetRuleManager(std::unique_ptr<rule::RuleManager> &&rule_manager);
   void AddListener(
       std::unique_ptr<transport::ServerListenerInterface> &&listener);
-  void SetResolver(std::unique_ptr<utils::ResolverInterface> &&resolver);
 
   void Run();
   void Stop();
-  void Reset();
-
-  boost::asio::io_service &io();
+  void ResetNetwork();
 
  private:
-  void SetUpRuntime();
-
   std::string name_;
   boost::asio::io_service io_;
 
-  std::unordered_map<void *, std::unique_ptr<transport::Tunnel>> tunnels_;
-  std::unique_ptr<rule::RuleSet> rule_set_;
+  std::unique_ptr<rule::RuleManager> rule_manager_;
   std::vector<std::unique_ptr<transport::ServerListenerInterface>> listeners_;
-  std::unique_ptr<utils::ResolverFactoryInterface> resolver_factory_;
+  transport::TunnelManager tunnel_manager_;
+
+  bool ready_{true};
 };
 }  // namespace nekit

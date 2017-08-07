@@ -21,6 +21,7 @@
 
 #include "nekit/instance.h"
 
+#include "nekit/utils/error.h"
 #include "nekit/utils/log.h"
 #include "nekit/utils/system_resolver.h"
 
@@ -30,10 +31,12 @@
 namespace nekit {
 using nekit::utils::LogLevel;
 
-Instance::Instance(std::string name) : name_{name}, io_{} {}
+Instance::Instance(std::string name)
+    : AsyncIoInterface{io_}, name_{name}, io_{} {}
 
-void Instance::SetRuleSet(std::unique_ptr<rule::RuleSet> &&rule_set) {
-  rule_set_ = std::move(rule_set);
+void Instance::SetRuleManager(
+    std::unique_ptr<rule::RuleManager> &&rule_manager) {
+  rule_manager_ = std::move(rule_manager);
   NEDEBUG << "Set new rules for instance " << name_ << ".";
 }
 
@@ -44,7 +47,8 @@ void Instance::AddListener(
 }
 
 void Instance::Run() {
-  assert(rule_set_);
+  assert(rule_manager_);
+  assert(ready_);
 
   BOOST_LOG_SCOPED_THREAD_ATTR(
       "Instance", boost::log::attributes::constant<std::string>(name_));
@@ -60,16 +64,11 @@ void Instance::Run() {
             exit(1);
           }
 
-          auto tunnel = std::make_unique<transport::Tunnel>(
-              std::move(conn), std::move(stream_coder));
-          tunnel->Open();
-          tunnels_[tunnel.get()] = std::move(tunnel);
+          tunnel_manager_
+              .Build(std::move(conn), std::move(stream_coder),
+                     rule_manager_.get())
+              .Open();
         });
-  }
-
-  if (!resolver_factory_) {
-    NEINFO << "No resolver is specified, using system default.";
-    resolver_factory_ = std::make_unique<utils::SystemResolverFactory>(io_);
   }
 
   NEINFO << "Start running instance.";
@@ -78,13 +77,15 @@ void Instance::Run() {
   NEINFO << "Instance stopped.";
 }
 
-void Instance::Stop() { io_.stop(); }
-
-void Instance::Reset() {
-  // TODO: Reset the instance so it can run again.
+void Instance::Stop() {
+  io_.stop();
+  ready_ = false;
 }
 
-boost::asio::io_service &Instance::io() { return io_; }
-
+void Instance::ResetNetwork() {
+  tunnel_manager_.CloseAll();
+  listeners_.clear();
+  ready_ = true;
 }
+
 }  // namespace nekit
