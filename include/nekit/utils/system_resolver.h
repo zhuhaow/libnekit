@@ -28,7 +28,7 @@
 
 namespace nekit {
 namespace utils {
-class SystemResolver : public ResolverInterface {
+class SystemResolver : public ResolverInterface, private LifeTime {
  public:
   SystemResolver(boost::asio::io_service& io);
 

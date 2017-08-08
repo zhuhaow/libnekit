@@ -49,10 +49,13 @@ Cancelable& SystemResolver::Resolve(std::string domain,
   auto cancelable_ptr = cancelable.get();
 
   resolver_.async_resolve(
-      query, [ this, domain, handler, cancelable{std::move(cancelable)} ](
-                 const boost::system::error_code& ec,
-                 boost::asio::ip::tcp::resolver::iterator iter) {
-        if (cancelable->canceled()) {
+      query,
+      [
+        this, domain, handler, cancelable{std::move(cancelable)},
+        life_time{life_time_cancelable_pointer()}
+      ](const boost::system::error_code& ec,
+        boost::asio::ip::tcp::resolver::iterator iter) {
+        if (cancelable->canceled() || life_time->canceled()) {
           return;
         }
 
