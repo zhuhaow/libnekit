@@ -43,7 +43,8 @@ class AdapterInterface : public utils::AsyncIoInterface {
 
   virtual ~AdapterInterface() = default;
 
-  virtual const utils::Cancelable &Open(EventHandler handler) = 0;
+  virtual const utils::Cancelable &Open(EventHandler handler)
+      __attribute__((warn_unused_result)) = 0;
 };
 
 class AdapterFactoryInterface : public utils::AsyncIoInterface {
