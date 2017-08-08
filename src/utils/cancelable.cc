@@ -48,7 +48,11 @@ Cancelable& Cancelable::operator=(Cancelable&& cancelable) {
 
 Cancelable::~Cancelable() { Cancel(); }
 
-void Cancelable::Cancel() { *canceled_ = true; }
+void Cancelable::Cancel() {
+  if (canceled_) {
+    *canceled_ = true;
+  }
+}
 
 bool Cancelable::canceled() const { return *canceled_; }
 
