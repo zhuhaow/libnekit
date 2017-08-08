@@ -38,10 +38,11 @@ class DirectAdapter : public AdapterInterface {
                 std::shared_ptr<utils::Session> session,
                 std::shared_ptr<ConnectorFactoryInterface> connector_factory);
 
-  void Open(EventHandler handler) override;
+  utils::Cancelable& Open(EventHandler handler) override
+      __attribute__((warn_unused_result));
 
  private:
-  void DoConnect();
+  utils::Cancelable& DoConnect();
 
   std::shared_ptr<utils::Session> session_;
   std::shared_ptr<ConnectorFactoryInterface> connector_factory_;
@@ -49,6 +50,8 @@ class DirectAdapter : public AdapterInterface {
 
   stream_coder::DirectStreamCoderFactory stream_coder_factory_{};
   EventHandler handler_;
+
+  utils::Cancelable connector_cancelable_;
 };
 
 class DirectAdapterFactory : public AdapterFactoryInterface {

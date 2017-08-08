@@ -31,7 +31,7 @@ DirectAdapter::DirectAdapter(
       session_{session},
       connector_factory_{connector_factory} {}
 
-void DirectAdapter::Open(EventHandler handler) {
+utils::Cancelable& DirectAdapter::Open(EventHandler handler) {
   handler_ = handler;
 
   if (session_->type() == utils::Session::Type::Address) {
@@ -42,12 +42,19 @@ void DirectAdapter::Open(EventHandler handler) {
         connector_factory_->Build(session_->domain(), session_->port());
   }
 
-  DoConnect();
+  return DoConnect();
 }
 
-void DirectAdapter::DoConnect() {
-  connector_->Connect(
-      [this](std::unique_ptr<ConnectionInterface>&& conn, std::error_code ec) {
+utils::Cancelable& DirectAdapter::DoConnect() {
+  auto cancelable = std::make_shared<utils::Cancelable>();
+
+  connector_cancelable_ = connector_->Connect(
+      [this, cancelable](std::unique_ptr<ConnectionInterface>&& conn,
+                         std::error_code ec) {
+        if (cancelable->canceled()) {
+          return;
+        }
+
         if (ec) {
           handler_(nullptr, nullptr, ec);
           return;
@@ -56,6 +63,8 @@ void DirectAdapter::DoConnect() {
         handler_(std::move(conn), stream_coder_factory_.Build(session_), ec);
         return;
       });
+
+  return *cancelable;
 }
 
 DirectAdapterFactory::DirectAdapterFactory(
