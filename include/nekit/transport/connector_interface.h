@@ -45,7 +45,7 @@ class ConnectorInterface : public utils::AsyncIoInterface {
   using EventHandler = std::function<void(
       std::unique_ptr<ConnectionInterface>&&, std::error_code)>;
 
-  virtual utils::Cancelable& Connect(EventHandler handler)
+  virtual const utils::Cancelable& Connect(EventHandler handler)
       __attribute__((warn_unused_result)) = 0;
 
   virtual void Bind(std::shared_ptr<utils::DeviceInterface> device) = 0;

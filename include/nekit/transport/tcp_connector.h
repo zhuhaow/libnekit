@@ -30,7 +30,7 @@
 
 namespace nekit {
 namespace transport {
-class TcpConnector : public ConnectorInterface {
+class TcpConnector : public ConnectorInterface, private utils::LifeTime {
  public:
   TcpConnector(const boost::asio::ip::address& address, uint16_t port,
                boost::asio::io_service& io);
@@ -42,7 +42,7 @@ class TcpConnector : public ConnectorInterface {
   TcpConnector(std::shared_ptr<utils::Domain> domain, uint16_t port,
                boost::asio::io_service& io);
 
-  void Connect(EventHandler handler) override;
+  const utils::Cancelable& Connect(EventHandler handler) override;
 
   void Bind(std::shared_ptr<utils::DeviceInterface> device) override;
 
@@ -55,7 +55,7 @@ class TcpConnector : public ConnectorInterface {
 
   uint16_t port_;
   std::shared_ptr<utils::DeviceInterface> device_;
-  utils::Cancelable cancelable_;
+  utils::Cancelable resolve_cancelable_;
 
   std::error_code last_error_;
 
