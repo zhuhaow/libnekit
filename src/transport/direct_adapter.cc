@@ -31,7 +31,7 @@ DirectAdapter::DirectAdapter(
       session_{session},
       connector_factory_{connector_factory} {}
 
-utils::Cancelable& DirectAdapter::Open(EventHandler handler) {
+const utils::Cancelable& DirectAdapter::Open(EventHandler handler) {
   handler_ = handler;
 
   if (session_->type() == utils::Session::Type::Address) {
@@ -45,12 +45,10 @@ utils::Cancelable& DirectAdapter::Open(EventHandler handler) {
   return DoConnect();
 }
 
-utils::Cancelable& DirectAdapter::DoConnect() {
-  auto cancelable = std::make_shared<utils::Cancelable>();
-
-  connector_cancelable_ = connector_->Connect(
-      [this, cancelable](std::unique_ptr<ConnectionInterface>&& conn,
-                         std::error_code ec) {
+const utils::Cancelable& DirectAdapter::DoConnect() {
+  connector_cancelable_ =
+      connector_->Connect([ this, cancelable{life_time_cancelable_pointer()} ](
+          std::unique_ptr<ConnectionInterface> && conn, std::error_code ec) {
         if (cancelable->canceled()) {
           return;
         }
@@ -64,7 +62,7 @@ utils::Cancelable& DirectAdapter::DoConnect() {
         return;
       });
 
-  return *cancelable;
+  return life_time_cancelable();
 }
 
 DirectAdapterFactory::DirectAdapterFactory(

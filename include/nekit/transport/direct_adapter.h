@@ -30,7 +30,7 @@
 
 namespace nekit {
 namespace transport {
-class DirectAdapter : public AdapterInterface {
+class DirectAdapter : public AdapterInterface, private utils::LifeTime {
  public:
   enum class ErrorCode { NoError, NoAddress };
 
@@ -38,11 +38,11 @@ class DirectAdapter : public AdapterInterface {
                 std::shared_ptr<utils::Session> session,
                 std::shared_ptr<ConnectorFactoryInterface> connector_factory);
 
-  utils::Cancelable& Open(EventHandler handler) override
+  const utils::Cancelable& Open(EventHandler handler) override
       __attribute__((warn_unused_result));
 
  private:
-  utils::Cancelable& DoConnect();
+  const utils::Cancelable& DoConnect();
 
   std::shared_ptr<utils::Session> session_;
   std::shared_ptr<ConnectorFactoryInterface> connector_factory_;
