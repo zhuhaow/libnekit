@@ -30,6 +30,7 @@
 #include <boost/asio.hpp>
 
 #include "../utils/async_io_interface.h"
+#include "../utils/cancelable.h"
 #include "../utils/device.h"
 #include "../utils/domain.h"
 #include "connection_interface.h"
@@ -44,7 +45,8 @@ class ConnectorInterface : public utils::AsyncIoInterface {
   using EventHandler = std::function<void(
       std::unique_ptr<ConnectionInterface>&&, std::error_code)>;
 
-  virtual void Connect(EventHandler handler) = 0;
+  virtual utils::Cancelable& Connect(EventHandler handler)
+      __attribute__((warn_unused_result)) = 0;
 
   virtual void Bind(std::shared_ptr<utils::DeviceInterface> device) = 0;
 };
