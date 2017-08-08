@@ -36,7 +36,7 @@
 
 namespace nekit {
 namespace rule {
-class RuleManager : private boost::noncopyable {
+class RuleManager : private utils::LifeTime {
  public:
   using EventHandler =
       std::function<void(std::shared_ptr<RuleInterface>, std::error_code)>;
@@ -50,8 +50,8 @@ class RuleManager : private boost::noncopyable {
   std::unique_ptr<utils::ResolverInterface>& resolver();
   void set_resolver(std::unique_ptr<utils::ResolverInterface> resolver);
 
-  utils::Cancelable& Match(std::shared_ptr<utils::Session> session,
-                           EventHandler handler)
+  const utils::Cancelable& Match(std::shared_ptr<utils::Session> session,
+                                 EventHandler handler)
       __attribute__((warn_unused_result));
 
  private:

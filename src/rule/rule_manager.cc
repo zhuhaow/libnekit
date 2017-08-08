@@ -40,11 +40,17 @@ void RuleManager::set_resolver(
   resolver_ = std::move(resolver);
 }
 
-utils::Cancelable& RuleManager::Match(std::shared_ptr<utils::Session> session,
-                                      EventHandler handler) {
+const utils::Cancelable& RuleManager::Match(
+    std::shared_ptr<utils::Session> session, EventHandler handler) {
   std::shared_ptr<utils::Cancelable> cancelable =
       std::make_shared<utils::Cancelable>();
-  io_->post([this, session, cancelable, handler]() {
+  io_->post([
+    this, session, cancelable, lifetime{life_time_cancelable_pointer()}, handler
+  ]() {
+    if (lifetime->canceled()) {
+      return;
+    }
+
     MatchIterator(rules_.cbegin(), session, cancelable, handler);
   });
   return *cancelable;
@@ -71,13 +77,13 @@ void RuleManager::MatchIterator(
         // the caller, `RuleManager`. This can be achieved by saving the
         // `Cancelable` in some container (`std::unordered_map` for example).
         // However, it seems too much hassle since `RuleManager`'s lifetime is
-        // basically as long as the whole program. We just need to make sure the
-        // resolver is released before `RuleManager` then everything should be
-        // fine.
+        // already bond to the block.
         // There is no way to silence the warning in GCC.
-        (void)session->domain()->Resolve([this, handler, cancelable, session,
-                                          iter](std::error_code ec) mutable {
-          if (cancelable->canceled()) {
+        (void)session->domain()->Resolve([
+          this, handler, cancelable, lifetime{life_time_cancelable_pointer()},
+          session, iter
+        ](std::error_code ec) mutable {
+          if (cancelable->canceled() || lifetime->canceled()) {
             return;
           }
 
