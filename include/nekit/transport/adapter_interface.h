@@ -27,6 +27,7 @@
 
 #include "../stream_coder/stream_coder_interface.h"
 #include "../utils/async_io_interface.h"
+#include "../utils/cancelable.h"
 #include "../utils/session.h"
 #include "connection_interface.h"
 
@@ -42,7 +43,7 @@ class AdapterInterface : public utils::AsyncIoInterface {
 
   virtual ~AdapterInterface() = default;
 
-  virtual void Open(EventHandler handler) = 0;
+  virtual utils::Cancelable &Open(EventHandler handler) = 0;
 };
 
 class AdapterFactoryInterface : public utils::AsyncIoInterface {
