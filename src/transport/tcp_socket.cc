@@ -52,11 +52,12 @@ utils::Cancelable &TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
   socket_.async_read_some(
       boost::asio::mutable_buffers_1(buffer->buffer(), buffer->capacity()),
       [
-        this, buffer{std::move(buffer)}, handler, cancelable{read_cancelable_}
+        this, buffer{std::move(buffer)}, handler, cancelable{read_cancelable_},
+        lifetime{life_time_cancelable_pointer()}
       ](const boost::system::error_code &ec,
         std::size_t bytes_transferred) mutable {
 
-        if (cancelable.canceled() || IsReadClosed()) {
+        if (cancelable.canceled() || lifetime->canceled() || IsReadClosed()) {
           return;
         }
 
@@ -102,11 +103,12 @@ utils::Cancelable &TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
       socket_,
       boost::asio::const_buffers_1(buffer->buffer(), buffer->capacity()),
       [
-        this, buffer{std::move(buffer)}, handler, cancelable{write_cancelable_}
+        this, buffer{std::move(buffer)}, handler, cancelable{write_cancelable_},
+        lifetime{life_time_cancelable_pointer()}
       ](const boost::system::error_code &ec,
         std::size_t bytes_transferred) mutable {
 
-        if (cancelable.canceled() || IsWriteClosed()) {
+        if (cancelable.canceled() || lifetime->canceled() || IsWriteClosed()) {
           return;
         }
 

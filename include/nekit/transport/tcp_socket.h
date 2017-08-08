@@ -37,7 +37,7 @@
 namespace nekit {
 namespace transport {
 
-class TcpSocket final : public ConnectionInterface, private boost::noncopyable {
+class TcpSocket final : public ConnectionInterface, private utils::LifeTime {
  public:
   ~TcpSocket() = default;
 
