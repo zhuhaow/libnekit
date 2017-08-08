@@ -28,7 +28,7 @@
 #include "nekit/utils/log.h"
 
 #undef NECHANNEL
-#define NECHANNEL "TCP connector"
+#define NECHANNEL "TCP Connector"
 
 namespace nekit {
 namespace transport {
