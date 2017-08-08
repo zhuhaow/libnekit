@@ -34,7 +34,7 @@
 
 namespace nekit {
 namespace utils {
-class Domain final {
+class Domain final : private LifeTime {
  public:
   using EventHandler = std::function<void(std::error_code)>;
 
@@ -44,8 +44,9 @@ class Domain final {
 
   void set_resolver(ResolverInterface* resolver);
 
-  Cancelable& Resolve(EventHandler handler) __attribute__((warn_unused_result));
-  Cancelable& ForceResolve(EventHandler handler)
+  const Cancelable& Resolve(EventHandler handler)
+      __attribute__((warn_unused_result));
+  const Cancelable& ForceResolve(EventHandler handler)
       __attribute__((warn_unused_result));
   void Cancel();
 

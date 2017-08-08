@@ -38,28 +38,27 @@ void Domain::set_resolver(nekit::utils::ResolverInterface* resolver) {
   resolver_ = resolver;
 }
 
-Cancelable& Domain::Resolve(EventHandler handler) {
+const Cancelable& Domain::Resolve(EventHandler handler) {
   assert(resolver_);
 
   if (resolved_) {
     NEDEBUG << "Already resolved, does nothing.";
 
-    auto cancelable = std::make_unique<Cancelable>();
-    auto cancelable_ptr = cancelable.get();
-    resolver_->io().post([ handler, cancelable{std::move(cancelable)} ]() {
-      if (cancelable->canceled()) {
-        return;
-      }
+    resolver_->io().post(
+        [ handler, cancelable{life_time_cancelable_pointer()} ]() {
+          if (cancelable->canceled()) {
+            return;
+          }
 
-      handler(NEKitErrorCode::NoError);
-    });
-    return *cancelable_ptr;
+          handler(NEKitErrorCode::NoError);
+        });
+    return life_time_cancelable();
   }
 
   return ForceResolve(handler);
 }
 
-Cancelable& Domain::ForceResolve(EventHandler handler) {
+const Cancelable& Domain::ForceResolve(EventHandler handler) {
   assert(resolver_);
   assert(!resolving_);
 
@@ -67,11 +66,9 @@ Cancelable& Domain::ForceResolve(EventHandler handler) {
 
   resolving_ = true;
 
-  auto cancelable = std::make_shared<Cancelable>();
-
   resolve_cancelable_ = resolver_->Resolve(
       domain_, ResolverInterface::AddressPreference::Any,
-      [this, handler, cancelable](
+      [ this, handler, cancelable{life_time_cancelable_pointer()} ](
           std::shared_ptr<std::vector<boost::asio::ip::address>> addresses,
           std::error_code ec) {
         if (cancelable->canceled()) {
@@ -95,7 +92,7 @@ Cancelable& Domain::ForceResolve(EventHandler handler) {
         handler(ec);
       });
 
-  return *cancelable;
+  return life_time_cancelable();
 }
 
 void Domain::Cancel() {
