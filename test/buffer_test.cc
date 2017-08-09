@@ -27,7 +27,7 @@
 TEST(BufferTest, UnitTest) {
   nekit::utils::Buffer buffer(10);
 
-  EXPECT_EQ(buffer.size(), 10u);
+  EXPECT_EQ(buffer.capacity(), 10u);
   EXPECT_EQ(buffer.capacity(), 10u);
   EXPECT_EQ(buffer.data(), buffer.buffer());
 
@@ -40,7 +40,7 @@ TEST(BufferTest, UnitTest) {
 
   EXPECT_FALSE(buffer.ReserveFront(11));
   EXPECT_TRUE(buffer.ReserveFront(3));
-  EXPECT_EQ(buffer.capacity(), 7u);
+  EXPECT_EQ(buffer.size(), 7u);
   EXPECT_EQ(static_cast<char *>(buffer.data()) + 3, buffer.buffer());
 
   EXPECT_FALSE(buffer.ReleaseFront(4));
@@ -49,7 +49,7 @@ TEST(BufferTest, UnitTest) {
 
   EXPECT_FALSE(buffer.ReserveBack(11));
   EXPECT_TRUE(buffer.ReserveBack(3));
-  EXPECT_EQ(buffer.capacity(), 7u);
+  EXPECT_EQ(buffer.size(), 7u);
   EXPECT_EQ(buffer.data(), buffer.buffer());
 
   EXPECT_FALSE(buffer.ReleaseBack(4));

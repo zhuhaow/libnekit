@@ -50,7 +50,7 @@ utils::Cancelable &TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
   }
 
   socket_.async_read_some(
-      boost::asio::mutable_buffers_1(buffer->buffer(), buffer->capacity()),
+      boost::asio::mutable_buffers_1(buffer->buffer(), buffer->size()),
       [
         this, buffer{std::move(buffer)}, handler, cancelable{read_cancelable_},
         lifetime{life_time_cancelable_pointer()}
@@ -81,7 +81,7 @@ utils::Cancelable &TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
 
         NETRACE << "Successfully read " << bytes_transferred
                 << " bytes from socket.";
-        buffer->ReserveBack(buffer->capacity() - bytes_transferred);
+        buffer->ReserveBack(buffer->size() - bytes_transferred);
         handler(std::move(buffer), ErrorCode::NoError);
         return;
       });
@@ -100,8 +100,7 @@ utils::Cancelable &TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
   }
 
   boost::asio::async_write(
-      socket_,
-      boost::asio::const_buffers_1(buffer->buffer(), buffer->capacity()),
+      socket_, boost::asio::const_buffers_1(buffer->buffer(), buffer->size()),
       [
         this, buffer{std::move(buffer)}, handler, cancelable{write_cancelable_},
         lifetime{life_time_cancelable_pointer()}
@@ -124,7 +123,7 @@ utils::Cancelable &TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
           return;
         }
 
-        assert(bytes_transferred == buffer->capacity());
+        assert(bytes_transferred == buffer->size());
 
         NETRACE << "Successfully write " << bytes_transferred
                 << " bytes to socket.";

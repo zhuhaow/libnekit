@@ -50,7 +50,7 @@ ActionRequest Socks5ServerStreamCoder::Decode(utils::Buffer *buffer) {
       return ActionRequest::Continue;
 
     case Status::ReadingVersion: {
-      if (buffer->capacity() <= 2) {
+      if (buffer->size() <= 2) {
         last_error_ = ErrorCode::RequestIncomplete;
         return ActionRequest::ErrorHappened;
       }
@@ -62,7 +62,7 @@ ActionRequest Socks5ServerStreamCoder::Decode(utils::Buffer *buffer) {
       }
 
       auto len = *data++;
-      if (buffer->capacity() != 2 + len) {
+      if (buffer->size() != 2 + len) {
         last_error_ = ErrorCode::RequestIncomplete;
         return ActionRequest::ErrorHappened;
       }
@@ -85,7 +85,7 @@ ActionRequest Socks5ServerStreamCoder::Decode(utils::Buffer *buffer) {
     } break;
 
     case Status::ReadingRequest: {
-      if (buffer->capacity() < 10) {
+      if (buffer->size() < 10) {
         last_error_ = ErrorCode::RequestIncomplete;
         return ActionRequest::ErrorHappened;
       }
@@ -105,7 +105,7 @@ ActionRequest Socks5ServerStreamCoder::Decode(utils::Buffer *buffer) {
 
       switch (*data++) {
         case 1: {
-          if (buffer->capacity() != 4 + 4 + 2) {
+          if (buffer->size() != 4 + 4 + 2) {
             last_error_ = ErrorCode::RequestIncomplete;
             return ActionRequest::ErrorHappened;
           }
@@ -119,7 +119,7 @@ ActionRequest Socks5ServerStreamCoder::Decode(utils::Buffer *buffer) {
         case 3: {
           auto len = *data++;
 
-          if (buffer->capacity() != 4 + 1 + len + 2) {
+          if (buffer->size() != 4 + 1 + len + 2) {
             last_error_ = ErrorCode::RequestIncomplete;
             return ActionRequest::ErrorHappened;
           }
@@ -129,7 +129,7 @@ ActionRequest Socks5ServerStreamCoder::Decode(utils::Buffer *buffer) {
           data += len;
         } break;
         case 4: {
-          if (buffer->capacity() != 4 + 16 + 2) {
+          if (buffer->size() != 4 + 16 + 2) {
             last_error_ = ErrorCode::RequestIncomplete;
             return ActionRequest::ErrorHappened;
           }
@@ -178,7 +178,7 @@ ActionRequest Socks5ServerStreamCoder::Encode(utils::Buffer *buffer) {
       return ActionRequest::Continue;
     case Status::ReadingVersion: {
       buffer->ReleaseBack(2);
-      assert(buffer->capacity() >= 2);
+      assert(buffer->size() >= 2);
       auto data = static_cast<uint8_t *>(buffer->buffer());
       *data = 5;
       *(data + 1) = 0;

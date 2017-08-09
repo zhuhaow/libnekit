@@ -34,7 +34,7 @@ namespace utils {
 struct Buffer final : public boost::noncopyable {
  public:
   Buffer(std::size_t size)
-      : size_(size), data_(::operator new(size)), front_(0), back_(0) {}
+      : capacity_(size), data_(::operator new(size)), front_(0), back_(0) {}
 
   Buffer(const BufferReserveSize &size) : Buffer(size, 0) {}
 
@@ -49,11 +49,11 @@ struct Buffer final : public boost::noncopyable {
   // Return the underlying buffer.
   void *data() { return data_; }
   const void *data() const { return data_; }
-  std::size_t size() const { return size_; }
+  std::size_t capacity() const { return capacity_; }
 
   bool ReserveFront(std::size_t size) {
     // Be careful. Overflow is not checked.
-    if (size >= size_ || size + front_ + back_ > size_) {
+    if (size >= capacity_ || size + front_ + back_ > capacity_) {
       return false;
     }
 
@@ -72,7 +72,7 @@ struct Buffer final : public boost::noncopyable {
 
   bool ReserveBack(std::size_t size) {
     // Be careful. Overflow is not checked.
-    if (size >= size_ || size + front_ + back_ > size_) {
+    if (size >= capacity_ || size + front_ + back_ > capacity_) {
       return false;
     }
 
@@ -90,7 +90,7 @@ struct Buffer final : public boost::noncopyable {
   }
 
   bool Reset(const BufferReserveSize &reserve_size) {
-    if (reserve_size.suffix() + reserve_size.prefix() > size_) {
+    if (reserve_size.suffix() + reserve_size.prefix() > capacity_) {
       return false;
     }
 
@@ -99,14 +99,16 @@ struct Buffer final : public boost::noncopyable {
     return true;
   }
 
-  std::size_t capacity() const { return size_ - front_ - back_; }
+  void ShrinkSize() { back_ += size(); }
+
+  std::size_t size() const { return capacity_ - front_ - back_; }
 
   void *buffer() { return static_cast<uint8_t *>(data_) + front_; }
 
   const void *buffer() const { return static_cast<uint8_t *>(data_) + front_; }
 
  private:
-  const std::size_t size_;
+  const std::size_t capacity_;
   void *const data_;
 
   std::size_t front_;
