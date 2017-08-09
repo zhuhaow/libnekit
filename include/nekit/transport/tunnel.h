@@ -54,26 +54,37 @@ class Tunnel final : private boost::noncopyable {
  private:
   void ProcessLocalNegotiation(stream_coder::ActionRequest action_request);
   void ProcessRemoteNegotiation(stream_coder::ActionRequest action_request);
+  void ProcessSession();
   void BeginForward();
   void ForwardLocal();
   void ForwardRemote();
-  void HandleError(std::error_code ec);
-  void ProcessSession();
+
+  // Only handling error in forwarding state.
+  void HandleLocalReadError(std::error_code ec);
+  void HandleLocalWriteError(std::error_code ec);
+  void HandleRemoteReadError(std::error_code ec);
+  void HandleRemoteWriteError(std::error_code ec);
+
+  void CheckTunnelStatus();
+  void ReleaseTunnel();
+
+  void ResetIncomingBuffer(const utils::BufferReserveSize& reserve);
+  void ReturnIncomingBuffer(std::unique_ptr<utils::Buffer>&& buffer);
+  void ResetOutgoingBuffer(const utils::BufferReserveSize& reserve);
+  void ReturnOutgoingBuffer(std::unique_ptr<utils::Buffer>&& buffer);
 
   std::shared_ptr<utils::Session> session_;
   std::unique_ptr<AdapterInterface> adapter_;
 
   rule::RuleManager* rule_manager_;
   TunnelManager* tunnel_manager_;
-  utils::Cancelable match_cancelable_;
 
   std::unique_ptr<ConnectionInterface> local_transport_, remote_transport_;
   std::unique_ptr<stream_coder::StreamCoderInterface> remote_stream_coder_;
   std::unique_ptr<stream_coder::ServerStreamCoderInterface> local_stream_coder_;
+  std::unique_ptr<utils::Buffer> incoming_buffer_, outgoing_buffer_;
 
-  utils::Cancelable cancelable_;
-  // Used by closure, is bind to `cancelable_`.
-  std::shared_ptr<utils::Cancelable> cancel_flag_;
+  utils::Cancelable incoming_cancelable_, outgoing_cancelable_;
 };
 
 class TunnelManager final : private boost::noncopyable {

@@ -40,7 +40,10 @@ Tunnel::Tunnel(std::unique_ptr<ConnectionInterface>&& local_transport,
     : rule_manager_{rule_manager},
       local_transport_{std::move(local_transport)},
       local_stream_coder_{std::move(local_stream_coder)},
-      cancel_flag_{std::make_shared<utils::Cancelable>(cancelable_)} {}
+      incoming_buffer_{
+          std::make_unique<utils::Buffer>(NEKIT_TUNNEL_BUFFER_SIZE)},
+      outgoing_buffer_{
+          std::make_unique<utils::Buffer>(NEKIT_TUNNEL_BUFFER_SIZE)} {}
 
 void Tunnel::Open() {
   ProcessLocalNegotiation(local_stream_coder_->Negotiate());
@@ -49,47 +52,44 @@ void Tunnel::Open() {
 void Tunnel::ProcessLocalNegotiation(ActionRequest request) {
   switch (request) {
     case ActionRequest::WantRead: {
-      auto buffer = std::make_unique<utils::Buffer>(
-          local_stream_coder_->DecodeReserve(),
-          NEKIT_TUNNEL_NEGOTIATION_CONTENT_SIZE);
-      local_transport_->Read(std::move(buffer), [
-        this, cancelable{cancel_flag_}
-      ](std::unique_ptr<utils::Buffer> && buffer, std::error_code ec) {
-        if (cancelable->canceled()) {
-          return;
-        }
+      ResetOutgoingBuffer(local_stream_coder_->DecodeReserve());
 
-        if (ec) {
-          HandleError(ec);
-          return;
-        }
+      outgoing_cancelable_ = local_transport_->Read(
+          std::move(outgoing_buffer_),
+          [this](std::unique_ptr<utils::Buffer>&& buffer, std::error_code ec) {
+            if (ec) {
+              ReleaseTunnel();
+              return;
+            }
 
-        ProcessLocalNegotiation(local_stream_coder_->Decode(buffer.get()));
-      });
+            auto action = local_stream_coder_->Decode(buffer.get());
+
+            ReturnOutgoingBuffer(std::move(buffer));
+
+            ProcessLocalNegotiation(action);
+          });
     } break;
     case ActionRequest::WantWrite: {
-      auto buffer =
-          std::make_unique<utils::Buffer>(local_stream_coder_->EncodeReserve());
-      auto request = local_stream_coder_->Encode(buffer.get());
-      local_transport_->Write(std::move(buffer), [
-        this, request, cancelable{cancel_flag_}
-      ](std::unique_ptr<utils::Buffer> && buffer, std::error_code ec) {
-        (void)buffer;
+      ResetIncomingBuffer(local_stream_coder_->EncodeReserve());
+      incoming_buffer_->ShrinkSize();
+      auto request = local_stream_coder_->Encode(incoming_buffer_.get());
 
-        if (cancelable->canceled()) {
-          return;
-        }
+      incoming_cancelable_ = local_transport_->Write(
+          std::move(incoming_buffer_),
+          [this, request](std::unique_ptr<utils::Buffer>&& buffer,
+                          std::error_code ec) {
+            if (ec) {
+              ReleaseTunnel();
+              return;
+            }
 
-        if (ec) {
-          HandleError(ec);
-          return;
-        }
+            ReturnIncomingBuffer(std::move(buffer));
 
-        ProcessLocalNegotiation(request);
-      });
+            ProcessLocalNegotiation(request);
+          });
     } break;
     case ActionRequest::ErrorHappened: {
-      HandleError(local_stream_coder_->GetLastError());
+      ReleaseTunnel();
     } break;
     case ActionRequest::Event: {
       session_ = local_stream_coder_->session();
@@ -107,47 +107,45 @@ void Tunnel::ProcessLocalNegotiation(ActionRequest request) {
 void Tunnel::ProcessRemoteNegotiation(ActionRequest request) {
   switch (request) {
     case ActionRequest::WantRead: {
-      auto buffer = std::make_unique<utils::Buffer>(
-          remote_stream_coder_->DecodeReserve(),
-          NEKIT_TUNNEL_NEGOTIATION_CONTENT_SIZE);
-      remote_transport_->Read(std::move(buffer), [
-        this, cancelable{cancel_flag_}
-      ](std::unique_ptr<utils::Buffer> && buffer, std::error_code ec) {
-        if (cancelable->canceled()) {
-          return;
-        }
+      ResetIncomingBuffer(remote_stream_coder_->DecodeReserve());
 
-        if (ec) {
-          HandleError(ec);
-          return;
-        }
+      incoming_cancelable_ = remote_transport_->Read(
+          std::move(incoming_buffer_),
+          [this](std::unique_ptr<utils::Buffer>&& buffer, std::error_code ec) {
+            if (ec) {
+              ProcessLocalNegotiation(local_stream_coder_->ReportError(ec));
+              return;
+            }
 
-        ProcessRemoteNegotiation(remote_stream_coder_->Decode(buffer.get()));
-      });
+            auto action = remote_stream_coder_->Decode(buffer.get());
+
+            ReturnIncomingBuffer(std::move(buffer));
+
+            ProcessRemoteNegotiation(action);
+          });
     } break;
     case ActionRequest::WantWrite: {
-      auto buffer = std::make_unique<utils::Buffer>(
-          remote_stream_coder_->EncodeReserve());
-      auto request = remote_stream_coder_->Encode(buffer.get());
-      remote_transport_->Write(std::move(buffer), [
-        this, request, cancelable{cancel_flag_}
-      ](std::unique_ptr<utils::Buffer> && buffer, std::error_code ec) {
-        (void)buffer;
+      ResetOutgoingBuffer(remote_stream_coder_->EncodeReserve());
+      outgoing_buffer_->ShrinkSize();
+      auto request = remote_stream_coder_->Encode(outgoing_buffer_.get());
 
-        if (cancelable->canceled()) {
-          return;
-        }
+      outgoing_cancelable_ = remote_transport_->Write(
+          std::move(outgoing_buffer_),
+          [this, request](std::unique_ptr<utils::Buffer>&& buffer,
+                          std::error_code ec) {
+            if (ec) {
+              ProcessLocalNegotiation(local_stream_coder_->ReportError(ec));
+              return;
+            }
 
-        if (ec) {
-          HandleError(ec);
-          return;
-        }
+            ReturnOutgoingBuffer(std::move(buffer));
 
-        ProcessRemoteNegotiation(request);
-      });
+            ProcessRemoteNegotiation(request);
+          });
     } break;
     case ActionRequest::ErrorHappened: {
-      HandleError(remote_stream_coder_->GetLastError());
+      ProcessLocalNegotiation(local_stream_coder_->ReportError(
+          remote_stream_coder_->GetLastError()));
     } break;
     case ActionRequest::Ready:
       ProcessLocalNegotiation(local_stream_coder_->Continue());
@@ -165,153 +163,200 @@ void Tunnel::BeginForward() {
 }
 
 void Tunnel::ForwardLocal() {
-  auto buffer =
-      std::make_unique<utils::Buffer>(local_stream_coder_->DecodeReserve() +
-                                          remote_stream_coder_->EncodeReserve(),
-                                      NEKIT_TUNNEL_FORWARD_CONTENT_SIZE);
-  local_transport_->Read(std::move(buffer), [
-    this, cancelable{cancel_flag_}
-  ](std::unique_ptr<utils::Buffer> && buffer, std::error_code ec) mutable {
+  ResetOutgoingBuffer(local_stream_coder_->DecodeReserve() +
+                      remote_stream_coder_->EncodeReserve());
 
-    if (cancelable->canceled()) {
-      return;
-    }
+  outgoing_cancelable_ = local_transport_->Read(
+      std::move(outgoing_buffer_),
+      [this](std::unique_ptr<utils::Buffer>&& buffer,
+             std::error_code ec) mutable {
+        if (ec) {
+          if (ec == ConnectionInterface::ErrorCode::EndOfFile) {
+            remote_transport_->CloseWrite();
+            CheckTunnelStatus();
+            return;
+          }
 
-    if (ec) {
-      HandleError(ec);
-      return;
-    }
+          HandleLocalReadError(ec);
+          return;
+        }
 
-    switch (local_stream_coder_->Decode(buffer.get())) {
-      case ActionRequest::Continue: {
-        switch (remote_stream_coder_->Encode(buffer.get())) {
-          case ActionRequest::Continue:
-            remote_transport_->Write(std::move(buffer), [
-              this, cancelable{cancel_flag_}
-            ](std::unique_ptr<utils::Buffer> && buffer, std::error_code ec) {
-              (void)buffer;
+        switch (local_stream_coder_->Decode(buffer.get())) {
+          case ActionRequest::Continue: {
+            switch (remote_stream_coder_->Encode(buffer.get())) {
+              case ActionRequest::Continue:
+                outgoing_cancelable_ = remote_transport_->Write(
+                    std::move(buffer),
+                    [this](std::unique_ptr<utils::Buffer>&& buffer,
+                           std::error_code ec) {
+                      (void)buffer;
 
-              if (cancelable->canceled()) {
-                return;
-              }
+                      if (ec) {
+                        HandleRemoteWriteError(ec);
+                        return;
+                      }
 
-              if (ec) {
-                HandleError(ec);
-                return;
-              }
+                      ReturnOutgoingBuffer(std::move(buffer));
 
-              ForwardLocal();
-            });
-            break;
+                      ForwardLocal();
+                    });
+                break;
+              default:
+                assert(0);
+            }
+          } break;
+
           case ActionRequest::ErrorHappened:
-            HandleError(remote_stream_coder_->GetLastError());
+            HandleLocalReadError(local_stream_coder_->GetLastError());
             break;
           default:
             assert(0);
         }
-      } break;
-
-      case ActionRequest::ErrorHappened:
-        HandleError(local_stream_coder_->GetLastError());
-        break;
-      default:
-        assert(0);
-    }
-  });
+      });
 }
 
 void Tunnel::ForwardRemote() {
-  auto buffer =
-      std::make_unique<utils::Buffer>(local_stream_coder_->EncodeReserve() +
-                                          remote_stream_coder_->DecodeReserve(),
-                                      NEKIT_TUNNEL_FORWARD_CONTENT_SIZE);
-  remote_transport_->Read(std::move(buffer), [
-    this, cancelable{cancel_flag_}
-  ](std::unique_ptr<utils::Buffer> && buffer, std::error_code ec) mutable {
-    if (cancelable->canceled()) {
-      return;
-    }
+  ResetIncomingBuffer(local_stream_coder_->EncodeReserve() +
+                      remote_stream_coder_->DecodeReserve());
+  incoming_cancelable_ = remote_transport_->Read(
+      std::move(incoming_buffer_),
+      [this](std::unique_ptr<utils::Buffer>&& buffer,
+             std::error_code ec) mutable {
+        if (ec) {
+          if (ec == ConnectionInterface::ErrorCode::EndOfFile) {
+            local_transport_->CloseWrite();
+            CheckTunnelStatus();
+            return;
+          }
 
-    if (ec) {
-      HandleError(ec);
-      return;
-    }
+          HandleRemoteReadError(ec);
+          return;
+        }
 
-    switch (remote_stream_coder_->Decode(buffer.get())) {
-      case ActionRequest::Continue:
-
-        switch (local_stream_coder_->Encode(buffer.get())) {
+        switch (remote_stream_coder_->Decode(buffer.get())) {
           case ActionRequest::Continue:
-            local_transport_->Write(std::move(buffer), [
-              this, cancelable{cancel_flag_}
-            ](std::unique_ptr<utils::Buffer> && buffer, std::error_code ec) {
-              (void)buffer;
+            switch (local_stream_coder_->Encode(buffer.get())) {
+              case ActionRequest::Continue:
+                incoming_cancelable_ = local_transport_->Write(
+                    std::move(buffer),
+                    [this](std::unique_ptr<utils::Buffer>&& buffer,
+                           std::error_code ec) {
+                      (void)buffer;
 
-              if (cancelable->canceled()) {
-                return;
-              }
+                      if (ec) {
+                        HandleLocalWriteError(ec);
+                        return;
+                      }
 
-              if (ec) {
-                HandleError(ec);
-                return;
-              }
+                      ReturnIncomingBuffer(std::move(buffer));
 
-              ForwardRemote();
-            });
+                      ForwardRemote();
+                    });
+                break;
+              default:
+                assert(0);
+            }
             break;
+
           case ActionRequest::ErrorHappened:
-            HandleError(local_stream_coder_->GetLastError());
+            HandleRemoteReadError(remote_stream_coder_->GetLastError());
             break;
           default:
             assert(0);
         }
-        break;
-
-      case ActionRequest::ErrorHappened:
-        HandleError(remote_stream_coder_->GetLastError());
-        break;
-      default:
-        assert(0);
-    }
-  });
+      });
 }
-
-void Tunnel::HandleError(std::error_code ec) {
-  (void)ec;
-  tunnel_manager_->NotifyClosed(this);
-};
 
 void Tunnel::ProcessSession() {
   session_->domain()->set_resolver(rule_manager_->resolver().get());
 
-  match_cancelable_ = rule_manager_->Match(
+  // Use incoming here since outgoing will be use for observing local
+  // event.
+  incoming_cancelable_ = rule_manager_->Match(
       session_,
       [this](std::shared_ptr<rule::RuleInterface> rule, std::error_code ec) {
         if (ec) {
-          HandleError(ec);
+          ProcessLocalNegotiation(local_stream_coder_->ReportError(ec));
           return;
         }
 
         adapter_ = rule->GetAdapter(session_);
-        adapter_->Open([ this, cancelable{cancel_flag_} ](
-            std::unique_ptr<ConnectionInterface> && conn,
-            std::unique_ptr<stream_coder::StreamCoderInterface> && stream_coder,
-            std::error_code ec) {
+        incoming_cancelable_ = adapter_->Open(
+            [this](std::unique_ptr<ConnectionInterface>&& conn,
+                   std::unique_ptr<stream_coder::StreamCoderInterface>&&
+                       stream_coder,
+                   std::error_code ec) {
+              if (ec) {
+                ProcessLocalNegotiation(local_stream_coder_->ReportError(ec));
+                return;
+              }
 
-          if (cancelable->canceled()) {
-            return;
-          }
-
-          if (ec) {
-            HandleError(ec);
-            return;
-          }
-
-          remote_transport_ = std::move(conn);
-          remote_stream_coder_ = std::move(stream_coder);
-          ProcessRemoteNegotiation(remote_stream_coder_->Negotiate());
-        });
+              remote_transport_ = std::move(conn);
+              remote_stream_coder_ = std::move(stream_coder);
+              ProcessRemoteNegotiation(remote_stream_coder_->Negotiate());
+            });
       });
+}
+
+void Tunnel::HandleLocalReadError(std::error_code ec) {
+  (void)ec;
+  ReleaseTunnel();
+}
+
+void Tunnel::HandleLocalWriteError(std::error_code ec) {
+  (void)ec;
+  ReleaseTunnel();
+}
+
+void Tunnel::HandleRemoteReadError(std::error_code ec) {
+  (void)ec;
+  ReleaseTunnel();
+}
+
+void Tunnel::HandleRemoteWriteError(std::error_code ec) {
+  (void)ec;
+  ReleaseTunnel();
+}
+
+void Tunnel::CheckTunnelStatus() {
+  if (local_transport_->IsClosed() &&
+      (!remote_transport_ || remote_transport_->IsClosed())) {
+    ReleaseTunnel();
+  }
+}
+
+void Tunnel::ReleaseTunnel() { tunnel_manager_->NotifyClosed(this); }
+
+void Tunnel::ResetIncomingBuffer(const utils::BufferReserveSize& reserve) {
+  if (!incoming_buffer_->Reset(reserve)) {
+    incoming_buffer_ =
+        std::make_unique<utils::Buffer>(reserve, NEKIT_TUNNEL_BUFFER_SIZE);
+  };
+}
+
+void Tunnel::ReturnIncomingBuffer(std::unique_ptr<utils::Buffer>&& buffer) {
+  if (buffer->size() > NEKIT_TUNNEL_MAX_BUFFER_SIZE) {
+    incoming_buffer_ =
+        std::make_unique<utils::Buffer>(NEKIT_TUNNEL_BUFFER_SIZE);
+  } else {
+    incoming_buffer_ = std::move(buffer);
+  }
+}
+
+void Tunnel::ResetOutgoingBuffer(const utils::BufferReserveSize& reserve) {
+  if (!outgoing_buffer_->Reset(reserve)) {
+    outgoing_buffer_ =
+        std::make_unique<utils::Buffer>(reserve, NEKIT_TUNNEL_BUFFER_SIZE);
+  };
+}
+
+void Tunnel::ReturnOutgoingBuffer(std::unique_ptr<utils::Buffer>&& buffer) {
+  if (buffer->size() > NEKIT_TUNNEL_MAX_BUFFER_SIZE) {
+    outgoing_buffer_ =
+        std::make_unique<utils::Buffer>(NEKIT_TUNNEL_BUFFER_SIZE);
+  } else {
+    outgoing_buffer_ = std::move(buffer);
+  }
 }
 
 Tunnel& TunnelManager::Build(
