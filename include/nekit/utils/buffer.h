@@ -36,9 +36,9 @@ struct Buffer final : public boost::noncopyable {
   Buffer(std::size_t size)
       : size_(size), data_(::operator new(size)), front_(0), back_(0) {}
 
-  Buffer(BufferReserveSize size) : Buffer(size, 0) {}
+  Buffer(const BufferReserveSize &size) : Buffer(size, 0) {}
 
-  Buffer(BufferReserveSize size, std::size_t content)
+  Buffer(const BufferReserveSize &size, std::size_t content)
       : Buffer(size.prefix() + size.suffix() + content) {
     ReserveFront(size.prefix());
     ReserveBack(size.suffix());
@@ -89,7 +89,7 @@ struct Buffer final : public boost::noncopyable {
     return true;
   }
 
-  bool Reset(BufferReserveSize reserve_size) {
+  bool Reset(const BufferReserveSize &reserve_size) {
     if (reserve_size.suffix() + reserve_size.prefix() > size_) {
       return false;
     }

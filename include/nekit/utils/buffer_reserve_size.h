@@ -32,8 +32,8 @@ struct BufferReserveSize {
   BufferReserveSize(std::size_t prefix, std::size_t suffix)
       : prefix_(prefix), suffix_(suffix) {}
 
-  std::size_t prefix() { return prefix_; }
-  std::size_t suffix() { return suffix_; }
+  std::size_t prefix() const { return prefix_; }
+  std::size_t suffix() const { return suffix_; }
 
   BufferReserveSize& operator+=(const BufferReserveSize& rhs) {
     prefix_ += rhs.prefix_;
