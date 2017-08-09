@@ -89,6 +89,16 @@ struct Buffer final : public boost::noncopyable {
     return true;
   }
 
+  bool Reset(BufferReserveSize reserve_size) {
+    if (reserve_size.suffix() + reserve_size.prefix() > size_) {
+      return false;
+    }
+
+    front_ = reserve_size.prefix();
+    back_ = reserve_size.suffix();
+    return true;
+  }
+
   std::size_t capacity() const { return size_ - front_ - back_; }
 
   void *buffer() { return static_cast<uint8_t *>(data_) + front_; }

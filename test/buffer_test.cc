@@ -59,4 +59,7 @@ TEST(BufferTest, UnitTest) {
   EXPECT_TRUE(buffer.ReserveFront(5));
   EXPECT_FALSE(buffer.ReserveBack(6));
   EXPECT_TRUE(buffer.ReserveBack(5));
+
+  EXPECT_FALSE(buffer.Reset({10, 10}));
+  EXPECT_TRUE(buffer.Reset({3, 5}));
 }
