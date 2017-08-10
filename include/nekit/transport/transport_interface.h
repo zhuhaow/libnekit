@@ -39,12 +39,18 @@ class TransportInterface : public utils::AsyncIoInterface {
 
   using EventHandler =
       std::function<void(std::unique_ptr<utils::Buffer>&&, std::error_code)>;
+  using PollEventHandler = std::function<void(std::error_code)>;
 
   virtual utils::Cancelable& Read(std::unique_ptr<utils::Buffer>&&,
                                   EventHandler)
       __attribute__((warn_unused_result)) = 0;
   virtual utils::Cancelable& Write(std::unique_ptr<utils::Buffer>&&,
                                    EventHandler)
+      __attribute__((warn_unused_result)) = 0;
+
+  virtual utils::Cancelable& PollRead(PollEventHandler)
+      __attribute__((warn_unused_result)) = 0;
+  virtual utils::Cancelable& PollWrite(PollEventHandler)
       __attribute__((warn_unused_result)) = 0;
 
   virtual void CloseRead() = 0;
