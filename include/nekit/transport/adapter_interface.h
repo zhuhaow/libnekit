@@ -39,7 +39,7 @@ class AdapterInterface : public utils::AsyncIoInterface {
       std::unique_ptr<ConnectionInterface> &&,
       std::unique_ptr<stream_coder::StreamCoderInterface>, std::error_code)>;
 
-  AdapterInterface(boost::asio::io_service &io) : AsyncIoInterface{io} {}
+  explicit AdapterInterface(boost::asio::io_service &io) : AsyncIoInterface{io} {}
 
   virtual ~AdapterInterface() = default;
 
@@ -49,7 +49,7 @@ class AdapterInterface : public utils::AsyncIoInterface {
 
 class AdapterFactoryInterface : public utils::AsyncIoInterface {
  public:
-  AdapterFactoryInterface(boost::asio::io_service &io) : AsyncIoInterface{io} {}
+  explicit AdapterFactoryInterface(boost::asio::io_service &io) : AsyncIoInterface{io} {}
   virtual ~AdapterFactoryInterface() = default;
 
   virtual std::unique_ptr<AdapterInterface> Build(

@@ -33,10 +33,10 @@ namespace nekit {
 namespace utils {
 struct Buffer final : public boost::noncopyable {
  public:
-  Buffer(std::size_t size)
+  explicit Buffer(std::size_t size)
       : capacity_(size), data_(::operator new(size)), front_(0), back_(0) {}
 
-  Buffer(const BufferReserveSize &size) : Buffer(size, 0) {}
+  explicit Buffer(const BufferReserveSize &size) : Buffer(size, 0) {}
 
   Buffer(const BufferReserveSize &size, std::size_t content)
       : Buffer(size.prefix() + size.suffix() + content) {

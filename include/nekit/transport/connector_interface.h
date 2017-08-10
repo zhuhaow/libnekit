@@ -39,7 +39,8 @@ namespace nekit {
 namespace transport {
 class ConnectorInterface : public utils::AsyncIoInterface {
  public:
-  ConnectorInterface(boost::asio::io_service& io) : AsyncIoInterface{io} {}
+  explicit ConnectorInterface(boost::asio::io_service& io)
+      : AsyncIoInterface{io} {}
   virtual ~ConnectorInterface() = default;
 
   using EventHandler = std::function<void(
@@ -53,7 +54,7 @@ class ConnectorInterface : public utils::AsyncIoInterface {
 
 class ConnectorFactoryInterface : public utils::AsyncIoInterface {
  public:
-  ConnectorFactoryInterface(boost::asio::io_service& io)
+  explicit ConnectorFactoryInterface(boost::asio::io_service& io)
       : AsyncIoInterface{io} {}
   virtual ~ConnectorFactoryInterface() = default;
 

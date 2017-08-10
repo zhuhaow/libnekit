@@ -68,7 +68,7 @@ class TcpSocket final : public ConnectionInterface, private utils::LifeTime {
   friend class TcpConnector;
 
  private:
-  TcpSocket(boost::asio::ip::tcp::socket&& socket);
+  explicit TcpSocket(boost::asio::ip::tcp::socket&& socket);
   std::error_code ConvertBoostError(const boost::system::error_code&) const;
 
   boost::asio::ip::tcp::socket socket_;

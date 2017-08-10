@@ -44,7 +44,7 @@ class ConnectionInterface : public TransportInterface {
     UnknownError
   };
 
-  ConnectionInterface(boost::asio::io_service &io) : TransportInterface{io} {}
+  explicit ConnectionInterface(boost::asio::io_service &io) : TransportInterface{io} {}
 
   virtual ~ConnectionInterface() = default;
 

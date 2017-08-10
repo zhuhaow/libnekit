@@ -36,7 +36,8 @@
 namespace nekit {
 class Instance : public utils::AsyncIoInterface, private boost::noncopyable {
  public:
-  Instance(std::string name);
+  explicit Instance(std::string name);
+
   void SetRuleManager(std::unique_ptr<rule::RuleManager> &&rule_manager);
   void AddListener(
       std::unique_ptr<transport::ServerListenerInterface> &&listener);

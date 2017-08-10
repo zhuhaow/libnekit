@@ -30,7 +30,7 @@ namespace nekit {
 namespace utils {
 class SystemResolver : public ResolverInterface, private LifeTime {
  public:
-  SystemResolver(boost::asio::io_service& io);
+  explicit SystemResolver(boost::asio::io_service& io);
 
   Cancelable& Resolve(std::string domain, AddressPreference preference,
                       EventHandler handler) override

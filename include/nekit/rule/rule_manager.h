@@ -43,7 +43,7 @@ class RuleManager : private utils::LifeTime {
 
   enum class ErrorCode { NoError, NoMatch };
 
-  RuleManager(boost::asio::io_service& io);
+  explicit RuleManager(boost::asio::io_service& io);
 
   void AppendRule(std::shared_ptr<RuleInterface> rule);
 

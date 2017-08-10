@@ -66,7 +66,7 @@ class TcpConnector : public ConnectorInterface, private utils::LifeTime {
 
 class TcpConnectorFactory : public ConnectorFactoryInterface {
  public:
-  TcpConnectorFactory(boost::asio::io_service& io);
+  explicit TcpConnectorFactory(boost::asio::io_service& io);
 
   std::unique_ptr<ConnectorInterface> Build(
       const boost::asio::ip::address& address, uint16_t port) override;

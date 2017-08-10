@@ -36,7 +36,7 @@ class TcpListener : public ListenerInterface, private boost::noncopyable {
  public:
   enum class ErrorCode { NoError = 0 };
 
-  TcpListener(boost::asio::io_service& io);
+  explicit TcpListener(boost::asio::io_service& io);
 
   std::error_code Bind(std::string ip, uint16_t port);
   std::error_code Bind(boost::asio::ip::address ip, uint16_t port);

@@ -29,7 +29,7 @@ namespace utils {
 
 class AsyncIoInterface {
  public:
-  AsyncIoInterface(boost::asio::io_service& io) : io_{&io} {};
+  explicit AsyncIoInterface(boost::asio::io_service& io) : io_{&io} {};
   ~AsyncIoInterface() = default;
 
   boost::asio::io_service& io() const { return *io_; }

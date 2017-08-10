@@ -36,7 +36,7 @@ class ListenerInterface : public utils::AsyncIoInterface {
   using EventHandler = std::function<void(
       std::unique_ptr<ConnectionInterface>&&, std::error_code)>;
 
-  ListenerInterface(boost::asio::io_service& io) : AsyncIoInterface{io} {}
+  explicit ListenerInterface(boost::asio::io_service& io) : AsyncIoInterface{io} {}
 
   virtual ~ListenerInterface() = default;
 

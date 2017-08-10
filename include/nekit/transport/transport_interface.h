@@ -34,7 +34,7 @@ namespace nekit {
 namespace transport {
 class TransportInterface : public utils::AsyncIoInterface {
  public:
-  TransportInterface(boost::asio::io_service& io) : AsyncIoInterface{io} {};
+explicit  TransportInterface(boost::asio::io_service& io) : AsyncIoInterface{io} {};
   virtual ~TransportInterface() = default;
 
   using EventHandler =

@@ -38,7 +38,7 @@ class Domain final : private LifeTime {
  public:
   using EventHandler = std::function<void(std::error_code)>;
 
-  Domain(std::string domain);
+  explicit Domain(std::string domain);
 
   bool operator==(const std::string& rhs) const;
 
