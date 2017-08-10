@@ -48,6 +48,11 @@ class TcpSocket final : public ConnectionInterface, private utils::LifeTime {
                            TransportInterface::EventHandler) override
       __attribute__((warn_unused_result));
 
+  utils::Cancelable& PollRead(TransportInterface::PollEventHandler) override
+      __attribute__((warn_unused_result));
+  utils::Cancelable& PollWrite(TransportInterface::PollEventHandler) override
+      __attribute__((warn_unused_result));
+
   void CloseRead() override;
   void CloseWrite() override;
   void Close() override;

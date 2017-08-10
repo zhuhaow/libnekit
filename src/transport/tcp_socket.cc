@@ -134,6 +134,113 @@ utils::Cancelable &TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
   return write_cancelable_;
 }
 
+utils::Cancelable &TcpSocket::PollRead(
+    TransportInterface::PollEventHandler handler) {
+  NETRACE << "Start polling for reading.";
+
+  read_cancelable_ = utils::Cancelable();
+
+  if (read_closed_) {
+    NEERROR << "Socket reading is already closed. Do nothing.";
+    return read_cancelable_;
+  }
+
+  socket_.async_read_some(
+      boost::asio::null_buffers{},
+      [
+        this, handler, cancelable{read_cancelable_},
+        lifetime{life_time_cancelable_pointer()}
+      ](const boost::system::error_code &ec,
+        std::size_t bytes_transferred) mutable {
+        (void)bytes_transferred;
+
+        if (cancelable.canceled() || lifetime->canceled() || IsReadClosed()) {
+          return;
+        }
+
+        if (ec) {
+          auto error = ConvertBoostError(ec);
+
+          if (error == utils::NEKitErrorCode::Canceled) {
+            return;
+          }
+
+          if (error == ErrorCode::EndOfFile) {
+            this->read_closed_ = true;
+            NEDEBUG << "Socket got EOF.";
+          } else {
+            NEERROR << "Polling read event failed due to " << error << ".";
+          }
+
+          handler(error);
+          return;
+        }
+
+        boost::system::error_code error;
+        boost::asio::socket_base::bytes_readable command(true);
+        socket_.io_control(command, error);
+        if (error) {
+          handler(ConvertBoostError(error));
+          return;
+        }
+        if (!command.get()) {
+          read_closed_ = true;
+          NEDEBUG << "Socket got EOF.";
+          handler(ErrorCode::EndOfFile);
+          return;
+        }
+
+        NETRACE << "Socket becomes readable.";
+        handler(ErrorCode::NoError);
+        return;
+      });
+  return read_cancelable_;
+}
+
+utils::Cancelable &TcpSocket::PollWrite(
+    TransportInterface::PollEventHandler handler) {
+  NETRACE << "Start polling for writing.";
+
+  write_cancelable_ = utils::Cancelable();
+
+  if (write_closed_) {
+    NEERROR << "Socket write is already closed. Do nothing.";
+    return write_cancelable_;
+  }
+
+  socket_.async_write_some(
+      boost::asio::null_buffers{},
+      [
+        this, handler, cancelable{write_cancelable_},
+        lifetime{life_time_cancelable_pointer()}
+      ](const boost::system::error_code &ec,
+        std::size_t bytes_transferred) mutable {
+        (void)bytes_transferred;
+
+        if (cancelable.canceled() || lifetime->canceled() || IsWriteClosed()) {
+          return;
+        }
+
+        if (ec) {
+          auto error = ConvertBoostError(ec);
+          NEERROR << "Polling write event failed due to " << error << ".";
+
+          if (error == utils::NEKitErrorCode::Canceled) {
+            return;
+          }
+
+          handler(error);
+          return;
+        }
+
+        NETRACE << "Socket becomes writable.";
+        handler(ErrorCode::NoError);
+        return;
+      });
+
+  return write_cancelable_;
+}
+
 void TcpSocket::CloseRead() {
   NEDEBUG << "Closing socket reading.";
   if (read_closed_) {
