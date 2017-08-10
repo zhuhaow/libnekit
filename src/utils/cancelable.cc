@@ -33,6 +33,10 @@ Cancelable::Cancelable(const Cancelable& cancelable) {
 }
 
 Cancelable& Cancelable::operator=(const Cancelable& cancelable) {
+  if (this == &cancelable) {
+    return *this;
+  }
+
   canceled_ = cancelable.canceled_;
   return *this;
 }
@@ -42,6 +46,10 @@ Cancelable::Cancelable(Cancelable&& cancelable) {
 }
 
 Cancelable& Cancelable::operator=(Cancelable&& cancelable) {
+  if (this == &cancelable) {
+    return *this;
+  }
+
   cancelable.canceled_.swap(canceled_);
   return *this;
 }
