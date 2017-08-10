@@ -20,5 +20,13 @@ fi
 
 if [[ "$TRAVIS_OS_NAME" == "linux" ]]
 then
+    if [[ "$COVERAGE" == "ON" ]]
+    then
+        mkdir coverage
+        cd coverage
+        find ../build -type f -name '*.gcda' -exec gcov -pbcu {} +
+        cd ..
+    fi
+
     sonar-scanner
 fi
