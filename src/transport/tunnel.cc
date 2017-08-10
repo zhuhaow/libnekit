@@ -52,6 +52,11 @@ void Tunnel::Open() {
 void Tunnel::ProcessLocalNegotiation(ActionRequest request) {
   switch (request) {
     case ActionRequest::WantRead: {
+      if (polling_) {
+        pending_action_ = PendingAction::NegotiationRead;
+        return;
+      }
+
       ResetOutgoingBuffer(local_stream_coder_->DecodeReserve());
 
       outgoing_cancelable_ = local_transport_->Read(
@@ -93,6 +98,32 @@ void Tunnel::ProcessLocalNegotiation(ActionRequest request) {
     } break;
     case ActionRequest::Event: {
       session_ = local_stream_coder_->session();
+
+      polling_ = true;
+      poll_cancelable_ = local_transport_->PollRead([this](std::error_code ec) {
+        polling_ = false;
+
+        if (ec) {
+          ReleaseTunnel();
+          return;
+        }
+
+        NEINFO << "Read polling finished, processing pending action "
+               << static_cast<int>(pending_action_) << " for session "
+               << session_->domain()->domain();
+        switch (pending_action_) {
+          case PendingAction::None:
+            break;
+          case PendingAction::NegotiationRead:
+            ProcessLocalNegotiation(ActionRequest::WantRead);
+            break;
+          case PendingAction::Forward:
+            ForwardLocal();
+            break;
+        }
+
+        pending_action_ = PendingAction::None;
+      });
       ProcessSession();
     } break;
     case ActionRequest::Ready:
@@ -163,6 +194,11 @@ void Tunnel::BeginForward() {
 }
 
 void Tunnel::ForwardLocal() {
+  if (polling_) {
+    pending_action_ = PendingAction::Forward;
+    return;
+  }
+
   ResetOutgoingBuffer(local_stream_coder_->DecodeReserve() +
                       remote_stream_coder_->EncodeReserve());
 
@@ -270,9 +306,7 @@ void Tunnel::ForwardRemote() {
 void Tunnel::ProcessSession() {
   session_->domain()->set_resolver(rule_manager_->resolver().get());
 
-  // Use incoming here since outgoing will be use for observing local
-  // event.
-  incoming_cancelable_ = rule_manager_->Match(
+  rule_cancelable_ = rule_manager_->Match(
       session_,
       [this](std::shared_ptr<rule::RuleInterface> rule, std::error_code ec) {
         if (ec) {
@@ -281,7 +315,7 @@ void Tunnel::ProcessSession() {
         }
 
         adapter_ = rule->GetAdapter(session_);
-        incoming_cancelable_ = adapter_->Open(
+        rule_cancelable_ = adapter_->Open(
             [this](std::unique_ptr<ConnectionInterface>&& conn,
                    std::unique_ptr<stream_coder::StreamCoderInterface>&&
                        stream_coder,

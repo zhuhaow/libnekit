@@ -84,7 +84,12 @@ class Tunnel final : private boost::noncopyable {
   std::unique_ptr<stream_coder::ServerStreamCoderInterface> local_stream_coder_;
   std::unique_ptr<utils::Buffer> incoming_buffer_, outgoing_buffer_;
 
-  utils::Cancelable incoming_cancelable_, outgoing_cancelable_;
+  utils::Cancelable incoming_cancelable_, outgoing_cancelable_,
+      rule_cancelable_, poll_cancelable_;
+
+  bool polling_{false};
+  enum class PendingAction { None, NegotiationRead, Forward };
+  PendingAction pending_action_{PendingAction::None};
 };
 
 class TunnelManager final : private boost::noncopyable {
