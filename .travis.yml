@@ -10,6 +10,7 @@ dist:
 cache:
   directories:
     - deps
+    - '$HOME/.sonar/cache'
 
 matrix:
   include:
@@ -29,7 +30,7 @@ matrix:
       env: PLATFORM=ios
 
     - os: linux
-      env: PLATFORM=linux COVERAGE=ON MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
+      env: PLATFORM=linux COVERAGE=ON MATRIX_EVAL="CC=gcc-5 && CXX=g++-5" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output"
       addons:
         apt:
           sources:
@@ -47,8 +48,15 @@ matrix:
           branch_pattern: coverity_scan
 
 
+        sonarcloud:
+          organization: "zhuhaow-github"
+          token:
+            secure: "PvuwWq/PWiRBSlaVvJSoa6Q9xZeQntRkA6x0rMQvApago+MsfquYekHMZpN6Wpk4bb5PswDYVmZdgqt9D8vFDieEIAlJ9Zr/CD/YZ1FTvWuL3fzVqM3WFJLaujrpS0jxWV6mx4qfmkU+po5s/z5l3XopxAoabmON/CuyJn3as/PR4xI50bDCqeYO3JHGllHyv9VFlqX0SQ2q45k2Ky9nU+m6oEJlkkmpudDpXHGjn4hECr6fTICkfVsgEWUJBPpTd96ve4cAdOxhHwoK1uhU2bwNrqAUuu8SdE0BR8iUhZjVm7Ha/IK6F0aIIUXdSXiVxDkgKT7VoPT9EddNGh3qLBoFnUwAezEl47y5uaJzeFQpN9EhEnh+Dqdn/3bCVBmpLn3+7toI2QlIYCRRgE/9semV83yILP4TBJmtyvruE7gWV7HB/AANe4/F6oU1TaoS3Lis868Sh2lczusQNkDo1pr8uZo1Pzjoe46IoLrGo/mhDA3cmTYsbqasOQ/7q3hOgWX7DjR2yV3p9ne+/eHlGyOe6N+dMod2ZeLFKLFa0yeXQB1zpW9ADpaXMu0LP/G1YRd7ams7auHmksths0vzzPEivoI8QXhaQYRZGts3vsNbplondrQkHEaTwIIcBVVff2BUzV3k4XW5eeP57Bzx9MkryJXPXvkRFjpxfi4bO5w="
+          branches:
+            - dev
+
     - os: linux
-      env: PLATFORM=linux COVERAGE=ON MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
+      env: PLATFORM=linux COVERAGE=ON MATRIX_EVAL="CC=gcc-6 && CXX=g++-6" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output"
       addons:
         apt:
           sources:
@@ -64,6 +72,11 @@ matrix:
           build_command_prepend: "cov-configure --comptype gcc --compiler `which gcc-6`;cmake -DPLATFORM=$PLATFORM -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${PLATFORM}.cmake ."
           build_command: "make"
           branch_pattern: coverity_scan
+
+        sonarcloud:
+          organization: "zhuhaow-github"
+          token:
+            secure: "PvuwWq/PWiRBSlaVvJSoa6Q9xZeQntRkA6x0rMQvApago+MsfquYekHMZpN6Wpk4bb5PswDYVmZdgqt9D8vFDieEIAlJ9Zr/CD/YZ1FTvWuL3fzVqM3WFJLaujrpS0jxWV6mx4qfmkU+po5s/z5l3XopxAoabmON/CuyJn3as/PR4xI50bDCqeYO3JHGllHyv9VFlqX0SQ2q45k2Ky9nU+m6oEJlkkmpudDpXHGjn4hECr6fTICkfVsgEWUJBPpTd96ve4cAdOxhHwoK1uhU2bwNrqAUuu8SdE0BR8iUhZjVm7Ha/IK6F0aIIUXdSXiVxDkgKT7VoPT9EddNGh3qLBoFnUwAezEl47y5uaJzeFQpN9EhEnh+Dqdn/3bCVBmpLn3+7toI2QlIYCRRgE/9semV83yILP4TBJmtyvruE7gWV7HB/AANe4/F6oU1TaoS3Lis868Sh2lczusQNkDo1pr8uZo1Pzjoe46IoLrGo/mhDA3cmTYsbqasOQ/7q3hOgWX7DjR2yV3p9ne+/eHlGyOe6N+dMod2ZeLFKLFa0yeXQB1zpW9ADpaXMu0LP/G1YRd7ams7auHmksths0vzzPEivoI8QXhaQYRZGts3vsNbplondrQkHEaTwIIcBVVff2BUzV3k4XW5eeP57Bzx9MkryJXPXvkRFjpxfi4bO5w="
 
 before_install:
   - eval "${MATRIX_EVAL}"
