@@ -61,6 +61,7 @@ class Domain final : private LifeTime {
   bool isFailed() const;
   std::error_code error() const;
 
+  const std::string& domain() const;
   std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses()
       const;
 

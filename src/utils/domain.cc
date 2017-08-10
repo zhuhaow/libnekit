@@ -116,6 +116,8 @@ bool Domain::isAddressAvailable() const {
 
 std::error_code Domain::error() const { return error_; }
 
+const std::string& Domain::domain() const { return domain_; }
+
 std::shared_ptr<const std::vector<boost::asio::ip::address>> Domain::addresses()
     const {
   return addresses_;
