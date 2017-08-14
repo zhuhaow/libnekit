@@ -20,14 +20,14 @@ matrix:
     - os: osx
       osx_image: xcode8.3
       env: PLATFORM=mac COVERAGE=ON
-    - os: osx
-      osx_image: xcode9
-      language: objective-c
-      env: PLATFORM=ios
-    - os: osx
-      osx_image: xcode8.3
-      language: objective-c
-      env: PLATFORM=ios
+    # - os: osx
+    #   osx_image: xcode9
+    #   language: objective-c
+    #   env: PLATFORM=ios
+    # - os: osx
+    #   osx_image: xcode8.3
+    #   language: objective-c
+    #   env: PLATFORM=ios
 
     - os: linux
       env: PLATFORM=linux COVERAGE=ON MATRIX_EVAL="CC=gcc-5 && CXX=g++-5" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output"
