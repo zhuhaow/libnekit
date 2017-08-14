@@ -37,7 +37,8 @@ from plumbum.cmd import git, cmake
 from clint.textui import progress
 import requests
 
-LIBRARIES = [('google/googletest', 'release-1.8.0', 'googletest')]
+LIBRARIES = [('google/googletest', 'release-1.8.0', 'googletest'),
+             ('jedisct1/libsodium', '1.0.13', 'libsodium')]
 
 OPENSSL_IOS = ('x2on/OpenSSL-for-iPhone', 'master', 'openssl')
 OPENSSL_LIB = ('openssl/openssl', 'OpenSSL_1_1_0f', 'openssl')
@@ -56,6 +57,20 @@ def ensure_path_exist(path):
     except OSError as e:
         if e.errno != errno.EEXIST:
             raise
+
+
+def copytree(src, dst, symlinks=False, ignore=None):
+    if not os.path.exists(dst):
+        os.makedirs(dst)
+    for item in os.listdir(src):
+        s = os.path.join(src, item)
+        d = os.path.join(dst, item)
+        if os.path.isdir(s):
+            copytree(s, d, symlinks, ignore)
+        else:
+            if not os.path.exists(
+                    d) or os.stat(s).st_mtime - os.stat(d).st_mtime > 1:
+                shutil.copy2(s, d)
 
 
 @contextmanager
@@ -244,8 +259,8 @@ def build_openssl(openssl_dir, install_prefix, target_platform):
                   "build-libssl.sh"]["--version=1.1.0f", "--verbose-on-error",
                                      "--ec-nistp-64-gcc-128",
                                      "--targets=ios-sim-cross-x86_64 ios-sim-cross-i386 ios64-cross-arm64 ios-cross-armv7"] & FG
-            shutil.copytree("lib", os.path.join(install_prefix, "lib"))
-            shutil.copytree("include", os.path.join(install_prefix, "include"))
+            copytree("lib", os.path.join(install_prefix, "lib"))
+            copytree("include", os.path.join(install_prefix, "include"))
 
     elif target_platform in [Platform.OSX]:
         with local.cwd(openssl_dir):
@@ -262,6 +277,26 @@ def build_openssl(openssl_dir, install_prefix, target_platform):
                                "enable-ec_nistp_64_gcc_128", "no-comp",
                                "--prefix={}".format(install_prefix)] & FG
             local["make"]["install_sw"] & FG
+
+
+def build_libsodium(libsodium_dir, install_prefix, target_platform):
+    with local.cwd(libsodium_dir):
+        with local.env(PREFIX=install_prefix):
+            local["autoreconf"]["-i"] & FG
+
+            if target_platform == Platform.iOS:
+                local["find"]["dist-build", "-type", "f", "-exec", "sed", "-i",
+                              "''", "s/^export PREFIX.*$//g", "{}", "+"] & FG
+                local["dist-build/ios.sh"] & FG
+            elif target_platform == Platform.OSX:
+                local["find"]["dist-build", "-type", "f", "-exec", "sed", "-i",
+                              "''", "s/^export PREFIX.*$//g", "{}", "+"] & FG
+                local["cat"]["dist-build/osx.sh"] & FG
+                local["dist-build/osx.sh"] & FG
+            elif target_platform == Platform.Linux:
+                local["./configure"]["--prefix={}".format(install_prefix)] & FG
+                local["make"] & FG
+                local["make"]["install"] & FG
 
 
 def main():
@@ -295,6 +330,10 @@ def main():
         # Remove built binaries and headers.
         shutil.rmtree(install_path(target_platform), True)
         ensure_path_exist(install_path(target_platform))
+
+        build_libsodium(
+            os.path.join(tempd, "libsodium"),
+            install_path(target_platform), target_platform)
 
         build_openssl(
             os.path.join(tempd, "openssl"),
