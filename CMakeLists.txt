@@ -82,6 +82,7 @@ set(SOURCES
   src/transport/direct_adapter.cc
   src/instance.cc
   src/transport/socks5_listener.cc
+  src/crypto/random.cc
   )
 
 cmake_policy(SET CMP0063 NEW)
