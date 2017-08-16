@@ -82,6 +82,7 @@ set(SOURCES
   src/transport/direct_adapter.cc
   src/instance.cc
   src/transport/socks5_listener.cc
+  src/stream_coder/shadowsocks_stream_coder.cc
   src/transport/server_adapter.cc
   src/crypto/random.cc
   src/crypto/key_generator.cc
