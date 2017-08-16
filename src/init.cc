@@ -24,6 +24,11 @@
 
 #include <boost/log/utility/setup/common_attributes.hpp>
 
+#include <openssl/evp.h>
+
 namespace nekit {
-void Initailize() { boost::log::add_common_attributes(); }
+void Initailize() {
+  boost::log::add_common_attributes();
+  OpenSSL_add_all_algorithms();
+}
 }  // namespace nekit
