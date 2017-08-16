@@ -102,6 +102,12 @@ if(NOT OPENSSL)
 endif()
 set(LIBS ${LIBS} ${OPENSSL})
 
+find_library(SODIUM sodium NO_SYSTEM_ENVIROMENT_PATH)
+if(NOT SODIUM)
+  message(FATAL_ERROR "libsodium not found. Build dependency first.")
+endif()
+set(LIBS ${LIBS} ${SODIUM})
+
 target_link_libraries(nekit ${LIBS})
 
 if (NOT IOS AND NOT ANDROID)
