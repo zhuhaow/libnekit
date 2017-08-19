@@ -53,7 +53,7 @@ struct Buffer final : public boost::noncopyable {
 
   bool ReserveFront(std::size_t size) {
     // Be careful. Overflow is not checked.
-    if (size >= capacity_ || size + front_ + back_ > capacity_) {
+    if (size + front_ + back_ > capacity_) {
       return false;
     }
 
@@ -72,7 +72,7 @@ struct Buffer final : public boost::noncopyable {
 
   bool ReserveBack(std::size_t size) {
     // Be careful. Overflow is not checked.
-    if (size >= capacity_ || size + front_ + back_ > capacity_) {
+    if (size + front_ + back_ > capacity_) {
       return false;
     }
 
@@ -90,7 +90,7 @@ struct Buffer final : public boost::noncopyable {
   }
 
   bool Reset(const BufferReserveSize &reserve_size) {
-    if (reserve_size.suffix() + reserve_size.prefix() > capacity_) {
+    if (reserve_size.suffix() + reserve_size.prefix() >= capacity_) {
       return false;
     }
 
