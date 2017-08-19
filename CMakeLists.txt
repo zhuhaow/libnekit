@@ -79,6 +79,7 @@ set(SOURCES
   src/init.cc
   src/rule/rule_manager.cc
   src/rule/all_rule.cc
+  src/rule/dns_fail_rule.cc
   src/transport/direct_adapter.cc
   src/instance.cc
   src/transport/socks5_listener.cc
