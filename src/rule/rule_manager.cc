@@ -83,12 +83,9 @@ void RuleManager::MatchIterator(
           this, handler, cancelable, lifetime{life_time_cancelable_pointer()},
           session, iter
         ](std::error_code ec) mutable {
-          if (cancelable->canceled() || lifetime->canceled()) {
-            return;
-          }
+          (void)ec;
 
-          if (ec) {
-            handler(nullptr, ec);
+          if (cancelable->canceled() || lifetime->canceled()) {
             return;
           }
 
