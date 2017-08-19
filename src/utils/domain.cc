@@ -108,7 +108,7 @@ bool Domain::isResolved() const { return resolved_; }
 
 bool Domain::isResolving() const { return resolving_; }
 
-bool Domain::isFailed() const { return resolved_ && addresses_; }
+bool Domain::isFailed() const { return resolved_ && !addresses_; }
 
 bool Domain::isAddressAvailable() const {
   return addresses_ && !addresses_->empty();
