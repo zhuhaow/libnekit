@@ -39,3 +39,7 @@ add_mem_test(buffer_test)
 add_executable(socks5_server_stream_coder_test socks5_server_stream_coder_test.cc)
 target_link_libraries(socks5_server_stream_coder_test nekit ${LIBS})
 add_mem_test(socks5_server_stream_coder_test)
+
+add_executable(trie_test trie_test.cc)
+target_link_libraries(trie_test nekit ${LIBS})
+add_mem_test(trie_test)
