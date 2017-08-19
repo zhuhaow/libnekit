@@ -86,6 +86,7 @@ set(SOURCES
   src/transport/server_adapter.cc
   src/crypto/random.cc
   src/crypto/key_generator.cc
+  src/crypto/stream_cipher_interface.cc
   )
 
 cmake_policy(SET CMP0063 NEW)

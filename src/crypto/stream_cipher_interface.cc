@@ -20,46 +20,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
+#include <string>
 
-#include <memory>
-#include <system_error>
-
-#include <boost/noncopyable.hpp>
+#include "nekit/crypto/stream_cipher_interface.h"
 
 namespace nekit {
 namespace crypto {
+namespace {
+struct StreamCipherErrorCategory : std::error_category {
+  const char* name() const noexcept override { return "Stream cipher"; }
 
-enum class Action { Decryption = 0, Encryption = 1 };
-
-// This class provide support for stream cipher or block cipher in stream mode.
-class StreamCipherInterface : private boost::noncopyable {
- public:
-  enum class ErrorCode { NoError, ValidationFailed, UnknownError };
-
-  virtual ~StreamCipherInterface() = default;
-
-  virtual void SetKey(const uint8_t *data, bool copy) = 0;
-  virtual void SetIv(const uint8_t *data, bool copy) = 0;
-
-  virtual ErrorCode Process(const uint8_t *input, size_t len,
-                            const uint8_t *input_tag, uint8_t *output,
-                            uint8_t *output_tag) = 0;
-
-  virtual void Reset() = 0;
-
-  virtual size_t key_size() = 0;
-  virtual size_t iv_size() = 0;
-  virtual size_t block_size() = 0;
-  virtual size_t tag_size() = 0;
+  std::string message(int error_code) const override {
+    switch (static_cast<StreamCipherInterface::ErrorCode>(error_code)) {
+      case StreamCipherInterface::ErrorCode::NoError:
+        return "no error";
+      case StreamCipherInterface::ErrorCode::ValidationFailed:
+        return "data validation failed";
+      case StreamCipherInterface::ErrorCode::UnknownError:
+        return "unknown error";
+    }
+  }
 };
 
-std::error_code make_error_code(StreamCipherInterface::ErrorCode ec);
+const StreamCipherErrorCategory streamCipherErrorCategory{};
+}  // namespace
+
+std::error_code make_error_code(StreamCipherInterface::ErrorCode ec) {
+  return {static_cast<int>(ec), streamCipherErrorCategory};
+}
 }  // namespace crypto
 }  // namespace nekit
-
-namespace std {
-template <>
-struct is_error_code_enum<nekit::crypto::StreamCipherInterface::ErrorCode>
-    : true_type {};
-}  // namespace std
