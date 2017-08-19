@@ -25,12 +25,20 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "hash.h"
+
 namespace nekit {
 namespace crypto {
 class KeyGenerator {
  public:
-  static void ShadowsocksGenerate(const uint8_t *data, size_t data_size, uint8_t *key,
-                       size_t key_size, uint8_t *iv, size_t iv_size);
+  static void ShadowsocksGenerate(const uint8_t *data, size_t data_size,
+                                  uint8_t *key, size_t key_size, uint8_t *iv,
+                                  size_t iv_size);
+
+  static void HkdfGenerate(const uint8_t *data, size_t data_size,
+                           const uint8_t *salt, size_t salt_size,
+                           const uint8_t *info, size_t info_size, uint8_t *key,
+                           size_t key_size, Hash hash_type);
 };
 }  // namespace crypto
 }  // namespace nekit

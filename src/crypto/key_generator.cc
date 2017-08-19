@@ -23,6 +23,7 @@
 #include "nekit/crypto/key_generator.h"
 
 #include <openssl/evp.h>
+#include <openssl/kdf.h>
 
 namespace nekit {
 namespace crypto {
@@ -80,6 +81,39 @@ void KeyGenerator::ShadowsocksGenerate(const uint8_t *data, size_t data_size,
   }
 
   EVP_MD_CTX_free(context);
+}
+
+void KeyGenerator::HkdfGenerate(const uint8_t *data, size_t data_size,
+                                const uint8_t *salt, size_t salt_size,
+                                const uint8_t *info, size_t info_size,
+                                uint8_t *key, size_t key_size, Hash hash_type) {
+  EVP_PKEY_CTX *context = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, nullptr);
+
+  if (EVP_PKEY_derive_init(context) <= 0) {
+    exit(1);
+  }
+
+  if (EVP_PKEY_CTX_set_hkdf_md(context, ToOpenSslType(hash_type)) <= 0) {
+    exit(1);
+  }
+
+  if (EVP_PKEY_CTX_set1_hkdf_key(context, data, data_size) <= 0) {
+    exit(1);
+  }
+
+  if (EVP_PKEY_CTX_set1_hkdf_salt(context, salt, salt_size) <= 0) {
+    exit(1);
+  }
+
+  if (EVP_PKEY_CTX_add1_hkdf_info(context, info, info_size) <= 0) {
+    exit(1);
+  }
+
+  if (EVP_PKEY_derive(context, key, &key_size) <= 0) {
+    exit(1);
+  }
+
+  EVP_PKEY_CTX_free(context);
 }
 }  // namespace crypto
 }  // namespace nekit
