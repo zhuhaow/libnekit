@@ -25,11 +25,12 @@
 #include <array>
 #include <string>
 
+#include <boost/range/adaptors.hpp>
 #include <boost/noncopyable.hpp>
 
 namespace nekit {
 namespace utils {
-template <typename CharT, CharT offset, CharT node_size>
+template <typename CharT, CharT offset, CharT node_size, bool reverse = false>
 class Trie : boost::noncopyable {
  public:
   bool AddPrefix(const std::basic_string<CharT>& prefix) {
@@ -44,11 +45,20 @@ class Trie : boost::noncopyable {
     }
 
     TrieNode* current_node = &root_;
-    for (const auto& ch : prefix) {
-      if (!current_node->nodes_[ch - offset]) {
-        current_node->nodes_[ch - offset] = std::make_unique<TrieNode>();
+    if (reverse) {
+      for (const auto& ch : boost::adaptors::reverse(prefix)) {
+        if (!current_node->nodes_[ch - offset]) {
+          current_node->nodes_[ch - offset] = std::make_unique<TrieNode>();
+        }
+        current_node = current_node->nodes_[ch - offset].get();
       }
-      current_node = current_node->nodes_[ch - offset].get();
+    } else {
+      for (const auto& ch : prefix) {
+        if (!current_node->nodes_[ch - offset]) {
+          current_node->nodes_[ch - offset] = std::make_unique<TrieNode>();
+        }
+        current_node = current_node->nodes_[ch - offset].get();
+      }
     }
     current_node->end_ = true;
     return true;
@@ -60,18 +70,35 @@ class Trie : boost::noncopyable {
     }
 
     TrieNode* current_node = &root_;
-    for (const auto& ch : literal) {
-      if (ch < offset || ch >= offset + node_size) {
-        return false;
-      }
+    if (reverse) {
+      for (const auto& ch : boost::adaptors::reverse(literal)) {
+        if (ch < offset || ch >= offset + node_size) {
+          return false;
+        }
 
-      current_node = current_node->nodes_[ch - offset].get();
-      if (!current_node) {
-        return false;
-      }
+        current_node = current_node->nodes_[ch - offset].get();
+        if (!current_node) {
+          return false;
+        }
 
-      if (current_node->end_) {
-        return true;
+        if (current_node->end_) {
+          return true;
+        }
+      }
+    } else {
+      for (const auto& ch : literal) {
+        if (ch < offset || ch >= offset + node_size) {
+          return false;
+        }
+
+        current_node = current_node->nodes_[ch - offset].get();
+        if (!current_node) {
+          return false;
+        }
+
+        if (current_node->end_) {
+          return true;
+        }
       }
     }
 
@@ -88,6 +115,9 @@ class Trie : boost::noncopyable {
   TrieNode root_;
 };
 
-using DomainTrie = Trie<char, '-', 78>;
+template <bool reverse = false>
+using DomainTrie = Trie<char, '-', 78, reverse>;
+
+using ReverseDomainTrie = DomainTrie<true>;
 }  // namespace utils
 }  // namespace nekit
