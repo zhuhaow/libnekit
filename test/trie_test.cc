@@ -27,14 +27,14 @@
 using namespace nekit::utils;
 
 TEST(TrieUnitTest, InputValidationTest) {
-  DomainTrie trie;
+  DomainTrie<> trie;
   EXPECT_TRUE(trie.AddPrefix(".AZaz-109"));
   EXPECT_FALSE(trie.AddPrefix("{"));
   EXPECT_FALSE(trie.AddPrefix(","));
 }
 
 TEST(TrieUnitTest, PrefixMatchTest) {
-  DomainTrie trie;
+  DomainTrie<> trie;
   EXPECT_TRUE(trie.AddPrefix("aabbcc"));
   EXPECT_TRUE(trie.AddPrefix("aabbdd"));
 
