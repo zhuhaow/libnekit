@@ -37,8 +37,9 @@ from plumbum.cmd import git, cmake
 from clint.textui import progress
 import requests
 
-LIBRARIES = [('google/googletest', 'release-1.8.0', 'googletest'),
-             ('jedisct1/libsodium', '1.0.13', 'libsodium')]
+LIBRARIES = [('google/googletest', 'release-1.8.0',
+              'googletest'), ('jedisct1/libsodium', '1.0.13', 'libsodium'),
+             ('zhuhaow/libmaxminddb', 'master', 'libmaxminddb')]
 
 OPENSSL_IOS = ('x2on/OpenSSL-for-iPhone', 'master', 'openssl')
 OPENSSL_LIB = ('openssl/openssl', 'OpenSSL_1_1_0f', 'openssl')
@@ -330,6 +331,10 @@ def main():
         # Remove built binaries and headers.
         shutil.rmtree(install_path(target_platform), True)
         ensure_path_exist(install_path(target_platform))
+
+        cmake_compile(
+            os.path.join(tempd, "libmaxminddb"),
+            install_path(target_platform), target_platform)
 
         build_libsodium(
             os.path.join(tempd, "libsodium"),
