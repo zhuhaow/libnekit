@@ -76,6 +76,8 @@ set(SOURCES
   src/utils/domain.cc
   src/utils/logger.cc
   src/utils/cancelable.cc
+  src/utils/maxmind.cc
+  src/utils/country_iso_code.cc
   src/init.cc
   src/rule/rule_manager.cc
   src/rule/all_rule.cc
@@ -114,6 +116,12 @@ if(NOT SODIUM)
   message(FATAL_ERROR "libsodium not found. Build dependency first.")
 endif()
 set(LIBS ${LIBS} ${SODIUM})
+
+find_library(MAXMINDDB maxminddb NO_SYSTEM_ENVIROMENT_PATH)
+if(NOT MAXMINDDB)
+  message(FATAL_ERROR "maxminddb not found. Build dependency first.")
+endif()
+set(LIBS ${LIBS} ${MAXMINDDB})
 
 target_link_libraries(nekit ${LIBS})
 

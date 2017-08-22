@@ -43,3 +43,9 @@ add_mem_test(socks5_server_stream_coder_test)
 add_executable(trie_test trie_test.cc)
 target_link_libraries(trie_test nekit ${LIBS})
 add_mem_test(trie_test)
+
+add_executable(maxmind_test maxmind_test.cc)
+target_link_libraries(maxmind_test nekit ${LIBS})
+add_mem_test(maxmind_test)
+
+configure_file(GeoLite2-Country.mmdb GeoLite2-Country.mmdb COPYONLY)
