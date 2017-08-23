@@ -43,6 +43,10 @@ CountryIsoCode MaxmindLookupResult::country_iso_code() {
   int status =
       MMDB_get_value(&result_.entry, &data, "country", "iso_code", NULL);
 
+  if (status == MMDB_LOOKUP_PATH_DOES_NOT_MATCH_DATA_ERROR) {
+    return CountryIsoCode::XX;
+  }
+
   assert(status == MMDB_SUCCESS);
   assert(data.has_data);
   assert(data.type == MMDB_DATA_TYPE_UTF8_STRING);
