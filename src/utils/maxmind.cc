@@ -71,13 +71,12 @@ MaxmindLookupResult Maxmind::Lookup(const std::string& ip) {
 }
 
 MaxmindLookupResult Maxmind::Lookup(const boost::asio::ip::address& ip) {
-  return Lookup<boost::asio::ip::tcp::tcp>(
-      boost::asio::ip::tcp::endpoint(ip, 0));
+  return Lookup(boost::asio::ip::tcp::endpoint(ip, 0));
 }
 
 template <typename Protocol>
 MaxmindLookupResult Maxmind::Lookup(
-    const boost::asio::generic::basic_endpoint<Protocol>& endpoint) {
+    const boost::asio::ip::basic_endpoint<Protocol>& endpoint) {
   int mmdb_error;
   MMDB_lookup_result_s result =
       MMDB_lookup_sockaddr(&GetMmdb(), endpoint.data(), &mmdb_error);

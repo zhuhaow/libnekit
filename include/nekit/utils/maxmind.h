@@ -58,7 +58,7 @@ class Maxmind {
 
   template <typename Protocol>
   static MaxmindLookupResult Lookup(
-      const boost::asio::generic::basic_endpoint<Protocol> &ip);
+      const boost::asio::ip::basic_endpoint<Protocol> &ip);
 
  private:
   Maxmind();
