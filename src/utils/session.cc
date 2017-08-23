@@ -53,7 +53,7 @@ bool Session::isAddressAvailable() const {
   return domain_->isAddressAvailable();
 }
 
-const boost::asio::ip::address &Session::GetBestAddress() const {
+const boost::asio::ip::address& Session::GetBestAddress() const {
   assert(isAddressAvailable());
 
   if (type_ == Type::Address) {
@@ -67,12 +67,18 @@ Session::Type Session::type() const { return type_; }
 
 std::shared_ptr<Domain> Session::domain() { return domain_; }
 
-const boost::asio::ip::address &Session::address() const { return address_; }
+const boost::asio::ip::address& Session::address() const { return address_; }
 
 uint16_t Session::port() const { return port_; }
 
 void Session::setPort(uint16_t port) { port_ = port; }
 
 IPProtocol Session::ipProtocol() const { return ip_protocol_; }
+
+std::map<std::string, int>& Session::int_cache() { return int_cache_; }
+
+std::map<std::string, std::string>& Session::string_cache() {
+  return string_cache_;
+}
 }  // namespace utils
 }  // namespace nekit

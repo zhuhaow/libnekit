@@ -23,11 +23,13 @@
 #pragma once
 
 #include <functional>
+#include <map>
 #include <memory>
 #include <string>
 
 #include <boost/asio.hpp>
 
+#include "country_iso_code.h"
 #include "domain.h"
 #include "ip_protocol.h"
 #include "resolver_interface.h"
@@ -52,12 +54,19 @@ struct Session {
   void setPort(uint16_t port);
   IPProtocol ipProtocol() const;
 
+  std::map<std::string, int>& int_cache();
+  std::map<std::string, std::string>& string_cache();
+
  private:
   Type type_;
   std::shared_ptr<Domain> domain_;
   boost::asio::ip::address address_;
   uint16_t port_;
   IPProtocol ip_protocol_{IPProtocol::TCP};
+
+  // Keys begin with "NE" are reserved.
+  std::map<std::string, int> int_cache_;
+  std::map<std::string, std::string> string_cache_;
 };
 }  // namespace utils
 }  // namespace nekit
