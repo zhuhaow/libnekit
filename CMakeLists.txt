@@ -83,6 +83,7 @@ set(SOURCES
   src/rule/all_rule.cc
   src/rule/dns_fail_rule.cc
   src/rule/geo_rule.cc
+  src/rule/domain_rule.cc
   src/transport/direct_adapter.cc
   src/instance.cc
   src/transport/socks5_listener.cc
