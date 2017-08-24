@@ -45,8 +45,8 @@ OPENSSL_IOS = ('x2on/OpenSSL-for-iPhone', 'master', 'openssl')
 OPENSSL_LIB = ('openssl/openssl', 'OpenSSL_1_1_0f', 'openssl')
 
 DOWNLOAD_LIBRARIES = [(
-    'https://dl.bintray.com/boostorg/release/1.64.0/source/boost_1_64_0.tar.gz',
-    'boost', 'boost_1_64_0')]
+    'https://dl.bintray.com/boostorg/release/1.65.0/source/boost_1_65_0.tar.gz',
+    'boost', 'boost_1_65_0')]
 
 source_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 install_dir = os.path.abspath(os.path.join(source_dir, "deps"))
