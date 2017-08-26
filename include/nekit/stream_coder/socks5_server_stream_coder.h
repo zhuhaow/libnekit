@@ -70,16 +70,15 @@ class Socks5ServerStreamCoder final : public ServerStreamCoderInterface {
 
 std::error_code make_error_code(Socks5ServerStreamCoder::ErrorCode ec);
 
-class Socks5ServerStreamCoderFactory : public ServerStreamCoderFactoryInterface {
+class Socks5ServerStreamCoderFactory
+    : public ServerStreamCoderFactoryInterface {
  public:
   std::unique_ptr<ServerStreamCoderInterface> Build() override;
 };
 }  // namespace stream_coder
 }  // namespace nekit
 
-namespace std {
 template <>
-struct is_error_code_enum<
-    nekit::stream_coder::Socks5ServerStreamCoder::ErrorCode>
-    : public std::true_type {};
-}  // namespace std
+struct std::is_error_code_enum<
+    nekit::stream_coder::Socks5ServerStreamCoder::ErrorCode> : std::true_type {
+};
