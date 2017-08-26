@@ -77,6 +77,7 @@ set(SOURCES
   src/utils/logger.cc
   src/utils/cancelable.cc
   src/utils/maxmind.cc
+  src/utils/subnet.cc
   src/utils/country_iso_code.cc
   src/init.cc
   src/rule/rule_manager.cc

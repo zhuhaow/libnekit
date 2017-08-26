@@ -49,3 +49,7 @@ target_link_libraries(maxmind_test nekit ${LIBS})
 add_mem_test(maxmind_test)
 
 configure_file(GeoLite2-Country.mmdb GeoLite2-Country.mmdb COPYONLY)
+
+add_executable(subnet_test subnet_test.cc)
+target_link_libraries(subnet_test nekit ${LIBS})
+add_mem_test(subnet_test)
