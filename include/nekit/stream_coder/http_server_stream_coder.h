@@ -81,6 +81,8 @@ class HttpServerStreamCoderFactory : public ServerStreamCoderFactoryInterface {
 }  // namespace stream_coder
 }  // namespace nekit
 
+namespace std {
 template <>
-struct std::is_error_code_enum<
-    nekit::stream_coder::HttpServerStreamCoder::ErrorCode> : std::true_type {};
+struct is_error_code_enum<nekit::stream_coder::HttpServerStreamCoder::ErrorCode>
+    : true_type {};
+}  // namespace std

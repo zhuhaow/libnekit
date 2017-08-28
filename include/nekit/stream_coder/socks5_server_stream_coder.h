@@ -78,7 +78,9 @@ class Socks5ServerStreamCoderFactory
 }  // namespace stream_coder
 }  // namespace nekit
 
+namespace std {
 template <>
-struct std::is_error_code_enum<
-    nekit::stream_coder::Socks5ServerStreamCoder::ErrorCode> : std::true_type {
+struct is_error_code_enum<
+    nekit::stream_coder::Socks5ServerStreamCoder::ErrorCode> : true_type {
 };
+}  // namespace std
