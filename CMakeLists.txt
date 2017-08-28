@@ -43,6 +43,7 @@ if(COVERAGE)
 endif()
 
 include_directories("include")
+include_directories("modules")
 include_directories(SYSTEM "deps/${PLATFORM}/include")
 
 set(CMAKE_FIND_ROOT_PATH "${PROJECT_SOURCE_DIR}/deps/${PLATFORM}")
@@ -79,6 +80,7 @@ set(SOURCES
   src/utils/maxmind.cc
   src/utils/subnet.cc
   src/utils/country_iso_code.cc
+  src/utils/http_header_parser.cc
   src/init.cc
   src/rule/rule_manager.cc
   src/rule/all_rule.cc
@@ -97,6 +99,10 @@ set(SOURCES
   src/crypto/key_generator.cc
   src/crypto/stream_cipher_interface.cc
   )
+
+set(SOURCES ${SOURCES}
+  modules/CxxUrl/url.cc
+  modules/picohttpparser/picohttpparser.c)
 
 cmake_policy(SET CMP0063 NEW)
 add_library(nekit ${SOURCES})
