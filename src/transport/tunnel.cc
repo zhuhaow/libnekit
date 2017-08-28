@@ -74,6 +74,39 @@ void Tunnel::ProcessLocalNegotiation(ActionRequest request) {
             ProcessLocalNegotiation(action);
           });
     } break;
+    case ActionRequest::ReadyAfterRead: {
+      ResetOutgoingBuffer(local_stream_coder_->DecodeReserve() +
+                          remote_stream_coder_->EncodeReserve());
+      outgoing_buffer_->ShrinkSize();
+
+      switch (local_stream_coder_->Decode(outgoing_buffer_.get())) {
+        case ActionRequest::Continue: {
+          switch (remote_stream_coder_->Encode(outgoing_buffer_.get())) {
+            case ActionRequest::Continue:
+              outgoing_cancelable_ = remote_transport_->Write(
+                  std::move(outgoing_buffer_),
+                  [this](std::unique_ptr<utils::Buffer>&& buffer,
+                         std::error_code ec) {
+                    (void)buffer;
+
+                    if (ec) {
+                      HandleRemoteWriteError(ec);
+                      return;
+                    }
+
+                    ReturnOutgoingBuffer(std::move(buffer));
+
+                    BeginForward();
+                  });
+              break;
+            default:
+              assert(0);
+          }
+        } break;
+        default:
+          assert(0);
+      }
+    } break;
     case ActionRequest::WantWrite: {
       ResetIncomingBuffer(local_stream_coder_->EncodeReserve());
       incoming_buffer_->ShrinkSize();
@@ -184,6 +217,7 @@ void Tunnel::ProcessRemoteNegotiation(ActionRequest request) {
     case ActionRequest::Continue:
     case ActionRequest::RemoveSelf:
     case ActionRequest::Event:
+    case ActionRequest::ReadyAfterRead:
       assert(0);
   }
 }

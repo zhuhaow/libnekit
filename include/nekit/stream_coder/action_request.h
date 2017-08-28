@@ -31,9 +31,12 @@ enum class ActionRequest {
   ErrorHappened,  // Some error happened, the coder can no longer process data.
 
   // The following is only used in negotiating phase.
-  WantRead,   // The coder wants to read data to decode.
-  WantWrite,  // The coder wants to write data.
-  Ready,      // Negotiating finished, ready to forward data.
+  WantRead,        // The coder wants to read data to decode.
+  WantWrite,       // The coder wants to write data.
+  Ready,           // Negotiating finished, ready to forward data.
+  ReadyAfterRead,  // For local stream coder only. Everything else is ready, but
+                   // we have something to send to remote first before
+                   // forwarding data.
 
   // This is used to extend ActionRequest to indicate some event happened.
   Event
