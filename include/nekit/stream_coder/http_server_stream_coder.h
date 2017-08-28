@@ -27,8 +27,16 @@
 
 namespace nekit {
 namespace stream_coder {
+
+class HttpServerStreamCoder;
+
+using HttpServerStreamCoderFactory =
+    ServerStreamCoderFactory<HttpServerStreamCoder>;
+
 class HttpServerStreamCoder final : public ServerStreamCoderInterface {
  public:
+  using Factory = HttpServerStreamCoderFactory;
+
   enum class ErrorCode { NoError = 0, InvalidHeader, InvalidContentLength };
 
   HttpServerStreamCoder();
@@ -74,10 +82,6 @@ class HttpServerStreamCoder final : public ServerStreamCoderInterface {
 
 std::error_code make_error_code(HttpServerStreamCoder::ErrorCode);
 
-class HttpServerStreamCoderFactory : public ServerStreamCoderFactoryInterface {
- public:
-  std::unique_ptr<ServerStreamCoderInterface> Build() override;
-};
 }  // namespace stream_coder
 }  // namespace nekit
 

@@ -180,14 +180,32 @@ using Aes256CtrCipher = OpenSslStreamCipher<action_, EVP_aes_256_ctr, 0>;
 template <Action action_>
 using ChaCha20IetfPoly1305Cipher =
     OpenSslStreamCipher<action_, EVP_chacha20_poly1305, 16>;
+template <>
+struct is_aead_cipher<ChaCha20IetfPoly1305Cipher<Action::Encryption>>
+    : std::true_type {};
+template <>
+struct is_aead_cipher<ChaCha20IetfPoly1305Cipher<Action::Decryption>>
+    : std::true_type {};
 
 template <Action action_>
 using Aes128Gcm = OpenSslStreamCipher<action_, EVP_aes_128_gcm, 16>;
+template <>
+struct is_aead_cipher<Aes128Gcm<Action::Encryption>> : std::true_type {};
+template <>
+struct is_aead_cipher<Aes128Gcm<Action::Decryption>> : std::true_type {};
 
 template <Action action_>
 using Aes192Gcm = OpenSslStreamCipher<action_, EVP_aes_192_gcm, 16>;
+template <>
+struct is_aead_cipher<Aes192Gcm<Action::Encryption>> : std::true_type {};
+template <>
+struct is_aead_cipher<Aes192Gcm<Action::Decryption>> : std::true_type {};
 
 template <Action action_>
 using Aes256Gcm = OpenSslStreamCipher<action_, EVP_aes_256_gcm, 16>;
+template <>
+struct is_aead_cipher<Aes256Gcm<Action::Encryption>> : std::true_type {};
+template <>
+struct is_aead_cipher<Aes256Gcm<Action::Decryption>> : std::true_type {};
 }  // namespace crypto
 }  // namespace nekit

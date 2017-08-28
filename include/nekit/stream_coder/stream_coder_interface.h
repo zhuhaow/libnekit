@@ -59,5 +59,15 @@ class StreamCoderFactoryInterface {
   virtual std::unique_ptr<StreamCoderInterface> Build(
       std::shared_ptr<utils::Session> session) = 0;
 };
+
+template <typename StreamCoderType>
+class StreamCoderFactory : public StreamCoderFactoryInterface {
+ public:
+  std::unique_ptr<StreamCoderInterface> Build(
+      std::shared_ptr<utils::Session> session) override {
+    (void)session;
+    return std::make_unique<StreamCoderType>();
+  }
+};
 }  // namespace stream_coder
 }  // namespace nekit

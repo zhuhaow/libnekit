@@ -26,8 +26,15 @@
 
 namespace nekit {
 namespace stream_coder {
+
+class DirectStreamCoder;
+
+using DirectStreamCoderFactory = StreamCoderFactory<DirectStreamCoder>;
+
 class DirectStreamCoder : public StreamCoderInterface {
  public:
+  using Factory = DirectStreamCoderFactory;
+
   ActionRequest Negotiate();
 
   utils::BufferReserveSize EncodeReserve() const;
@@ -41,10 +48,5 @@ class DirectStreamCoder : public StreamCoderInterface {
   bool forwarding() const;
 };
 
-class DirectStreamCoderFactory : public StreamCoderFactoryInterface {
- public:
-  std::unique_ptr<StreamCoderInterface> Build(
-      std::shared_ptr<utils::Session> session) override;
-};
 }  // namespace stream_coder
 }  // namespace nekit

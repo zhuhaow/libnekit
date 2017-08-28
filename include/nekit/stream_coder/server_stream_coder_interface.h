@@ -43,5 +43,13 @@ class ServerStreamCoderFactoryInterface {
 
   virtual std::unique_ptr<ServerStreamCoderInterface> Build() = 0;
 };
+
+template <typename StreamCoderType>
+class ServerStreamCoderFactory : public ServerStreamCoderFactoryInterface {
+ public:
+  std::unique_ptr<ServerStreamCoderInterface> Build() override {
+    return std::make_unique<StreamCoderType>();
+  }
+};
 }  // namespace stream_coder
 }  // namespace nekit

@@ -30,8 +30,53 @@
 
 namespace nekit {
 namespace stream_coder {
+
+class ShadowsocksAeadStreamCoder;
+
+template <template <crypto::Action> class Cipher>
+class ShadowsocksAeadStreamCoderFactory : public StreamCoderFactoryInterface {
+ public:
+  static_assert(nekit::crypto::is_aead_cipher<
+                    Cipher<crypto::Action::Encryption>>::value &&
+                    nekit::crypto::is_aead_cipher<
+                        Cipher<crypto::Action::Decryption>>::value,
+                "Must be a cipher using AEAD.");
+
+  ShadowsocksAeadStreamCoderFactory(const std::string& key) {
+    size_t key_size = Cipher<crypto::Action::Encryption>{}.key_size();
+    size_t iv_size = Cipher<crypto::Action::Encryption>{}.iv_size();
+
+    key_ = std::make_unique<uint8_t[]>(key_size);
+    crypto::KeyGenerator::ShadowsocksGenerate(
+        reinterpret_cast<const uint8_t*>(key.c_str()), key.size(), key_.get(),
+        key_size, nullptr, iv_size);
+  }
+
+  std::unique_ptr<StreamCoderInterface> Build(
+      std::shared_ptr<utils::Session> session) {
+    switch (session->type()) {
+      case utils::Session::Type::Address:
+        return std::make_unique<ShadowsocksAeadStreamCoder>(
+            session->address(), session->port(),
+            std::make_unique<Cipher<crypto::Action::Encryption>>(),
+            std::make_unique<Cipher<crypto::Action::Decryption>>(), key_.get());
+      case utils::Session::Type::Domain:
+        return std::make_unique<ShadowsocksAeadStreamCoder>(
+            session->domain()->domain(), session->port(),
+            std::make_unique<Cipher<crypto::Action::Encryption>>(),
+            std::make_unique<Cipher<crypto::Action::Decryption>>(), key_.get());
+    }
+  }
+
+ private:
+  std::unique_ptr<uint8_t[]> key_;
+};
+
 class ShadowsocksAeadStreamCoder : public StreamCoderInterface {
  public:
+  template <template <crypto::Action> class Cipher>
+  using Factory = ShadowsocksAeadStreamCoderFactory<Cipher>;
+
   ShadowsocksAeadStreamCoder(
       const std::string& domain, uint16_t port,
       std::unique_ptr<crypto::StreamCipherInterface>&& encryptor,
@@ -85,37 +130,5 @@ class ShadowsocksAeadStreamCoder : public StreamCoderInterface {
   std::error_code last_error_;
 };
 
-template <template <crypto::Action action_> class Cipher>
-class ShadowsocksAeadStreamCoderFactory : public StreamCoderFactoryInterface {
- public:
-  ShadowsocksAeadStreamCoderFactory(const std::string& key) {
-    size_t key_size = Cipher<crypto::Action::Encryption>{}.key_size();
-    size_t iv_size = Cipher<crypto::Action::Encryption>{}.iv_size();
-
-    key_ = std::make_unique<uint8_t[]>(key_size);
-    crypto::KeyGenerator::ShadowsocksGenerate(
-        reinterpret_cast<const uint8_t*>(key.c_str()), key.size(), key_.get(),
-        key_size, nullptr, iv_size);
-  }
-
-  std::unique_ptr<StreamCoderInterface> Build(
-      std::shared_ptr<utils::Session> session) {
-    switch (session->type()) {
-      case utils::Session::Type::Address:
-        return std::make_unique<ShadowsocksAeadStreamCoder>(
-            session->address(), session->port(),
-            std::make_unique<Cipher<crypto::Action::Encryption>>(),
-            std::make_unique<Cipher<crypto::Action::Decryption>>(), key_.get());
-      case utils::Session::Type::Domain:
-        return std::make_unique<ShadowsocksAeadStreamCoder>(
-            session->domain()->domain(), session->port(),
-            std::make_unique<Cipher<crypto::Action::Encryption>>(),
-            std::make_unique<Cipher<crypto::Action::Decryption>>(), key_.get());
-    }
-  }
-
- private:
-  std::unique_ptr<uint8_t[]> key_;
-};
 }  // namespace stream_coder
 }  // namespace nekit

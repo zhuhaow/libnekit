@@ -273,9 +273,5 @@ std::error_code make_error_code(HttpServerStreamCoder::ErrorCode ec) {
   return {static_cast<int>(ec), httpServerStreamCoderErrorCategory};
 }
 
-std::unique_ptr<ServerStreamCoderInterface>
-HttpServerStreamCoderFactory::Build() {
-  return std::make_unique<HttpServerStreamCoder>();
-}
 }  // namespace stream_coder
 }  // namespace nekit

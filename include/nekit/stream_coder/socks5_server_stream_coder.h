@@ -29,8 +29,16 @@
 
 namespace nekit {
 namespace stream_coder {
+
+class Socks5ServerStreamCoder;
+
+using Socks5ServerStreamCoderFactory =
+    ServerStreamCoderFactory<Socks5ServerStreamCoder>;
+
 class Socks5ServerStreamCoder final : public ServerStreamCoderInterface {
  public:
+  using Factory = Socks5ServerStreamCoderFactory;
+
   enum class ErrorCode {
     NoError = 0,
     RequestIncomplete,
@@ -70,17 +78,11 @@ class Socks5ServerStreamCoder final : public ServerStreamCoderInterface {
 
 std::error_code make_error_code(Socks5ServerStreamCoder::ErrorCode ec);
 
-class Socks5ServerStreamCoderFactory
-    : public ServerStreamCoderFactoryInterface {
- public:
-  std::unique_ptr<ServerStreamCoderInterface> Build() override;
-};
 }  // namespace stream_coder
 }  // namespace nekit
 
 namespace std {
 template <>
 struct is_error_code_enum<
-    nekit::stream_coder::Socks5ServerStreamCoder::ErrorCode> : true_type {
-};
+    nekit::stream_coder::Socks5ServerStreamCoder::ErrorCode> : true_type {};
 }  // namespace std

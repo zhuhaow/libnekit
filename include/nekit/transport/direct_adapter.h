@@ -48,7 +48,7 @@ class DirectAdapter : public AdapterInterface, private utils::LifeTime {
   std::shared_ptr<ConnectorFactoryInterface> connector_factory_;
   std::unique_ptr<ConnectorInterface> connector_;
 
-  stream_coder::DirectStreamCoderFactory stream_coder_factory_{};
+  stream_coder::DirectStreamCoder::Factory stream_coder_factory_{};
   EventHandler handler_;
 
   utils::Cancelable connector_cancelable_;

@@ -51,10 +51,5 @@ std::error_code DirectStreamCoder::GetLastError() const {
 
 bool DirectStreamCoder::forwarding() const { return true; }
 
-std::unique_ptr<StreamCoderInterface> DirectStreamCoderFactory::Build(
-    std::shared_ptr<utils::Session> session) {
-  (void)session;
-  return std::make_unique<DirectStreamCoder>();
-}
 }  // namespace stream_coder
 }  // namespace nekit

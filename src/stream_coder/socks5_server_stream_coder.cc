@@ -279,9 +279,5 @@ std::error_code make_error_code(Socks5ServerStreamCoder::ErrorCode ec) {
   return {static_cast<int>(ec), socks5ServerStreamCoderErrorCategory};
 }
 
-std::unique_ptr<ServerStreamCoderInterface>
-Socks5ServerStreamCoderFactory::Build() {
-  return std::make_unique<Socks5ServerStreamCoder>();
-}
 }  // namespace stream_coder
 }  // namespace nekit
