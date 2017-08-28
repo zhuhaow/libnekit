@@ -30,8 +30,28 @@
 
 namespace nekit {
 namespace transport {
+
+class TcpConnector;
+
+class TcpConnectorFactory : public ConnectorFactoryInterface {
+ public:
+  explicit TcpConnectorFactory(boost::asio::io_service& io);
+
+  std::unique_ptr<ConnectorInterface> Build(
+      const boost::asio::ip::address& address, uint16_t port) override;
+
+  std::unique_ptr<ConnectorInterface> Build(
+      std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses,
+      uint16_t port) override;
+
+  std::unique_ptr<ConnectorInterface> Build(
+      std::shared_ptr<utils::Domain> domain, uint16_t port) override;
+};
+
 class TcpConnector : public ConnectorInterface, private utils::LifeTime {
  public:
+  using Factory = TcpConnectorFactory;
+
   TcpConnector(const boost::asio::ip::address& address, uint16_t port,
                boost::asio::io_service& io);
 
@@ -64,19 +84,5 @@ class TcpConnector : public ConnectorInterface, private utils::LifeTime {
   bool connecting_{false};
 };
 
-class TcpConnectorFactory : public ConnectorFactoryInterface {
- public:
-  explicit TcpConnectorFactory(boost::asio::io_service& io);
-
-  std::unique_ptr<ConnectorInterface> Build(
-      const boost::asio::ip::address& address, uint16_t port) override;
-
-  std::unique_ptr<ConnectorInterface> Build(
-      std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses,
-      uint16_t port) override;
-
-  std::unique_ptr<ConnectorInterface> Build(
-      std::shared_ptr<utils::Domain> domain, uint16_t port) override;
-};
 }  // namespace transport
 }  // namespace nekit

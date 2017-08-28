@@ -30,8 +30,26 @@
 
 namespace nekit {
 namespace transport {
+
+class DirectAdapter;
+
+class DirectAdapterFactory : public AdapterFactoryInterface {
+ public:
+  DirectAdapterFactory(
+      boost::asio::io_service& io,
+      std::shared_ptr<ConnectorFactoryInterface> connector_factory);
+
+  std::unique_ptr<AdapterInterface> Build(
+      std::shared_ptr<utils::Session> session) override;
+
+ private:
+  std::shared_ptr<ConnectorFactoryInterface> connector_factory_;
+};
+
 class DirectAdapter : public AdapterInterface, private utils::LifeTime {
  public:
+  using Factory = DirectAdapterFactory;
+
   enum class ErrorCode { NoError, NoAddress };
 
   DirectAdapter(boost::asio::io_service& io,
@@ -54,17 +72,5 @@ class DirectAdapter : public AdapterInterface, private utils::LifeTime {
   utils::Cancelable connector_cancelable_;
 };
 
-class DirectAdapterFactory : public AdapterFactoryInterface {
- public:
-  DirectAdapterFactory(
-      boost::asio::io_service& io,
-      std::shared_ptr<ConnectorFactoryInterface> connector_factory);
-
-  std::unique_ptr<AdapterInterface> Build(
-      std::shared_ptr<utils::Session> session) override;
-
- private:
-  std::shared_ptr<ConnectorFactoryInterface> connector_factory_;
-};
 }  // namespace transport
 }  // namespace nekit

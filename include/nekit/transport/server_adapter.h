@@ -29,8 +29,43 @@
 
 namespace nekit {
 namespace transport {
+
+class ServerAdapter;
+
+class ServerAdapterFactory : public AdapterFactoryInterface {
+ public:
+  ServerAdapterFactory(
+      boost::asio::io_service &io,
+      std::shared_ptr<ConnectorFactoryInterface> connector_factory,
+      std::shared_ptr<stream_coder::StreamCoderFactoryInterface>
+          stream_coder_factory,
+      boost::asio::ip::address address, uint16_t port);
+
+  ServerAdapterFactory(
+      boost::asio::io_service &io,
+      std::shared_ptr<ConnectorFactoryInterface> connector_factory,
+      std::shared_ptr<stream_coder::StreamCoderFactoryInterface>
+          stream_coder_factory,
+      std::string domain, uint16_t port, utils::ResolverInterface *resolver);
+
+  std::unique_ptr<AdapterInterface> Build(
+      std::shared_ptr<utils::Session> session) override;
+
+ private:
+  std::shared_ptr<ConnectorFactoryInterface> connector_factory_;
+  std::shared_ptr<stream_coder::StreamCoderFactoryInterface>
+      stream_coder_factory_;
+  utils::ResolverInterface *resolver_;
+
+  boost::asio::ip::address address_;
+  std::string domain_;
+  uint16_t port_;
+};
+
 class ServerAdapter : public AdapterInterface, private utils::LifeTime {
  public:
+  using Factory = ServerAdapterFactory;
+
   ServerAdapter(boost::asio::io_service &io,
                 std::shared_ptr<utils::Session> session,
                 std::shared_ptr<ConnectorFactoryInterface> connector_factory,
@@ -64,34 +99,5 @@ class ServerAdapter : public AdapterInterface, private utils::LifeTime {
   utils::Cancelable cancelable_;
 };
 
-class ServerAdapterFactory : public AdapterFactoryInterface {
- public:
-  ServerAdapterFactory(
-      boost::asio::io_service &io,
-      std::shared_ptr<ConnectorFactoryInterface> connector_factory,
-      std::shared_ptr<stream_coder::StreamCoderFactoryInterface>
-          stream_coder_factory,
-      boost::asio::ip::address address, uint16_t port);
-
-  ServerAdapterFactory(
-      boost::asio::io_service &io,
-      std::shared_ptr<ConnectorFactoryInterface> connector_factory,
-      std::shared_ptr<stream_coder::StreamCoderFactoryInterface>
-          stream_coder_factory,
-      std::string domain, uint16_t port, utils::ResolverInterface *resolver);
-
-  std::unique_ptr<AdapterInterface> Build(
-      std::shared_ptr<utils::Session> session) override;
-
- private:
-  std::shared_ptr<ConnectorFactoryInterface> connector_factory_;
-  std::shared_ptr<stream_coder::StreamCoderFactoryInterface>
-      stream_coder_factory_;
-  utils::ResolverInterface *resolver_;
-
-  boost::asio::ip::address address_;
-  std::string domain_;
-  uint16_t port_;
-};
 }  // namespace transport
 }  // namespace nekit
