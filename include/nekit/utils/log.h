@@ -23,6 +23,8 @@
 // This file is only for libnekit project. Do not use it in the
 // application.
 
+#pragma once
+
 #include "logger.h"
 
 #define NELOGGER nekit::utils::default_logger()
