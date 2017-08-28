@@ -89,7 +89,6 @@ set(SOURCES
   src/rule/subnet_rule.cc
   src/transport/direct_adapter.cc
   src/instance.cc
-  src/transport/socks5_listener.cc
   src/stream_coder/shadowsocks_stream_coder.cc
   src/stream_coder/shadowsocks_aead_stream_coder.cc
   src/stream_coder/shadowsocks_stream_coder_error.cc
