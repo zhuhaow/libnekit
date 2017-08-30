@@ -152,8 +152,8 @@ using ChaCha20Cipher =
 template <Action action_>
 using ChaCha20IetfCipher =
     SodiumStreamCipher<action_, uint32_t, crypto_stream_chacha20_ietf_xor_ic,
-                       crypto_stream_chacha20_KEYBYTES,
-                       crypto_stream_chacha20_NONCEBYTES, 64>;
+                       crypto_stream_chacha20_IETF_KEYBYTES,
+                       crypto_stream_chacha20_IETF_NONCEBYTES, 64>;
 
 template <Action action_>
 using XChaCha20Cipher =
