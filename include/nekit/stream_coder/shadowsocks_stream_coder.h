@@ -42,7 +42,10 @@ class ShadowsocksStreamCoderFactory : public StreamCoderFactoryInterface {
                         Cipher<crypto::Action::Decryption>>::value,
                 "Must not be a cipher using AEAD.");
 
-  ShadowsocksStreamCoderFactory(const std::string& key) {
+  ShadowsocksStreamCoderFactory(
+      const std::string& key,
+      std::shared_ptr<utils::Endpoint> endpoint = nullptr)
+      : next_hop_endpoint_{endpoint} {
     size_t key_size = Cipher<crypto::Action::Encryption>{}.key_size();
     size_t iv_size = Cipher<crypto::Action::Encryption>{}.iv_size();
 
@@ -54,14 +57,14 @@ class ShadowsocksStreamCoderFactory : public StreamCoderFactoryInterface {
 
   ShadowsocksStreamCoderFactory(const std::string& key,
                                 const std::string& domain, uint16_t port)
-      : ShadowsocksStreamCoderFactory{key},
-        next_hop_endpoint_{std::make_shared<utils::Endpoint>(domain, port)} {}
+      : ShadowsocksStreamCoderFactory{
+            key, std::make_shared<utils::Endpoint>(domain, port)} {}
 
   ShadowsocksStreamCoderFactory(const std::string& key,
                                 const boost::asio::ip::address& address,
                                 uint16_t port)
-      : ShadowsocksStreamCoderFactory{key},
-        next_hop_endpoint_{std::make_shared<utils::Endpoint>(address, port)} {}
+      : ShadowsocksStreamCoderFactory{
+            key, std::make_shared<utils::Endpoint>(address, port)} {}
 
   ~ShadowsocksStreamCoderFactory() { free(key_); }
 
