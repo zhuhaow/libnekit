@@ -96,6 +96,8 @@ class Endpoint : LifeTime {
     return resolved_addresses_;
   }
 
+  std::shared_ptr<Endpoint> Dup() const;
+
  private:
   Type type_;
   std::string domain_;

@@ -115,5 +115,20 @@ void Endpoint::CancelResolve() {
 
   resolve_cancelable_.Cancel();
 }
+
+std::shared_ptr<Endpoint> Endpoint::Dup() const {
+  std::shared_ptr<Endpoint> endpoint_;
+  switch (type_) {
+    case Type::Address:
+      endpoint_ = std::make_shared<Endpoint>(address_, port_);
+    case Type::Domain:
+      endpoint_ = std::make_shared<Endpoint>(domain_, port_);
+  }
+
+  endpoint_->set_ip_protocol(ip_protocol_);
+
+  return endpoint_;
+}
+
 }  // namespace utils
 }  // namespace nekit
