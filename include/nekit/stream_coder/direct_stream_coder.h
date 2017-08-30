@@ -27,12 +27,17 @@
 namespace nekit {
 namespace stream_coder {
 
-class DirectStreamCoder;
-
-using DirectStreamCoderFactory = StreamCoderFactory<DirectStreamCoder>;
-
 class DirectStreamCoder : public StreamCoderInterface {
  public:
+  class DirectStreamCoderFactory : public StreamCoderFactoryInterface {
+   public:
+    std::unique_ptr<StreamCoderInterface> Build(
+        std::shared_ptr<utils::Session> session) override {
+      (void)session;
+      return std::make_unique<DirectStreamCoder>();
+    }
+  };
+
   using Factory = DirectStreamCoderFactory;
 
   ActionRequest Negotiate();
