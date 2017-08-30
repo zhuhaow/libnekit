@@ -52,16 +52,35 @@ class ShadowsocksAeadStreamCoderFactory : public StreamCoderFactoryInterface {
         key_size, nullptr, iv_size);
   }
 
+  ShadowsocksAeadStreamCoderFactory(const std::string& key,
+                                    const std::string& domain, uint16_t port)
+      : ShadowsocksAeadStreamCoderFactory{key},
+        next_hop_endpoint_{std::make_shared<utils::Endpoint>(domain, port)} {}
+
+  ShadowsocksAeadStreamCoderFactory(const std::string& key,
+                                    const boost::asio::ip::address& address,
+                                    uint16_t port)
+      : ShadowsocksAeadStreamCoderFactory{key},
+        next_hop_endpoint_{std::make_shared<utils::Endpoint>(address, port)} {}
+
   std::unique_ptr<StreamCoderInterface> Build(
       std::shared_ptr<utils::Session> session) {
-    return std::make_unique<ShadowsocksAeadStreamCoder>(
-        session->endpoint(),
-        std::make_unique<Cipher<crypto::Action::Encryption>>(),
-        std::make_unique<Cipher<crypto::Action::Decryption>>(), key_.get());
+    if (next_hop_endpoint_) {
+      return std::make_unique<ShadowsocksAeadStreamCoder>(
+          next_hop_endpoint_->Dup(),
+          std::make_unique<Cipher<crypto::Action::Encryption>>(),
+          std::make_unique<Cipher<crypto::Action::Decryption>>(), key_.get());
+    } else {
+      return std::make_unique<ShadowsocksAeadStreamCoder>(
+          session->endpoint(),
+          std::make_unique<Cipher<crypto::Action::Encryption>>(),
+          std::make_unique<Cipher<crypto::Action::Decryption>>(), key_.get());
+    }
   }
 
  private:
   std::unique_ptr<uint8_t[]> key_;
+  std::shared_ptr<utils::Endpoint> next_hop_endpoint_;
 };  // namespace stream_coder
 
 class ShadowsocksAeadStreamCoder : public StreamCoderInterface {

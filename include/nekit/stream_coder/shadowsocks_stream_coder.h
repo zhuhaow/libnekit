@@ -40,7 +40,6 @@ class ShadowsocksStreamCoderFactory : public StreamCoderFactoryInterface {
                     Cipher<crypto::Action::Encryption>>::value &&
                     !nekit::crypto::is_aead_cipher<
                         Cipher<crypto::Action::Decryption>>::value,
-
                 "Must not be a cipher using AEAD.");
 
   ShadowsocksStreamCoderFactory(const std::string& key) {
@@ -53,18 +52,37 @@ class ShadowsocksStreamCoderFactory : public StreamCoderFactoryInterface {
         key_size, nullptr, iv_size);
   }
 
+  ShadowsocksStreamCoderFactory(const std::string& key,
+                                const std::string& domain, uint16_t port)
+      : ShadowsocksStreamCoderFactory{key},
+        next_hop_endpoint_{std::make_shared<utils::Endpoint>(domain, port)} {}
+
+  ShadowsocksStreamCoderFactory(const std::string& key,
+                                const boost::asio::ip::address& address,
+                                uint16_t port)
+      : ShadowsocksStreamCoderFactory{key},
+        next_hop_endpoint_{std::make_shared<utils::Endpoint>(address, port)} {}
+
   ~ShadowsocksStreamCoderFactory() { free(key_); }
 
   std::unique_ptr<StreamCoderInterface> Build(
       std::shared_ptr<utils::Session> session) {
-    return std::make_unique<ShadowsocksStreamCoder>(
-        session->endpoint(),
-        std::make_unique<Cipher<crypto::Action::Encryption>>(),
-        std::make_unique<Cipher<crypto::Action::Decryption>>(), key_);
+    if (next_hop_endpoint_) {
+      return std::make_unique<ShadowsocksStreamCoder>(
+          next_hop_endpoint_->Dup(),
+          std::make_unique<Cipher<crypto::Action::Encryption>>(),
+          std::make_unique<Cipher<crypto::Action::Decryption>>(), key_);
+    } else {
+      return std::make_unique<ShadowsocksStreamCoder>(
+          session->endpoint(),
+          std::make_unique<Cipher<crypto::Action::Encryption>>(),
+          std::make_unique<Cipher<crypto::Action::Decryption>>(), key_);
+    }
   }
 
  private:
   uint8_t* key_;
+  std::shared_ptr<utils::Endpoint> next_hop_endpoint_;
 };  // namespace stream_coder
 
 class ShadowsocksStreamCoder : public StreamCoderInterface {
