@@ -45,7 +45,7 @@ TcpConnector::TcpConnector(const boost::asio::ip::address& address,
 
 TcpConnector::TcpConnector(std::shared_ptr<utils::Endpoint> endpoint,
                            boost::asio::io_service& io)
-    : ConnectorInterface{io}, socket_{io}, endpoint_{endpoint} {}
+    : ConnectorInterface{io}, socket_{io}, endpoint_{endpoint}, port_{endpoint->port()} {}
 
 const utils::Cancelable& TcpConnector::Connect(EventHandler handler) {
   assert(!connecting_);
@@ -123,7 +123,7 @@ void TcpConnector::DoConnect(EventHandler handler) {
     return;
   }
 
-  if ((!addresses_ && current_ind_) || current_ind_ >= addresses_->size()) {
+  if ((!addresses_ && current_ind_) || (addresses_ && current_ind_ >= addresses_->size())) {
     NEERROR << "Fail to connect to all addresses, the last known error is "
             << last_error_ << ".";
     handler(nullptr, last_error_);
