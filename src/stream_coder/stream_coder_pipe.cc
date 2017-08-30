@@ -132,6 +132,7 @@ ActionRequest StreamCoderPipe::NegotiateNextCoder() {
         return request;
       case ActionRequest::Continue:
       case ActionRequest::Event:
+      case ActionRequest::ReadyAfterRead:
         assert(false);  // unreachable
     }
   }
@@ -233,6 +234,7 @@ ActionRequest StreamCoderPipe::EncodeForNegotiation(utils::Buffer* buffer) {
       return action;
     case ActionRequest::Continue:
     case ActionRequest::Event:
+    case ActionRequest::ReadyAfterRead:
       assert(false);  // not reachable
   }
 }
@@ -287,6 +289,7 @@ ActionRequest StreamCoderPipe::DecodeForNegotiation(utils::Buffer* buffer) {
       break;
     case ActionRequest::Continue:
     case ActionRequest::Event:
+    case ActionRequest::ReadyAfterRead:
       assert(false);  // not reachable
   }
 

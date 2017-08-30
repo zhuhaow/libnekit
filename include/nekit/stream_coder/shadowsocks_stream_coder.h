@@ -57,23 +57,15 @@ class ShadowsocksStreamCoderFactory : public StreamCoderFactoryInterface {
 
   std::unique_ptr<StreamCoderInterface> Build(
       std::shared_ptr<utils::Session> session) {
-    switch (session->type()) {
-      case utils::Session::Type::Address:
-        return std::make_unique<ShadowsocksStreamCoder>(
-            session->address(), session->port(),
-            std::make_unique<Cipher<crypto::Action::Encryption>>(),
-            std::make_unique<Cipher<crypto::Action::Decryption>>(), key_);
-      case utils::Session::Type::Domain:
-        return std::make_unique<ShadowsocksStreamCoder>(
-            session->domain()->domain(), session->port(),
-            std::make_unique<Cipher<crypto::Action::Encryption>>(),
-            std::make_unique<Cipher<crypto::Action::Decryption>>(), key_);
-    }
+    return std::make_unique<ShadowsocksStreamCoder>(
+        session->endpoint(),
+        std::make_unique<Cipher<crypto::Action::Encryption>>(),
+        std::make_unique<Cipher<crypto::Action::Decryption>>(), key_);
   }
 
  private:
   uint8_t* key_;
-};
+};  // namespace stream_coder
 
 class ShadowsocksStreamCoder : public StreamCoderInterface {
  public:
@@ -81,12 +73,7 @@ class ShadowsocksStreamCoder : public StreamCoderInterface {
   using Factory = class ShadowsocksStreamCoderFactory<Cipher>;
 
   ShadowsocksStreamCoder(
-      const std::string& domain, uint16_t port,
-      std::unique_ptr<crypto::StreamCipherInterface>&& encryptor,
-      std::unique_ptr<crypto::StreamCipherInterface>&& decryptor,
-      const uint8_t* key);
-  ShadowsocksStreamCoder(
-      const boost::asio::ip::address& address, uint16_t port,
+      std::shared_ptr<utils::Endpoint> endpoint,
       std::unique_ptr<crypto::StreamCipherInterface>&& encryptor,
       std::unique_ptr<crypto::StreamCipherInterface>&& decryptor,
       const uint8_t* key);
@@ -106,8 +93,7 @@ class ShadowsocksStreamCoder : public StreamCoderInterface {
   bool forwarding() const override;
 
  private:
-  std::string domain_;
-  uint16_t port_;
+  std::shared_ptr<utils::Endpoint> endpoint_;
 
   std::unique_ptr<crypto::StreamCipherInterface> encryptor_, decryptor_;
   uint8_t* encryptor_iv_{nullptr};

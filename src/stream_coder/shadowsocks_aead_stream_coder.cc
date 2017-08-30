@@ -34,12 +34,11 @@ namespace nekit {
 namespace stream_coder {
 
 ShadowsocksAeadStreamCoder::ShadowsocksAeadStreamCoder(
-    const std::string& domain, uint16_t port,
+    std::shared_ptr<utils::Endpoint> endpoint,
     std::unique_ptr<crypto::StreamCipherInterface>&& encryptor,
     std::unique_ptr<crypto::StreamCipherInterface>&& decryptor,
     const uint8_t* key)
-    : domain_{domain},
-      port_{port},
+    : endpoint_{endpoint},
       encryptor_{std::move(encryptor)},
       decryptor_{std::move(decryptor)} {
   key_ = std::make_unique<uint8_t[]>(encryptor_->key_size());
@@ -68,15 +67,6 @@ ShadowsocksAeadStreamCoder::ShadowsocksAeadStreamCoder(
       std::make_unique<uint8_t[]>(decryptor_->tag_size() + 2);
 }
 
-ShadowsocksAeadStreamCoder::ShadowsocksAeadStreamCoder(
-    const boost::asio::ip::address& address, uint16_t port,
-    std::unique_ptr<crypto::StreamCipherInterface>&& encryptor,
-    std::unique_ptr<crypto::StreamCipherInterface>&& decryptor,
-    const uint8_t* key)
-    : ShadowsocksAeadStreamCoder(address.to_string(), port,
-                                 std::move(encryptor), std::move(decryptor),
-                                 key) {}
-
 ActionRequest ShadowsocksAeadStreamCoder::Negotiate() {
   return ActionRequest::Ready;
 }
@@ -88,13 +78,13 @@ utils::BufferReserveSize ShadowsocksAeadStreamCoder::EncodeReserve() const {
 
   // salt and key have same size.
   return {encryptor_->key_size() + 2 + encryptor_->tag_size() + 1 + 1 +
-              domain_.size() + 2,
+              endpoint_->host().size() + 2,
           encryptor_->tag_size()};
 }
 
 ActionRequest ShadowsocksAeadStreamCoder::Encode(utils::Buffer* buffer) {
-  if (buffer->size() >
-      0x3FFF - (2 + encryptor_->tag_size() + 1 + 1 + domain_.size() + 2)) {
+  if (buffer->size() > 0x3FFF - (2 + encryptor_->tag_size() + 1 + 1 +
+                                 endpoint_->host().size() + 2)) {
     last_error_ = ShadowsocksStreamCoderErrorCode::InputBufferTooLarge;
     return ActionRequest::ErrorHappened;
   }
@@ -109,7 +99,7 @@ ActionRequest ShadowsocksAeadStreamCoder::Encode(utils::Buffer* buffer) {
 
   if (!send_header_) {
     buffer->ReleaseFront(encryptor_->key_size() + 2 + encryptor_->tag_size() +
-                         1 + 1 + domain_.size() + 2);
+                         1 + 1 + endpoint_->host().size() + 2);
     buffer->ReleaseBack(encryptor_->tag_size());
 
     memcpy(buffer->buffer(), encryptor_salt_.get(), encryptor_->key_size());
@@ -118,14 +108,14 @@ ActionRequest ShadowsocksAeadStreamCoder::Encode(utils::Buffer* buffer) {
            2 + encryptor_->tag_size();
 
     *data++ = 3;
-    *data++ = uint8_t(domain_.size());
-    memcpy(data, domain_.c_str(), domain_.size());
-    data += domain_.size();
-    *reinterpret_cast<uint16_t*>(data) = htons(port_);
+    *data++ = uint8_t(endpoint_->host().size());
+    memcpy(data, endpoint_->host().c_str(), endpoint_->host().size());
+    data += endpoint_->host().size();
+    *reinterpret_cast<uint16_t*>(data) = htons(endpoint_->port());
 
     data = static_cast<uint8_t*>(buffer->buffer()) + encryptor_->key_size() +
            2 + encryptor_->tag_size();
-    data_len += 2 + domain_.size() + 2;
+    data_len += 2 + endpoint_->host().size() + 2;
 
     buffer_head =
         static_cast<uint8_t*>(buffer->buffer()) + encryptor_->key_size();
@@ -216,10 +206,10 @@ ActionRequest ShadowsocksAeadStreamCoder::Decode(utils::Buffer* buffer) {
           decryptor_->Reset();
 
           next_encrypt_data_size_ = ntohs(next_block_length);
-            if (next_encrypt_data_size_ > 0x3FFF) {
-                last_error_ = ShadowsocksStreamCoderErrorCode::LengthIsTooLarge;
-                return ActionRequest::ErrorHappened;
-            }
+          if (next_encrypt_data_size_ > 0x3FFF) {
+            last_error_ = ShadowsocksStreamCoderErrorCode::LengthIsTooLarge;
+            return ActionRequest::ErrorHappened;
+          }
           pending_length_data_size_ = 0;
         }
       } else {
@@ -236,11 +226,11 @@ ActionRequest ShadowsocksAeadStreamCoder::Decode(utils::Buffer* buffer) {
         BumpDecryptorNonce();
         decryptor_->Reset();
 
-          next_encrypt_data_size_ = ntohs(next_block_length);
-          if (next_encrypt_data_size_ > 0x3FFF) {
-              last_error_ = ShadowsocksStreamCoderErrorCode::LengthIsTooLarge;
-              return ActionRequest::ErrorHappened;
-          }
+        next_encrypt_data_size_ = ntohs(next_block_length);
+        if (next_encrypt_data_size_ > 0x3FFF) {
+          last_error_ = ShadowsocksStreamCoderErrorCode::LengthIsTooLarge;
+          return ActionRequest::ErrorHappened;
+        }
         data += 2 + decryptor_->tag_size();
         remain -= 2 + decryptor_->tag_size();
       }

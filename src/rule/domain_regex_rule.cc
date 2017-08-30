@@ -40,11 +40,11 @@ bool DomainRegexRule::AddRegex(const std::string &expression) {
 }
 
 MatchResult DomainRegexRule::Match(std::shared_ptr<utils::Session> session) {
-  if (session->type() == utils::Session::Type::Address) {
+  if (session->endpoint()->type() == utils::Endpoint::Type::Address) {
     return MatchResult::NotMatch;
   }
 
-  const std::string &domain = session->domain()->domain();
+  const std::string &domain = session->endpoint()->host();
   for (const auto &regex : regex_list_) {
     if (std::regex_search(domain, regex)) {
       return MatchResult::Match;

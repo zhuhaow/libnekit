@@ -49,11 +49,11 @@ class DomainAffixRule : public RuleInterface {
   }
 
   MatchResult Match(std::shared_ptr<utils::Session> session) override {
-    if (session->type() == utils::Session::Type::Address) {
+    if (session->endpoint()->type() == utils::Endpoint::Type::Address) {
       return MatchResult::NotMatch;
     }
 
-    if (trie_.MatchPrefixWith(session->domain()->domain())) {
+    if (trie_.MatchPrefixWith(session->endpoint()->host())) {
       return MatchResult::Match;
     } else {
       return MatchResult::NotMatch;

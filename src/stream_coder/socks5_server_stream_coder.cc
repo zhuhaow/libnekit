@@ -146,7 +146,7 @@ ActionRequest Socks5ServerStreamCoder::Decode(utils::Buffer *buffer) {
         }
       }
 
-      session_->setPort(ntohs(*reinterpret_cast<uint16_t *>(data)));
+      session_->endpoint()->set_port(ntohs(*reinterpret_cast<uint16_t *>(data)));
       return ActionRequest::Event;
     }
   }
@@ -159,11 +159,11 @@ utils::BufferReserveSize Socks5ServerStreamCoder::EncodeReserve() const {
     case Status::ReadingVersion:
       return {0, 2};
     case Status::ReadingRequest:
-      switch (session_->type()) {
-        case utils::Session::Type::Domain:
+      switch (session_->endpoint()->type()) {
+        case utils::Endpoint::Type::Domain:
           return {0, 10};
-        case utils::Session::Type::Address:
-          if (session_->address().is_v4()) {
+        case utils::Endpoint::Type::Address:
+          if (session_->endpoint()->address().is_v4()) {
             return {0, 10};
           } else {
             return {0, 22};
@@ -188,13 +188,13 @@ ActionRequest Socks5ServerStreamCoder::Encode(utils::Buffer *buffer) {
     case Status::ReadingRequest: {
       std::size_t len;
       uint8_t type;
-      switch (session_->type()) {
-        case utils::Session::Type::Domain:
+      switch (session_->endpoint()->type()) {
+        case utils::Endpoint::Type::Domain:
           len = 10;
           type = 1;
           break;
-        case utils::Session::Type::Address:
-          if (session_->address().is_v4()) {
+        case utils::Endpoint::Type::Address:
+          if (session_->endpoint()->address().is_v4()) {
             len = 10;
             type = 1;
           } else {

@@ -143,7 +143,7 @@ void Tunnel::ProcessLocalNegotiation(ActionRequest request) {
 
         NEINFO << "Read polling finished, processing pending action "
                << static_cast<int>(pending_action_) << " for session "
-               << session_->domain()->domain();
+        << session_->endpoint()->host();
         switch (pending_action_) {
           case PendingAction::None:
             break;
@@ -338,7 +338,7 @@ void Tunnel::ForwardRemote() {
 }
 
 void Tunnel::ProcessSession() {
-  session_->domain()->set_resolver(rule_manager_->resolver().get());
+  session_->endpoint()->set_resolver(rule_manager_->resolver().get());
 
   rule_cancelable_ = rule_manager_->Match(
       session_,

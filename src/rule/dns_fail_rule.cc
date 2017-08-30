@@ -29,19 +29,15 @@ DnsFailRule::DnsFailRule(
     : adapter_factory_{adapter_factory} {}
 
 MatchResult DnsFailRule::Match(std::shared_ptr<utils::Session> session) {
-  if (session->type() == utils::Session::Type::Address) {
+  if (session->endpoint()->IsAddressAvailable()) {
     return MatchResult::NotMatch;
   }
 
-  if (!session->domain()->isResolved()) {
+  if (session->endpoint()->IsResolvable()) {
     return MatchResult::ResolveNeeded;
   }
 
-  if (session->domain()->isFailed()) {
-    return MatchResult::Match;
-  }
-
-  return MatchResult::NotMatch;
+  return MatchResult::Match;
 }
 
 std::unique_ptr<transport::AdapterInterface> DnsFailRule::GetAdapter(

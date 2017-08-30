@@ -54,23 +54,15 @@ class ShadowsocksAeadStreamCoderFactory : public StreamCoderFactoryInterface {
 
   std::unique_ptr<StreamCoderInterface> Build(
       std::shared_ptr<utils::Session> session) {
-    switch (session->type()) {
-      case utils::Session::Type::Address:
-        return std::make_unique<ShadowsocksAeadStreamCoder>(
-            session->address(), session->port(),
-            std::make_unique<Cipher<crypto::Action::Encryption>>(),
-            std::make_unique<Cipher<crypto::Action::Decryption>>(), key_.get());
-      case utils::Session::Type::Domain:
-        return std::make_unique<ShadowsocksAeadStreamCoder>(
-            session->domain()->domain(), session->port(),
-            std::make_unique<Cipher<crypto::Action::Encryption>>(),
-            std::make_unique<Cipher<crypto::Action::Decryption>>(), key_.get());
-    }
+    return std::make_unique<ShadowsocksAeadStreamCoder>(
+        session->endpoint(),
+        std::make_unique<Cipher<crypto::Action::Encryption>>(),
+        std::make_unique<Cipher<crypto::Action::Decryption>>(), key_.get());
   }
 
  private:
   std::unique_ptr<uint8_t[]> key_;
-};
+};  // namespace stream_coder
 
 class ShadowsocksAeadStreamCoder : public StreamCoderInterface {
  public:
@@ -78,12 +70,7 @@ class ShadowsocksAeadStreamCoder : public StreamCoderInterface {
   using Factory = ShadowsocksAeadStreamCoderFactory<Cipher>;
 
   ShadowsocksAeadStreamCoder(
-      const std::string& domain, uint16_t port,
-      std::unique_ptr<crypto::StreamCipherInterface>&& encryptor,
-      std::unique_ptr<crypto::StreamCipherInterface>&& decryptor,
-      const uint8_t* key);
-  ShadowsocksAeadStreamCoder(
-      const boost::asio::ip::address& address, uint16_t port,
+      std::shared_ptr<utils::Endpoint> endpoint,
       std::unique_ptr<crypto::StreamCipherInterface>&& encryptor,
       std::unique_ptr<crypto::StreamCipherInterface>&& decryptor,
       const uint8_t* key);
@@ -106,8 +93,7 @@ class ShadowsocksAeadStreamCoder : public StreamCoderInterface {
 
   void BumpDecryptorNonce();
 
-  std::string domain_;
-  uint16_t port_;
+  std::shared_ptr<utils::Endpoint> endpoint_;
 
   std::unique_ptr<uint8_t[]> key_;
 

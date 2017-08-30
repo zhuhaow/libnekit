@@ -34,16 +34,10 @@ DirectAdapter::DirectAdapter(
 const utils::Cancelable& DirectAdapter::Open(EventHandler handler) {
   handler_ = handler;
 
-  if (session_->type() == utils::Session::Type::Address) {
-    connector_ =
-        connector_factory_->Build(session_->address(), session_->port());
-  } else {
-    connector_ =
-        connector_factory_->Build(session_->domain(), session_->port());
-  }
+  connector_ = connector_factory_->Build(session_->endpoint());
 
   return DoConnect();
-}
+}  // namespace transport
 
 const utils::Cancelable& DirectAdapter::DoConnect() {
   connector_cancelable_ =

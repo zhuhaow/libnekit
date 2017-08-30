@@ -34,19 +34,14 @@ void SubnetRule::AddSubnet(const boost::asio::ip::address &address,
 }
 
 MatchResult SubnetRule::Match(std::shared_ptr<utils::Session> session) {
-  if (session->type() == utils::Session::Type::Address) {
-    return LookUp(session->address()) ? MatchResult::Match
-                                      : MatchResult::NotMatch;
+  if (session->endpoint()->IsAddressAvailable()) {
+    return LookUp(session->endpoint()->address()) ? MatchResult::Match
+                                                  : MatchResult::NotMatch;
   } else {
-    if (session->domain()->isFailed()) {
-      return MatchResult::NotMatch;
-    }
-    if (!session->domain()->isResolved()) {
+    if (session->endpoint()->IsResolvable()) {
       return MatchResult::ResolveNeeded;
     }
-    return LookUp(session->domain()->addresses()->front())
-               ? MatchResult::Match
-               : MatchResult::NotMatch;
+    return MatchResult::NotMatch;
   }
 }
 

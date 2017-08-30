@@ -41,16 +41,14 @@ MatchResult GeoRule::Match(std::shared_ptr<utils::Session> session) {
   if (iter != session->int_cache().end()) {
     code = static_cast<utils::CountryIsoCode>(iter->second);
   } else {
-    if (session->type() == utils::Session::Type::Address) {
-      code = LookupAndCache(session, session->address());
+    if (session->endpoint()->IsAddressAvailable()) {
+      code = LookupAndCache(session, session->endpoint()->address());
     } else {
-      if (session->domain()->isFailed()) {
+      if (session->endpoint()->IsResolvable()) {
+        return MatchResult::ResolveNeeded;
+      } else {
         return MatchResult::NotMatch;
       }
-      if (!session->domain()->isResolved()) {
-        return MatchResult::ResolveNeeded;
-      }
-      code = LookupAndCache(session, session->domain()->addresses()->front());
     }
   }
 
@@ -59,7 +57,7 @@ MatchResult GeoRule::Match(std::shared_ptr<utils::Session> session) {
   } else {
     return MatchResult::NotMatch;
   }
-}
+}  // namespace rule
 
 std::unique_ptr<transport::AdapterInterface> GeoRule::GetAdapter(
     std::shared_ptr<utils::Session> session) {

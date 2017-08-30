@@ -75,13 +75,13 @@ set(SOURCES
   src/utils/session.cc
   src/utils/system_resolver.cc
   src/utils/error.cc
-  src/utils/domain.cc
   src/utils/logger.cc
   src/utils/cancelable.cc
   src/utils/maxmind.cc
   src/utils/subnet.cc
   src/utils/country_iso_code.cc
   src/utils/http_header_parser.cc
+  src/utils/endpoint.cc
   src/init.cc
   src/rule/rule_manager.cc
   src/rule/all_rule.cc

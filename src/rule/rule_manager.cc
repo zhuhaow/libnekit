@@ -79,7 +79,7 @@ void RuleManager::MatchIterator(
         // However, it seems too much hassle since `RuleManager`'s lifetime is
         // already bond to the block.
         // There is no way to silence the warning in GCC.
-        (void)session->domain()->Resolve([
+        (void)session->endpoint()->Resolve([
           this, handler, cancelable, lifetime{life_time_cancelable_pointer()},
           session, iter
         ](std::error_code ec) mutable {

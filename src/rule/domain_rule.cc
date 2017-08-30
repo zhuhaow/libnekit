@@ -33,8 +33,8 @@ void DomainRule::AddDomain(const std::string &domain) {
 }
 
 MatchResult DomainRule::Match(std::shared_ptr<utils::Session> session) {
-  if (session->type() == utils::Session::Type::Domain &&
-      domains_.find(session->domain()->domain()) != domains_.end()) {
+  if (session->endpoint()->type() == utils::Endpoint::Type::Domain &&
+      domains_.find(session->endpoint()->host()) != domains_.end()) {
     return MatchResult::Match;
   } else {
     return MatchResult::NotMatch;

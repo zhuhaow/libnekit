@@ -32,7 +32,7 @@
 #include "../utils/async_io_interface.h"
 #include "../utils/cancelable.h"
 #include "../utils/device.h"
-#include "../utils/domain.h"
+#include "../utils/endpoint.h"
 #include "connection_interface.h"
 
 namespace nekit {
@@ -66,7 +66,7 @@ class ConnectorFactoryInterface : public utils::AsyncIoInterface {
       uint16_t port) = 0;
 
   virtual std::unique_ptr<ConnectorInterface> Build(
-      std::shared_ptr<utils::Domain> domain, uint16_t port) = 0;
+      std::shared_ptr<utils::Endpoint> endpoint) = 0;
 };
 }  // namespace transport
 }  // namespace nekit

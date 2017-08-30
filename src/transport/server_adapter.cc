@@ -34,8 +34,7 @@ ServerAdapter::ServerAdapter(
       session_{session},
       connector_factory_{connector_factory},
       stream_coder_factory_{stream_coder_factory},
-      address_{address},
-      port_{port} {}
+      endpoint_{std::make_shared<utils::Endpoint>(address, port)} {}
 
 ServerAdapter::ServerAdapter(
     boost::asio::io_service &io, std::shared_ptr<utils::Session> session,
@@ -48,17 +47,13 @@ ServerAdapter::ServerAdapter(
       session_{session},
       connector_factory_{connector_factory},
       stream_coder_factory_{stream_coder_factory},
-      domain_{std::make_shared<utils::Domain>(domain)},
-      port_{port} {
-  domain_->set_resolver(resolver);
+      endpoint_{std::make_shared<utils::Endpoint>(domain, port)} {
+  endpoint_->set_resolver(resolver);
 }
 
 const utils::Cancelable &ServerAdapter::Open(EventHandler handler) {
-  if (domain_) {
-    connector_ = connector_factory_->Build(domain_, port_);
-  } else {
-    connector_ = connector_factory_->Build(address_, port_);
-  }
+  connector_ = connector_factory_->Build(endpoint_);
+
   cancelable_ = connector_->Connect([
     this, cancelable{life_time_cancelable_pointer()}, handler
   ](std::unique_ptr<ConnectionInterface> && conn, std::error_code ec) {

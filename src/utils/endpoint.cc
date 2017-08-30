@@ -20,25 +20,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "nekit/utils/domain.h"
+#include "nekit/utils/endpoint.h"
+
+#include <boost/assert.hpp>
 
 #include "nekit/utils/error.h"
 #include "nekit/utils/log.h"
 
 #undef NECHANNEL
-#define NECHANNEL "Domain"
+#define NECHANNEL "Endpoint"
 
 namespace nekit {
 namespace utils {
-Domain::Domain(std::string domain) : domain_{domain} {}
+Endpoint::Endpoint(const std::string& host, uint16_t port)
+    : domain_{host}, port_{port} {
+  boost::system::error_code ec;
+  address_ = boost::asio::ip::address::from_string(host, ec);
 
-bool Domain::operator==(const std::string& rhs) const { return domain_ == rhs; }
-
-void Domain::set_resolver(nekit::utils::ResolverInterface* resolver) {
-  resolver_ = resolver;
+  if (ec) {
+    type_ = Type::Domain;
+  } else {
+    type_ = Type::Address;
+  }
 }
 
-const Cancelable& Domain::Resolve(EventHandler handler) {
+Endpoint::Endpoint(const boost::asio::ip::address& ip, uint16_t port)
+    : type_{Type::Address},
+      domain_{ip.to_string()},
+      address_{ip},
+      port_{port} {}
+
+const Cancelable& Endpoint::Resolve(EventHandler handler) {
   assert(resolver_);
 
   if (resolved_) {
@@ -58,7 +70,7 @@ const Cancelable& Domain::Resolve(EventHandler handler) {
   return ForceResolve(handler);
 }
 
-const Cancelable& Domain::ForceResolve(EventHandler handler) {
+const Cancelable& Endpoint::ForceResolve(EventHandler handler) {
   assert(resolver_);
   assert(!resolving_);
 
@@ -81,21 +93,21 @@ const Cancelable& Domain::ForceResolve(EventHandler handler) {
         if (ec) {
           NEERROR << "Failed to resolve " << domain_ << " due to " << ec << ".";
           error_ = ec;
-          addresses_ = nullptr;
+          resolved_addresses_ = nullptr;
           handler(ec);
           return;
         }
 
         NEINFO << "Successfully resolved domain " << domain_ << ".";
 
-        addresses_ = addresses;
+        resolved_addresses_ = addresses;
         handler(ec);
       });
 
   return life_time_cancelable();
 }
 
-void Domain::Cancel() {
+void Endpoint::CancelResolve() {
   if (!resolving_) {
     NEDEBUG << "Canceling a domain not resolving, do nothing.";
     return;
@@ -103,25 +115,5 @@ void Domain::Cancel() {
 
   resolve_cancelable_.Cancel();
 }
-
-bool Domain::isResolved() const { return resolved_; }
-
-bool Domain::isResolving() const { return resolving_; }
-
-bool Domain::isFailed() const { return resolved_ && !addresses_; }
-
-bool Domain::isAddressAvailable() const {
-  return addresses_ && !addresses_->empty();
-}
-
-std::error_code Domain::error() const { return error_; }
-
-const std::string& Domain::domain() const { return domain_; }
-
-std::shared_ptr<const std::vector<boost::asio::ip::address>> Domain::addresses()
-    const {
-  return addresses_;
-}
-
 }  // namespace utils
 }  // namespace nekit

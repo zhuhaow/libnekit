@@ -92,12 +92,9 @@ class ServerAdapter : public AdapterInterface, private utils::LifeTime {
 
   std::unique_ptr<ConnectorInterface> connector_;
 
-  boost::asio::ip::address address_;
-  std::shared_ptr<utils::Domain> domain_;
-  uint16_t port_;
+  std::shared_ptr<utils::Endpoint> endpoint_;
 
   utils::Cancelable cancelable_;
 };
-
 }  // namespace transport
 }  // namespace nekit

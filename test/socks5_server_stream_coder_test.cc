@@ -58,10 +58,10 @@ TEST(SOCKS5StreamCoderSessionNegotiation, CorrectIPv4Request) {
   *data++ = 0;
   *data = 53;  // 53
   EXPECT_EQ(coder.Decode(&buffer3), ActionRequest::Event);
-  EXPECT_EQ(coder.session()->type(), Session::Type::Address);
-  EXPECT_EQ(coder.session()->address().is_v4(), true);
-  EXPECT_EQ(coder.session()->address().to_string(), "8.8.8.8");
-  EXPECT_EQ(coder.session()->port(), 53);
+  EXPECT_EQ(coder.session()->endpoint()->type(), Endpoint::Type::Address);
+  EXPECT_EQ(coder.session()->endpoint()->address().is_v4(), true);
+  EXPECT_EQ(coder.session()->endpoint()->address().to_string(), "8.8.8.8");
+  EXPECT_EQ(coder.session()->endpoint()->port(), 53);
 
   EXPECT_EQ(coder.Continue(), ActionRequest::WantWrite);
   Buffer buffer4(coder.EncodeReserve());
@@ -105,11 +105,11 @@ TEST(SOCKS5StreamCoderSessionNegotiation, CorrectIPv6Request) {
   *data++ = 0;
   *data = 53;  // 53
   EXPECT_EQ(coder.Decode(&buffer3), ActionRequest::Event);
-  EXPECT_EQ(coder.session()->type(), Session::Type::Address);
-  EXPECT_EQ(coder.session()->address().is_v6(), true);
-  EXPECT_EQ(coder.session()->address().to_string(),
+  EXPECT_EQ(coder.session()->endpoint()->type(), Endpoint::Type::Address);
+  EXPECT_EQ(coder.session()->endpoint()->address().is_v6(), true);
+  EXPECT_EQ(coder.session()->endpoint()->address().to_string(),
             "808:808:808:808:808:808:808:808");
-  EXPECT_EQ(coder.session()->port(), 53);
+  EXPECT_EQ(coder.session()->endpoint()->port(), 53);
 
   EXPECT_EQ(coder.Continue(), ActionRequest::WantWrite);
   Buffer buffer4(coder.EncodeReserve());
@@ -153,9 +153,9 @@ TEST(SOCKS5StreamCoderSessionNegotiation, CorrectDomainRequest) {
   *data++ = 0;
   *data = 53;  // 53
   EXPECT_EQ(coder.Decode(&buffer3), ActionRequest::Event);
-  EXPECT_EQ(coder.session()->type(), Session::Type::Domain);
-  EXPECT_EQ(*coder.session()->domain(), "example.com");
-  EXPECT_EQ(coder.session()->port(), 53);
+  EXPECT_EQ(coder.session()->endpoint()->type(), Endpoint::Type::Domain);
+  EXPECT_EQ(coder.session()->endpoint()->host(), "example.com");
+  EXPECT_EQ(coder.session()->endpoint()->port(), 53);
 
   EXPECT_EQ(coder.Continue(), ActionRequest::WantWrite);
   Buffer buffer4(coder.EncodeReserve());

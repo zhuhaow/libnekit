@@ -45,7 +45,7 @@ class TcpConnectorFactory : public ConnectorFactoryInterface {
       uint16_t port) override;
 
   std::unique_ptr<ConnectorInterface> Build(
-      std::shared_ptr<utils::Domain> domain, uint16_t port) override;
+      std::shared_ptr<utils::Endpoint> endpoint) override;
 };
 
 class TcpConnector : public ConnectorInterface, private utils::LifeTime {
@@ -59,7 +59,7 @@ class TcpConnector : public ConnectorInterface, private utils::LifeTime {
       std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses,
       uint16_t port, boost::asio::io_service& io);
 
-  TcpConnector(std::shared_ptr<utils::Domain> domain, uint16_t port,
+  TcpConnector(std::shared_ptr<utils::Endpoint> endpoint,
                boost::asio::io_service& io);
 
   const utils::Cancelable& Connect(EventHandler handler) override;
@@ -71,7 +71,8 @@ class TcpConnector : public ConnectorInterface, private utils::LifeTime {
 
   boost::asio::ip::tcp::socket socket_;
   std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses_;
-  std::shared_ptr<utils::Domain> domain_;
+  boost::asio::ip::address address_;
+  std::shared_ptr<utils::Endpoint> endpoint_;
 
   uint16_t port_;
   std::shared_ptr<utils::DeviceInterface> device_;

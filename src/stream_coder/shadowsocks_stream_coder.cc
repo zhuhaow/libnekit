@@ -28,24 +28,16 @@
 namespace nekit {
 namespace stream_coder {
 ShadowsocksStreamCoder::ShadowsocksStreamCoder(
-    const std::string& domain, uint16_t port,
+    std::shared_ptr<utils::Endpoint> endpoint,
     std::unique_ptr<crypto::StreamCipherInterface>&& encryptor,
-    std::unique_ptr<crypto::StreamCipherInterface>&& decryptor, const uint8_t* key)
-    : domain_{domain},
-      port_{port},
+    std::unique_ptr<crypto::StreamCipherInterface>&& decryptor,
+    const uint8_t* key)
+    : endpoint_{endpoint},
       encryptor_{std::move(encryptor)},
       decryptor_{std::move(decryptor)} {
-  assert(domain_.size() <= 255);
   encryptor_->SetKey(key, true);
   decryptor_->SetKey(key, true);
 }
-
-ShadowsocksStreamCoder::ShadowsocksStreamCoder(
-    const boost::asio::ip::address& address, uint16_t port,
-    std::unique_ptr<crypto::StreamCipherInterface>&& encryptor,
-    std::unique_ptr<crypto::StreamCipherInterface>&& decryptor, const uint8_t* key)
-    : ShadowsocksStreamCoder{address.to_string(), port, std::move(encryptor),
-                             std::move(decryptor), key} {}
 
 ShadowsocksStreamCoder::~ShadowsocksStreamCoder() {
   if (encryptor_iv_) {
@@ -62,7 +54,7 @@ utils::BufferReserveSize ShadowsocksStreamCoder::EncodeReserve() const {
     return {0, 0};
   }
 
-  return {encryptor_->iv_size() + 1 + 1 + domain_.size() + 2, 0};
+  return {encryptor_->iv_size() + 1 + 1 + endpoint_->host().size() + 2, 0};
 }
 
 ActionRequest ShadowsocksStreamCoder::Encode(utils::Buffer* buffer) {
@@ -72,17 +64,18 @@ ActionRequest ShadowsocksStreamCoder::Encode(utils::Buffer* buffer) {
     crypto::Random::Bytes(encryptor_iv_, encryptor_->iv_size());
     encryptor_->SetIv(encryptor_iv_, false);
 
-    buffer->ReleaseFront(encryptor_->iv_size() + 1 + 1 + domain_.size() + 2);
+    buffer->ReleaseFront(encryptor_->iv_size() + 1 + 1 +
+                         endpoint_->host().size() + 2);
     uint8_t* buf = static_cast<uint8_t*>(buffer->buffer());
 
     memcpy(buffer->buffer(), encryptor_iv_, encryptor_->iv_size());
     buf += encryptor_->iv_size();
 
     *buf++ = 3;
-    *buf++ = uint8_t(domain_.size());
-    memcpy(buf, domain_.c_str(), domain_.size());
-    buf += domain_.size();
-    *reinterpret_cast<uint16_t*>(buf) = htons(port_);
+    *buf++ = uint8_t(endpoint_->host().size());
+    memcpy(buf, endpoint_->host().c_str(), endpoint_->host().size());
+    buf += endpoint_->host().size();
+    *reinterpret_cast<uint16_t*>(buf) = htons(endpoint_->port());
 
     buf = static_cast<uint8_t*>(buffer->buffer());
     buf += encryptor_->iv_size();

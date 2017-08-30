@@ -29,40 +29,22 @@
 
 #include <boost/asio.hpp>
 
-#include "country_iso_code.h"
-#include "domain.h"
-#include "ip_protocol.h"
-#include "resolver_interface.h"
+#include "endpoint.h"
 
 namespace nekit {
 namespace utils {
 struct Session {
  public:
-  enum class Type { Domain, Address };
-
   Session(std::string host, uint16_t port = 0);
   Session(boost::asio::ip::address ip, uint16_t port = 0);
 
-  bool isAddressAvailable() const;
+  std::map<std::string, int>& int_cache() { return int_cache_; }
+  std::map<std::string, std::string>& string_cache() { return string_cache_; }
 
-  const boost::asio::ip::address& GetBestAddress() const;
-
-  Type type() const;
-  std::shared_ptr<Domain> domain();
-  const boost::asio::ip::address& address() const;
-  uint16_t port() const;
-  void setPort(uint16_t port);
-  IPProtocol ipProtocol() const;
-
-  std::map<std::string, int>& int_cache();
-  std::map<std::string, std::string>& string_cache();
+  std::shared_ptr<Endpoint>& endpoint() { return endpoint_; }
 
  private:
-  Type type_;
-  std::shared_ptr<Domain> domain_;
-  boost::asio::ip::address address_;
-  uint16_t port_;
-  IPProtocol ip_protocol_{IPProtocol::TCP};
+  std::shared_ptr<Endpoint> endpoint_;
 
   // Keys begin with "NE" are reserved.
   std::map<std::string, int> int_cache_;
