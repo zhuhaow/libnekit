@@ -24,6 +24,8 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
+#include <utility>
 
 #include <boost/noncopyable.hpp>
 
@@ -34,7 +36,10 @@ namespace utils {
 struct Buffer final : public boost::noncopyable {
  public:
   explicit Buffer(std::size_t size)
-      : capacity_(size), data_(::operator new(size)), front_(0), back_(0) {}
+      : capacity_(size),
+        data_{std::make_unique<uint8_t[]>(size)},
+        front_(0),
+        back_(0) {}
 
   explicit Buffer(const BufferReserveSize &size) : Buffer(size, 0) {}
 
@@ -44,11 +49,18 @@ struct Buffer final : public boost::noncopyable {
     ReserveBack(size.suffix());
   }
 
-  ~Buffer() { ::operator delete(data_); }
+  Buffer(const Buffer &buffer, std::size_t suffix, std::size_t prefix)
+      : capacity_{buffer.size() + suffix + prefix},
+        data_{std::make_unique<uint8_t[]>(capacity_)} {
+    memcpy(data_.get() + buffer.front_ + suffix,
+           buffer.data_.get() + buffer.front_, buffer.size());
+    ReserveFront(buffer.front_ + suffix);
+    ReserveBack(buffer.back_ + suffix);
+  }
 
   // Return the underlying buffer.
-  void *data() { return data_; }
-  const void *data() const { return data_; }
+  void *data() { return data_.get(); }
+  const void *data() const { return data_.get(); }
   std::size_t capacity() const { return capacity_; }
 
   bool ReserveFront(std::size_t size) {
@@ -101,15 +113,24 @@ struct Buffer final : public boost::noncopyable {
 
   void ShrinkSize() { back_ += size(); }
 
+  void Swap(Buffer &rhs) {
+    using std::swap;
+
+    swap(capacity_, rhs.capacity_);
+    swap(data_, rhs.data_);
+    swap(front_, rhs.front_);
+    swap(back_, rhs.back_);
+  }
+
   std::size_t size() const { return capacity_ - front_ - back_; }
 
-  void *buffer() { return static_cast<uint8_t *>(data_) + front_; }
+  void *buffer() { return data_.get() + front_; }
 
-  const void *buffer() const { return static_cast<uint8_t *>(data_) + front_; }
+  const void *buffer() const { return data_.get() + front_; }
 
  private:
-  const std::size_t capacity_;
-  void *const data_;
+  std::size_t capacity_;
+  std::unique_ptr<uint8_t[]> data_;
 
   std::size_t front_;
   std::size_t back_;
