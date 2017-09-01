@@ -254,7 +254,6 @@ void TcpSocket::CloseRead() {
   // But SSL is never used in TcpSocket.
   if (ec && ec != boost::asio::error::not_connected) {
     NEERROR << "Failed to close socket reading due to " << ec << ".";
-    assert(!ec);
   }
 
   read_closed_ = true;
@@ -272,7 +271,6 @@ void TcpSocket::CloseWrite() {
   socket_.shutdown(socket_.shutdown_send, ec);
   if (ec && ec != boost::asio::error::not_connected) {
     NEERROR << "Failed to close socket writing due to " << ec << ".";
-    assert(!ec);
   }
 
   write_closed_ = true;
