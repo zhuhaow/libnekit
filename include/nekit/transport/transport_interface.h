@@ -34,7 +34,8 @@ namespace nekit {
 namespace transport {
 class TransportInterface : public utils::AsyncIoInterface {
  public:
-explicit  TransportInterface(boost::asio::io_service& io) : AsyncIoInterface{io} {};
+  explicit TransportInterface(boost::asio::io_service& io)
+      : AsyncIoInterface{io} {};
   virtual ~TransportInterface() = default;
 
   using EventHandler =
@@ -60,6 +61,9 @@ explicit  TransportInterface(boost::asio::io_service& io) : AsyncIoInterface{io}
   virtual bool IsReadClosed() const = 0;
   virtual bool IsWriteClosed() const = 0;
   virtual bool IsClosed() const = 0;
+
+  virtual bool IsReading() const = 0;
+  virtual bool IsWriting() const = 0;
 };
 }  // namespace transport
 }  // namespace nekit

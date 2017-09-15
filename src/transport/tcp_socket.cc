@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <cassert>
+#include <boost/assert.hpp>
 
 #include "nekit/transport/tcp_socket.h"
 #include "nekit/utils/auto.h"
@@ -40,6 +40,8 @@ TcpSocket::TcpSocket(boost::asio::ip::tcp::socket &&socket)
 
 utils::Cancelable &TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
                                    TransportInterface::EventHandler handler) {
+  BOOST_ASSERT(!reading_);
+
   NETRACE << "Start reading data.";
 
   read_cancelable_ = utils::Cancelable();
@@ -49,6 +51,7 @@ utils::Cancelable &TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
     return read_cancelable_;
   }
 
+  reading_ = true;
   socket_.async_read_some(
       boost::asio::mutable_buffers_1(buffer->buffer(), buffer->size()),
       [
@@ -57,7 +60,12 @@ utils::Cancelable &TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
       ](const boost::system::error_code &ec,
         std::size_t bytes_transferred) mutable {
 
-        if (cancelable.canceled() || lifetime->canceled() || IsReadClosed()) {
+        if (cancelable.canceled() || lifetime->canceled()) {
+          return;
+        }
+
+        reading_ = false;
+        if (IsReadClosed()) {
           return;
         }
 
@@ -90,6 +98,8 @@ utils::Cancelable &TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
 
 utils::Cancelable &TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
                                     TransportInterface::EventHandler handler) {
+  BOOST_ASSERT(!writing_);
+
   NETRACE << "Start writing data.";
 
   write_cancelable_ = utils::Cancelable();
@@ -99,6 +109,7 @@ utils::Cancelable &TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
     return write_cancelable_;
   }
 
+  writing_ = true;
   boost::asio::async_write(
       socket_, boost::asio::const_buffers_1(buffer->buffer(), buffer->size()),
       [
@@ -107,7 +118,12 @@ utils::Cancelable &TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
       ](const boost::system::error_code &ec,
         std::size_t bytes_transferred) mutable {
 
-        if (cancelable.canceled() || lifetime->canceled() || IsWriteClosed()) {
+        if (cancelable.canceled() || lifetime->canceled()) {
+          return;
+        }
+
+        writing_ = false;
+        if (IsWriteClosed()) {
           return;
         }
 
@@ -123,7 +139,7 @@ utils::Cancelable &TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
           return;
         }
 
-        assert(bytes_transferred == buffer->size());
+        BOOST_ASSERT(bytes_transferred == buffer->size());
 
         NETRACE << "Successfully write " << bytes_transferred
                 << " bytes to socket.";
@@ -136,6 +152,8 @@ utils::Cancelable &TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
 
 utils::Cancelable &TcpSocket::PollRead(
     TransportInterface::PollEventHandler handler) {
+  BOOST_ASSERT(!reading_);
+
   NETRACE << "Start polling for reading.";
 
   read_cancelable_ = utils::Cancelable();
@@ -145,6 +163,7 @@ utils::Cancelable &TcpSocket::PollRead(
     return read_cancelable_;
   }
 
+  reading_ = true;
   socket_.async_read_some(
       boost::asio::null_buffers{},
       [
@@ -154,7 +173,12 @@ utils::Cancelable &TcpSocket::PollRead(
         std::size_t bytes_transferred) mutable {
         (void)bytes_transferred;
 
-        if (cancelable.canceled() || lifetime->canceled() || IsReadClosed()) {
+        if (cancelable.canceled() || lifetime->canceled()) {
+          return;
+        }
+
+        reading_ = false;
+        if (IsReadClosed()) {
           return;
         }
 
@@ -199,6 +223,8 @@ utils::Cancelable &TcpSocket::PollRead(
 
 utils::Cancelable &TcpSocket::PollWrite(
     TransportInterface::PollEventHandler handler) {
+  BOOST_ASSERT(!writing_);
+
   NETRACE << "Start polling for writing.";
 
   write_cancelable_ = utils::Cancelable();
@@ -208,6 +234,7 @@ utils::Cancelable &TcpSocket::PollWrite(
     return write_cancelable_;
   }
 
+  writing_ = true;
   socket_.async_write_some(
       boost::asio::null_buffers{},
       [
@@ -217,7 +244,12 @@ utils::Cancelable &TcpSocket::PollWrite(
         std::size_t bytes_transferred) mutable {
         (void)bytes_transferred;
 
-        if (cancelable.canceled() || lifetime->canceled() || IsWriteClosed()) {
+        if (cancelable.canceled() || lifetime->canceled()) {
+          return;
+        }
+
+        writing_ = false;
+        if (IsWriteClosed()) {
           return;
         }
 
@@ -289,17 +321,21 @@ bool TcpSocket::IsWriteClosed() const { return write_closed_; }
 
 bool TcpSocket::IsClosed() const { return IsReadClosed() && IsWriteClosed(); }
 
+bool TcpSocket::IsReading() const { return reading_; }
+
+bool TcpSocket::IsWriting() const { return writing_; }
+
 boost::asio::ip::tcp::endpoint TcpSocket::localEndpoint() const {
   boost::system::error_code ec;
   boost::asio::ip::tcp::endpoint endpoint = socket_.local_endpoint(ec);
-  assert(!ec);
+  BOOST_ASSERT(!ec);
   return endpoint;
 }
 
 boost::asio::ip::tcp::endpoint TcpSocket::remoteEndpoint() const {
   boost::system::error_code ec;
   boost::asio::ip::tcp::endpoint endpoint = socket_.remote_endpoint(ec);
-  assert(!ec);
+  BOOST_ASSERT(!ec);
   return endpoint;
 }
 
