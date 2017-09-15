@@ -61,6 +61,9 @@ class TcpSocket final : public ConnectionInterface, private utils::LifeTime {
   bool IsWriteClosed() const override;
   bool IsClosed() const override;
 
+  bool IsReading() const override;
+  bool IsWriting() const override;
+
   boost::asio::ip::tcp::endpoint localEndpoint() const override;
   boost::asio::ip::tcp::endpoint remoteEndpoint() const override;
 
@@ -73,6 +76,7 @@ class TcpSocket final : public ConnectionInterface, private utils::LifeTime {
 
   boost::asio::ip::tcp::socket socket_;
   bool read_closed_{false}, write_closed_{false};
+  bool reading_{false}, writing_{false};
   utils::Cancelable read_cancelable_, write_cancelable_;
 };
 }  // namespace transport
