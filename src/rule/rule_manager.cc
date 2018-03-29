@@ -25,34 +25,25 @@
 namespace nekit {
 namespace rule {
 
-RuleManager::RuleManager(boost::asio::io_service& io) : io_{&io} {}
+RuleManager::RuleManager(boost::asio::io_context* io) : io_{io} {}
 
 void RuleManager::AppendRule(std::shared_ptr<RuleInterface> rule) {
   rules_.push_back(rule);
-}
-
-std::unique_ptr<utils::ResolverInterface>& RuleManager::resolver() {
-  return resolver_;
-}
-
-void RuleManager::set_resolver(
-    std::unique_ptr<utils::ResolverInterface> resolver) {
-  resolver_ = std::move(resolver);
 }
 
 const utils::Cancelable& RuleManager::Match(
     std::shared_ptr<utils::Session> session, EventHandler handler) {
   std::shared_ptr<utils::Cancelable> cancelable =
       std::make_shared<utils::Cancelable>();
-  io_->post([
-    this, session, cancelable, lifetime{life_time_cancelable_pointer()}, handler
-  ]() {
-    if (lifetime->canceled()) {
-      return;
-    }
+  boost::asio::post(
+      *io(), [this, session, cancelable,
+              lifetime{life_time_cancelable_pointer()}, handler]() {
+        if (lifetime->canceled()) {
+          return;
+        }
 
-    MatchIterator(rules_.cbegin(), session, cancelable, handler);
-  });
+        MatchIterator(rules_.cbegin(), session, cancelable, handler);
+      });
   return *cancelable;
 }
 
@@ -72,30 +63,30 @@ void RuleManager::MatchIterator(
       case MatchResult::NotMatch:
         iter++;
         break;
-      case MatchResult::ResolveNeeded:
-        // Ideally, the returned `Cancelable` should have the same lifetime as
-        // the caller, `RuleManager`. This can be achieved by saving the
-        // `Cancelable` in some container (`std::unordered_map` for example).
-        // However, it seems too much hassle since `RuleManager`'s lifetime is
-        // already bond to the block.
-        // There is no way to silence the warning in GCC.
-        (void)session->endpoint()->Resolve([
-          this, handler, cancelable, lifetime{life_time_cancelable_pointer()},
-          session, iter
-        ](std::error_code ec) mutable {
-          (void)ec;
+      case MatchResult::ResolveNeeded: {
+        auto _cancelable = session->endpoint()->Resolve(
+            [this, handler, cancelable,
+             lifetime{life_time_cancelable_pointer()}, session,
+             iter](std::error_code ec) mutable {
+              // Resolve failure should be handled by rules.
+              (void)ec;
 
-          if (cancelable->canceled() || lifetime->canceled()) {
-            return;
-          }
+              if (cancelable->canceled() || lifetime->canceled()) {
+                return;
+              }
 
-          MatchIterator(iter, session, cancelable, handler);
-        });
+              MatchIterator(iter, session, cancelable, handler);
+            });
+        // The lifetime of callback block is already bound to the caller of
+        // `Match` and `this`. There is no need to guard the lifetime of the
+        // callback in `Cancelable`.
+        _cancelable.Dispose();
         return;
+      }
     }
   }
   handler(nullptr, ErrorCode::NoMatch);
-}
+}  // namespace rule
 
 namespace {
 struct RuleManagerErrorCategory : std::error_category {

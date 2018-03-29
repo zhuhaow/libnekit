@@ -28,31 +28,31 @@
 #include <vector>
 
 #include <boost/asio.hpp>
-#include <boost/noncopyable.hpp>
 
+#include "../utils/async_io_interface.h"
 #include "../utils/cancelable.h"
 #include "../utils/resolver_interface.h"
 #include "rule_interface.h"
 
 namespace nekit {
 namespace rule {
-class RuleManager : private utils::LifeTime {
+class RuleManager final : public utils::AsyncIoInterface,
+                          private utils::LifeTime {
  public:
   using EventHandler =
       std::function<void(std::shared_ptr<RuleInterface>, std::error_code)>;
 
   enum class ErrorCode { NoError, NoMatch };
 
-  explicit RuleManager(boost::asio::io_service& io);
+  explicit RuleManager(boost::asio::io_context* io);
 
   void AppendRule(std::shared_ptr<RuleInterface> rule);
-
-  std::unique_ptr<utils::ResolverInterface>& resolver();
-  void set_resolver(std::unique_ptr<utils::ResolverInterface> resolver);
 
   const utils::Cancelable& Match(std::shared_ptr<utils::Session> session,
                                  EventHandler handler)
       __attribute__((warn_unused_result));
+
+  boost::asio::io_context* io() override;
 
  private:
   void MatchIterator(
@@ -61,7 +61,6 @@ class RuleManager : private utils::LifeTime {
       std::shared_ptr<utils::Cancelable> cancelable, EventHandler handler);
 
   std::vector<std::shared_ptr<RuleInterface>> rules_;
-  std::unique_ptr<utils::ResolverInterface> resolver_;
   boost::asio::io_service* io_;
 };
 
