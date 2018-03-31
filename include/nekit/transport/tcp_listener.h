@@ -36,7 +36,7 @@ class TcpListener : public ListenerInterface, private boost::noncopyable {
  public:
   enum class ErrorCode { NoError = 0 };
 
-  explicit TcpListener(boost::asio::io_service& io);
+  TcpListener(boost::asio::io_context* io, DataFlowHandler handler);
 
   std::error_code Bind(std::string ip, uint16_t port);
   std::error_code Bind(boost::asio::ip::address ip, uint16_t port);
@@ -45,11 +45,13 @@ class TcpListener : public ListenerInterface, private boost::noncopyable {
 
   void Close() override;
 
+  boost::asio::io_context* io() override;
+
  private:
   boost::asio::ip::tcp::acceptor acceptor_;
   boost::asio::ip::tcp::socket socket_;
 
-  EventHandler handler_;
+  DataFlowHandler handler_;
 };
 
 std::error_code make_error_code(TcpListener::ErrorCode ec);
