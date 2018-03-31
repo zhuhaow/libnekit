@@ -64,7 +64,10 @@ void RuleManager::MatchIterator(
         iter++;
         break;
       case MatchResult::ResolveNeeded: {
-        auto _cancelable = session->endpoint()->Resolve(
+        // The lifetime of callback block is already bound to the caller of
+        // `Match` and `this`. There is no need to guard the lifetime of the
+        // callback in another `Cancelable`.
+        (void)session->endpoint()->Resolve(
             [this, handler, cancelable,
              lifetime{life_time_cancelable_pointer()}, session,
              iter](std::error_code ec) mutable {
@@ -77,16 +80,12 @@ void RuleManager::MatchIterator(
 
               MatchIterator(iter, session, cancelable, handler);
             });
-        // The lifetime of callback block is already bound to the caller of
-        // `Match` and `this`. There is no need to guard the lifetime of the
-        // callback in `Cancelable`.
-        _cancelable.Dispose();
         return;
       }
     }
   }
   handler(nullptr, ErrorCode::NoMatch);
-}  // namespace rule
+}
 
 namespace {
 struct RuleManagerErrorCategory : std::error_category {
