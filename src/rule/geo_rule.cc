@@ -22,19 +22,21 @@
 
 #include "nekit/rule/geo_rule.h"
 
+#include <boost/assert.hpp>
+
 namespace nekit {
 namespace rule {
 
 namespace {
-const std::string CountryIsoCodeCacheKey = "NECO";
+const std::string CountryIsoCodeCacheKey = "NECC";
 }
 
-GeoRule::GeoRule(
-    utils::CountryIsoCode code, bool match,
-    std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory)
-    : code_{code}, match_{match}, adapter_factory_{adapter_factory} {}
+GeoRule::GeoRule(utils::CountryIsoCode code, bool match, RuleHandler handler)
+    : code_{code}, match_{match}, handler_{handler} {}
 
 MatchResult GeoRule::Match(std::shared_ptr<utils::Session> session) {
+  BOOST_ASSERT(session->endpoint());
+
   utils::CountryIsoCode code;
 
   auto iter = session->int_cache().find(CountryIsoCodeCacheKey);
@@ -59,9 +61,11 @@ MatchResult GeoRule::Match(std::shared_ptr<utils::Session> session) {
   }
 }  // namespace rule
 
-std::unique_ptr<transport::AdapterInterface> GeoRule::GetAdapter(
+std::unique_ptr<data_flow::RemoteDataFlowInterface> GeoRule::GetDataFlow(
     std::shared_ptr<utils::Session> session) {
-  return adapter_factory_->Build(session);
+  BOOST_ASSERT(session->endpoint());
+
+  return handler_(session);
 }
 
 utils::CountryIsoCode GeoRule::LookupAndCache(

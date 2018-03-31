@@ -35,21 +35,20 @@ namespace rule {
 // and contiguous blocks should be merged.
 class SubnetRule : public RuleInterface {
  public:
-  SubnetRule(
-      std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory);
+  SubnetRule(RuleHandler handler);
 
   void AddSubnet(const boost::asio::ip::address &address, uint prefix);
 
-  MatchResult Match(std::shared_ptr<utils::Session> session);
-  std::unique_ptr<transport::AdapterInterface> GetAdapter(
-      std::shared_ptr<utils::Session> session);
+  MatchResult Match(std::shared_ptr<utils::Session> session) override;
+  std::unique_ptr<data_flow::RemoteDataFlowInterface> GetDataFlow(
+      std::shared_ptr<utils::Session> session) override;
 
  private:
   bool LookUp(const boost::asio::ip::address &address);
 
-  std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory_;
-
   std::vector<utils::Subnet> subnets_;
+
+  RuleHandler handler_;
 };
 }  // namespace rule
 }  // namespace nekit

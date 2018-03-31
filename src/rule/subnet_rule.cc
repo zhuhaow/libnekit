@@ -22,11 +22,11 @@
 
 #include "nekit/rule/subnet_rule.h"
 
+#include <boost/assert.hpp>
+
 namespace nekit {
 namespace rule {
-SubnetRule::SubnetRule(
-    std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory)
-    : adapter_factory_{adapter_factory} {}
+SubnetRule::SubnetRule(RuleHandler handler) : handler_{handler} {}
 
 void SubnetRule::AddSubnet(const boost::asio::ip::address &address,
                            uint prefix) {
@@ -34,6 +34,8 @@ void SubnetRule::AddSubnet(const boost::asio::ip::address &address,
 }
 
 MatchResult SubnetRule::Match(std::shared_ptr<utils::Session> session) {
+  BOOST_ASSERT(session->endpoint());
+
   if (session->endpoint()->IsAddressAvailable()) {
     return LookUp(session->endpoint()->address()) ? MatchResult::Match
                                                   : MatchResult::NotMatch;
@@ -45,9 +47,10 @@ MatchResult SubnetRule::Match(std::shared_ptr<utils::Session> session) {
   }
 }
 
-std::unique_ptr<transport::AdapterInterface> SubnetRule::GetAdapter(
+std::unique_ptr<data_flow::RemoteDataFlowInterface> SubnetRule::GetDataFlow(
     std::shared_ptr<utils::Session> session) {
-  return adapter_factory_->Build(session);
+  BOOST_ASSERT(session->endpoint());
+  return handler_(session);
 }
 
 bool SubnetRule::LookUp(const boost::asio::ip::address &address) {

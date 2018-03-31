@@ -22,20 +22,24 @@
 
 #include "nekit/rule/all_rule.h"
 
+#include <boost/assert.hpp>
+
 namespace nekit {
 namespace rule {
-AllRule::AllRule(
-    std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory)
-    : adapter_factory_{adapter_factory} {}
+AllRule::AllRule(RuleHandler handler) : handler_{handler} {}
 
 MatchResult AllRule::Match(std::shared_ptr<utils::Session> session) {
+  BOOST_ASSERT(session->endpoint());
+
   (void)session;
   return MatchResult::Match;
 }
 
-std::unique_ptr<transport::AdapterInterface> AllRule::GetAdapter(
+std::unique_ptr<data_flow::RemoteDataFlowInterface> AllRule::GetDataFlow(
     std::shared_ptr<utils::Session> session) {
-  return adapter_factory_->Build(session);
+  BOOST_ASSERT(session->endpoint());
+
+  return handler_(session);
 }
 
 }  // namespace rule

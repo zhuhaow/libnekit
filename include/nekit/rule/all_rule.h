@@ -22,24 +22,20 @@
 
 #pragma once
 
-#include <memory>
-
-#include "../stream_coder/stream_coder_interface.h"
-#include "../transport/connector_interface.h"
 #include "rule_interface.h"
 
 namespace nekit {
 namespace rule {
 class AllRule : public RuleInterface {
-public:
-  explicit AllRule(std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory);
+ public:
+  explicit AllRule(RuleHandler);
 
   MatchResult Match(std::shared_ptr<utils::Session> session) override;
-  std::unique_ptr<transport::AdapterInterface> GetAdapter(
+  std::unique_ptr<data_flow::RemoteDataFlowInterface> GetDataFlow(
       std::shared_ptr<utils::Session> session) override;
 
  private:
-  std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory_;
+  RuleHandler handler_;
 };
 }  // namespace rule
 }  // namespace nekit

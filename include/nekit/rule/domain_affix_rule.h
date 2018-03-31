@@ -24,7 +24,7 @@
 
 #include <type_traits>
 
-#include <boost/noncopyable.hpp>
+#include <boost/assert.hpp>
 
 #include "../utils/trie.h"
 #include "rule_interface.h"
@@ -34,9 +34,7 @@ namespace rule {
 template <bool reverse>
 class DomainAffixRule : public RuleInterface {
  public:
-  explicit DomainAffixRule(
-      std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory)
-      : adapter_factory_{adapter_factory} {};
+  explicit DomainAffixRule(RuleHandler handler) : handler_{handler} {}
 
   template <typename = std::enable_if_t<!reverse>>
   void AddPrefix(const std::string& prefix) {
@@ -49,6 +47,8 @@ class DomainAffixRule : public RuleInterface {
   }
 
   MatchResult Match(std::shared_ptr<utils::Session> session) override {
+    BOOST_ASSERT(session->endpoint());
+
     if (session->endpoint()->type() == utils::Endpoint::Type::Address) {
       return MatchResult::NotMatch;
     }
@@ -60,14 +60,17 @@ class DomainAffixRule : public RuleInterface {
     }
   }
 
-  std::unique_ptr<transport::AdapterInterface> GetAdapter(
+  std::unique_ptr<data_flow::RemoteDataFlowInterface> GetDataFlow(
       std::shared_ptr<utils::Session> session) override {
-    return adapter_factory_->Build(session);
+    BOOST_ASSERT(session->endpoint());
+
+    return handler_(session);
   }
 
  private:
   utils::DomainTrie<reverse> trie_;
-  std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory_;
+
+  RuleHandler handler_;
 };
 
 using DomainPrefixRule = DomainAffixRule<false>;

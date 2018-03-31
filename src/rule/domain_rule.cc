@@ -22,11 +22,11 @@
 
 #include "nekit/rule/domain_rule.h"
 
+#include <boost/assert.hpp>
+
 namespace nekit {
 namespace rule {
-DomainRule::DomainRule(
-    std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory)
-    : adapter_factory_{adapter_factory} {}
+DomainRule::DomainRule(RuleHandler handler) : handler_{handler} {}
 
 void DomainRule::AddDomain(const std::string &domain) {
   domains_.emplace(domain);
@@ -41,9 +41,9 @@ MatchResult DomainRule::Match(std::shared_ptr<utils::Session> session) {
   }
 }
 
-std::unique_ptr<transport::AdapterInterface> DomainRule::GetAdapter(
+std::unique_ptr<data_flow::RemoteDataFlowInterface> DomainRule::GetDataFlow(
     std::shared_ptr<utils::Session> session) {
-  return adapter_factory_->Build(session);
+  return handler_(session);
 }
 }  // namespace rule
 }  // namespace nekit

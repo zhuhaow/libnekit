@@ -22,13 +22,15 @@
 
 #include "nekit/rule/dns_fail_rule.h"
 
+#include <boost/assert.hpp>
+
 namespace nekit {
 namespace rule {
-DnsFailRule::DnsFailRule(
-    std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory)
-    : adapter_factory_{adapter_factory} {}
+DnsFailRule::DnsFailRule(RuleHandler handler) : handler_{handler} {}
 
 MatchResult DnsFailRule::Match(std::shared_ptr<utils::Session> session) {
+  BOOST_ASSERT(session->endpoint());
+
   if (session->endpoint()->IsAddressAvailable()) {
     return MatchResult::NotMatch;
   }
@@ -40,9 +42,9 @@ MatchResult DnsFailRule::Match(std::shared_ptr<utils::Session> session) {
   return MatchResult::Match;
 }
 
-std::unique_ptr<transport::AdapterInterface> DnsFailRule::GetAdapter(
+std::unique_ptr<data_flow::RemoteDataFlowInterface> DnsFailRule::GetDataFlow(
     std::shared_ptr<utils::Session> session) {
-  return adapter_factory_->Build(session);
+  return handler_(session);
 }
 
 }  // namespace rule

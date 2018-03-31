@@ -29,12 +29,11 @@ namespace nekit {
 namespace rule {
 class GeoRule : public RuleInterface {
  public:
-  GeoRule(utils::CountryIsoCode code, bool match,
-          std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory);
+  GeoRule(utils::CountryIsoCode code, bool match, RuleHandler handler);
 
-  MatchResult Match(std::shared_ptr<utils::Session> session);
-  std::unique_ptr<transport::AdapterInterface> GetAdapter(
-      std::shared_ptr<utils::Session> session);
+  MatchResult Match(std::shared_ptr<utils::Session> session) override;
+  std::unique_ptr<data_flow::RemoteDataFlowInterface> GetDataFlow(
+      std::shared_ptr<utils::Session> session) override;
 
  private:
   utils::CountryIsoCode LookupAndCache(std::shared_ptr<utils::Session> session,
@@ -42,7 +41,8 @@ class GeoRule : public RuleInterface {
 
   utils::CountryIsoCode code_;
   bool match_;
-  std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory_;
+
+  RuleHandler handler_;
 };
 }  // namespace rule
 }  // namespace nekit

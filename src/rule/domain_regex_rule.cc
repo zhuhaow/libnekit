@@ -22,11 +22,11 @@
 
 #include "nekit/rule/domain_regex_rule.h"
 
+#include <boost/assert.hpp>
+
 namespace nekit {
 namespace rule {
-DomainRegexRule::DomainRegexRule(
-    std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory)
-    : adapter_factory_{adapter_factory} {}
+DomainRegexRule::DomainRegexRule(RuleHandler handler) : handler_{handler} {}
 
 bool DomainRegexRule::AddRegex(const std::string &expression) {
   try {
@@ -40,6 +40,8 @@ bool DomainRegexRule::AddRegex(const std::string &expression) {
 }
 
 MatchResult DomainRegexRule::Match(std::shared_ptr<utils::Session> session) {
+  BOOST_ASSERT(session->endpoint());
+
   if (session->endpoint()->type() == utils::Endpoint::Type::Address) {
     return MatchResult::NotMatch;
   }
@@ -54,9 +56,11 @@ MatchResult DomainRegexRule::Match(std::shared_ptr<utils::Session> session) {
   return MatchResult::NotMatch;
 }
 
-std::unique_ptr<transport::AdapterInterface> DomainRegexRule::GetAdapter(
-    std::shared_ptr<utils::Session> session) {
-  return adapter_factory_->Build(session);
+std::unique_ptr<data_flow::RemoteDataFlowInterface>
+DomainRegexRule::GetDataFlow(std::shared_ptr<utils::Session> session) {
+  BOOST_ASSERT(session->endpoint());
+
+  return handler_(session);
 }
 }  // namespace rule
 }  // namespace nekit

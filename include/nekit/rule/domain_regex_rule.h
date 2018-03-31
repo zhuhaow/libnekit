@@ -31,18 +31,18 @@ namespace nekit {
 namespace rule {
 class DomainRegexRule : public RuleInterface {
  public:
-  DomainRegexRule(
-      std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory);
+  explicit DomainRegexRule(RuleHandler handler);
 
   bool AddRegex(const std::string &expression);
 
-  MatchResult Match(std::shared_ptr<utils::Session> session);
-  std::unique_ptr<transport::AdapterInterface> GetAdapter(
-      std::shared_ptr<utils::Session> session);
+  MatchResult Match(std::shared_ptr<utils::Session> session) override;
+  std::unique_ptr<data_flow::RemoteDataFlowInterface> GetDataFlow(
+      std::shared_ptr<utils::Session> session) override;
 
  private:
   std::vector<std::regex> regex_list_;
-  std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory_;
+
+  RuleHandler handler_;
 };
 }  // namespace rule
 }  // namespace nekit

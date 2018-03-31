@@ -22,24 +22,20 @@
 
 #pragma once
 
-#include <memory>
-
-#include "../transport/adapter_interface.h"
 #include "rule_interface.h"
 
 namespace nekit {
 namespace rule {
 class DnsFailRule : public RuleInterface {
  public:
-  explicit DnsFailRule(
-      std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory);
+  explicit DnsFailRule(RuleHandler handler);
 
   MatchResult Match(std::shared_ptr<utils::Session> session) override;
-  std::unique_ptr<transport::AdapterInterface> GetAdapter(
+  std::unique_ptr<data_flow::RemoteDataFlowInterface> GetDataFlow(
       std::shared_ptr<utils::Session> session) override;
 
  private:
-  std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory_;
+  RuleHandler handler_;
 };
 }  // namespace rule
 }  // namespace nekit

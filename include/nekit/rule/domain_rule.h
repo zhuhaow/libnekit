@@ -30,18 +30,18 @@ namespace nekit {
 namespace rule {
 class DomainRule : public RuleInterface {
  public:
-  explicit DomainRule(
-      std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory);
+  explicit DomainRule(RuleHandler handler);
 
   void AddDomain(const std::string &domain);
 
-  MatchResult Match(std::shared_ptr<utils::Session> session);
-  std::unique_ptr<transport::AdapterInterface> GetAdapter(
-      std::shared_ptr<utils::Session> session);
+  MatchResult Match(std::shared_ptr<utils::Session> session) override;
+  std::unique_ptr<data_flow::RemoteDataFlowInterface> GetDataFlow(
+      std::shared_ptr<utils::Session> session) override;
 
  private:
-  std::shared_ptr<transport::AdapterFactoryInterface> adapter_factory_;
   std::unordered_set<std::string> domains_;
+
+  RuleHandler handler_;
 };
 }  // namespace rule
 }  // namespace nekit
