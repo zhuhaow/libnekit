@@ -37,6 +37,8 @@ class NEKitErrorCategory : public std::error_category {
         return "no error";
       case nekit::utils::NEKitErrorCode::Canceled:
         return "canceled";
+      case nekit::utils::NEKitErrorCode::MemoryAllocationFailed:
+        return "memory allocation failed";
     }
   }
 };

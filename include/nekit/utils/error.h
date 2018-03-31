@@ -26,7 +26,7 @@
 
 namespace nekit {
 namespace utils {
-enum class NEKitErrorCode { NoError, Canceled };
+enum class NEKitErrorCode { NoError, Canceled, MemoryAllocationFailed };
 std::error_code make_error_code(NEKitErrorCode);
 }  // namespace utils
 }  // namespace nekit
