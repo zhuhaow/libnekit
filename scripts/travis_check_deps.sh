@@ -10,7 +10,7 @@ diff -rqyl scripts deps/scripts
 if [ $? -ne 0 ]; then
     set -euo pipefail
 
-    ./scripts/build_deps.py $PLATFORM
+    pipenv run ./scripts/build_deps.py $PLATFORM
     rm -rf deps/scripts
     cp -R scripts deps/
 fi
