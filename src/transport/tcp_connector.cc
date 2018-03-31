@@ -34,18 +34,18 @@ namespace nekit {
 namespace transport {
 TcpConnector::TcpConnector(
     std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses,
-    uint16_t port, boost::asio::io_service& io)
-    : ConnectorInterface{io}, socket_{io}, addresses_{addresses}, port_{port} {
+    uint16_t port, boost::asio::io_context* io)
+    : socket_{*io}, addresses_{addresses}, port_{port} {
   assert(!addresses_->empty());
 }
 
 TcpConnector::TcpConnector(const boost::asio::ip::address& address,
-                           uint16_t port, boost::asio::io_service& io)
-    : ConnectorInterface{io}, socket_{io}, address_{address}, port_{port} {}
+                           uint16_t port, boost::asio::io_context* io)
+    : socket_{*io}, address_{address}, port_{port} {}
 
 TcpConnector::TcpConnector(std::shared_ptr<utils::Endpoint> endpoint,
-                           boost::asio::io_service& io)
-    : ConnectorInterface{io}, socket_{io}, endpoint_{endpoint}, port_{endpoint->port()} {}
+                           boost::asio::io_context* io)
+    : socket_{*io}, endpoint_{endpoint}, port_{endpoint->port()} {}
 
 const utils::Cancelable& TcpConnector::Connect(EventHandler handler) {
   assert(!connecting_);
@@ -71,34 +71,35 @@ const utils::Cancelable& TcpConnector::Connect(EventHandler handler) {
         NEERROR << "Can not connect since resolve is failed due to "
                 << endpoint_->resolve_error() << ".";
 
-        io().post(
-            [ this, handler, cancelable{life_time_cancelable_pointer()} ]() {
+        boost::asio::post(
+            socket_.get_executor(),
+            [this, handler, cancelable{life_time_cancelable_pointer()}]() {
               if (cancelable->canceled()) {
                 return;
               }
 
-              handler(nullptr, endpoint_->resolve_error());
+              handler(std::move(socket_), endpoint_->resolve_error());
             });
         return life_time_cancelable();
       } else {
-        resolve_cancelable_ = endpoint_->Resolve([
-          this, handler, cancelable{life_time_cancelable_pointer()}
-        ](std::error_code ec) mutable {
-          if (cancelable->canceled()) {
-            return;
-          }
+        resolve_cancelable_ = endpoint_->Resolve(
+            [this, handler, cancelable{life_time_cancelable_pointer()}](
+                std::error_code ec) mutable {
+              if (cancelable->canceled()) {
+                return;
+              }
 
-          if (ec) {
-            NEERROR << "Can not connect since resolve is failed due to "
-                    << endpoint_->resolve_error() << ".";
-            handler(nullptr, ec);
-            return;
-          }
+              if (ec) {
+                NEERROR << "Can not connect since resolve is failed due to "
+                        << endpoint_->resolve_error() << ".";
+                handler(std::move(socket_), ec);
+                return;
+              }
 
-          NEDEBUG << "Domain resolved, connect now.";
-          addresses_ = endpoint_->resolved_addresses();
-          DoConnect(handler);
-        });
+              NEDEBUG << "Domain resolved, connect now.";
+              addresses_ = endpoint_->resolved_addresses();
+              DoConnect(handler);
+            });
         return life_time_cancelable();
       }
     }
@@ -123,10 +124,11 @@ void TcpConnector::DoConnect(EventHandler handler) {
     return;
   }
 
-  if ((!addresses_ && current_ind_) || (addresses_ && current_ind_ >= addresses_->size())) {
+  if ((!addresses_ && current_ind_) ||
+      (addresses_ && current_ind_ >= addresses_->size())) {
     NEERROR << "Fail to connect to all addresses, the last known error is "
             << last_error_ << ".";
-    handler(nullptr, last_error_);
+    handler(std::move(socket_), last_error_);
     return;
   }
 
@@ -141,51 +143,55 @@ void TcpConnector::DoConnect(EventHandler handler) {
     address = &address_;
   }
 
-  socket_.async_connect(boost::asio::ip::tcp::endpoint(*address, port_), [
-    this, handler, cancelable{life_time_cancelable_pointer()}
-  ](const boost::system::error_code& ec) mutable {
-    if (cancelable->canceled()) {
-      return;
-    }
+  socket_.async_connect(
+      boost::asio::ip::tcp::endpoint(*address, port_),
+      [this, handler, cancelable{life_time_cancelable_pointer()}](
+          const boost::system::error_code& ec) mutable {
+        if (cancelable->canceled()) {
+          return;
+        }
 
-    if (ec) {
-      NEDEBUG << "Connect failed due to " << ec << ", trying next address.";
+        if (ec) {
+          NEDEBUG << "Connect failed due to " << ec << ", trying next address.";
 
-      if (ec.value() == boost::asio::error::operation_aborted) {
+          if (ec.value() == boost::asio::error::operation_aborted) {
+            return;
+          }
+
+          last_error_ = std::make_error_code(ec);
+          current_ind_++;
+          DoConnect(handler);
+          return;
+        }
+
+        NEINFO << "Successfully connected to remote.";
+        connecting_ = false;
+        handler(std::move(socket_), utils::NEKitErrorCode::NoError);
         return;
-      }
-
-      last_error_ = std::make_error_code(ec);
-      current_ind_++;
-      DoConnect(handler);
-      return;
-    }
-
-    NEINFO << "Successfully connected to remote.";
-    connecting_ = false;
-    handler(std::unique_ptr<TcpSocket>(new TcpSocket(std::move(socket_))),
-            utils::NEKitErrorCode::NoError);
-    return;
-  });
+      });
 }
 
-TcpConnectorFactory::TcpConnectorFactory(boost::asio::io_service& io)
-    : ConnectorFactoryInterface{io} {}
-
-std::unique_ptr<ConnectorInterface> TcpConnectorFactory::Build(
-    const boost::asio::ip::address& address, uint16_t port) {
-  return std::make_unique<TcpConnector>(address, port, io());
+boost::asio::io_context* TcpConnector::io() {
+  return &socket_.get_io_context();
 }
 
-std::unique_ptr<ConnectorInterface> TcpConnectorFactory::Build(
-    std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses,
-    uint16_t port) {
-  return std::make_unique<TcpConnector>(addresses, port, io());
-}
+// TcpConnectorFactory::TcpConnectorFactory(boost::asio::io_context* io)
+//     : ConnectorFactoryInterface{io} {}
 
-std::unique_ptr<ConnectorInterface> TcpConnectorFactory::Build(
-    std::shared_ptr<utils::Endpoint> endpoint) {
-  return std::make_unique<TcpConnector>(endpoint, io());
-}
+// std::unique_ptr<ConnectorInterface> TcpConnectorFactory::Build(
+//     const boost::asio::ip::address& address, uint16_t port) {
+//   return std::make_unique<TcpConnector>(address, port, io());
+// }
+
+// std::unique_ptr<ConnectorInterface> TcpConnectorFactory::Build(
+//     std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses,
+//     uint16_t port) {
+//   return std::make_unique<TcpConnector>(addresses, port, io());
+// }
+
+// std::unique_ptr<ConnectorInterface> TcpConnectorFactory::Build(
+//     std::shared_ptr<utils::Endpoint> endpoint) {
+//   return std::make_unique<TcpConnector>(endpoint, io());
+// }
 }  // namespace transport
 }  // namespace nekit

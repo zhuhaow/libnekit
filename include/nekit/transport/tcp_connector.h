@@ -26,45 +26,34 @@
 
 #include <boost/asio.hpp>
 
-#include "connector_interface.h"
+#include "../utils/cancelable.h"
+#include "../utils/device.h"
+#include "../utils/endpoint.h"
 
 namespace nekit {
 namespace transport {
 
-class TcpConnector;
-
-class TcpConnectorFactory : public ConnectorFactoryInterface {
+class TcpConnector : public utils::AsyncIoInterface, private utils::LifeTime {
  public:
-  explicit TcpConnectorFactory(boost::asio::io_service& io);
-
-  std::unique_ptr<ConnectorInterface> Build(
-      const boost::asio::ip::address& address, uint16_t port) override;
-
-  std::unique_ptr<ConnectorInterface> Build(
-      std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses,
-      uint16_t port) override;
-
-  std::unique_ptr<ConnectorInterface> Build(
-      std::shared_ptr<utils::Endpoint> endpoint) override;
-};
-
-class TcpConnector : public ConnectorInterface, private utils::LifeTime {
- public:
-  using Factory = TcpConnectorFactory;
+  using EventHandler =
+      std::function<void(boost::asio::ip::tcp::socket&&, std::error_code)>;
 
   TcpConnector(const boost::asio::ip::address& address, uint16_t port,
-               boost::asio::io_service& io);
+               boost::asio::io_context* io);
 
   TcpConnector(
       std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses,
-      uint16_t port, boost::asio::io_service& io);
+      uint16_t port, boost::asio::io_context* io);
 
   TcpConnector(std::shared_ptr<utils::Endpoint> endpoint,
-               boost::asio::io_service& io);
+               boost::asio::io_context* io);
 
-  const utils::Cancelable& Connect(EventHandler handler) override;
+  const utils::Cancelable& Connect(EventHandler handler)
+      __attribute__((warn_unused_result));
 
-  void Bind(std::shared_ptr<utils::DeviceInterface> device) override;
+  void Bind(std::shared_ptr<utils::DeviceInterface> device);
+
+  boost::asio::io_context* io() override;
 
  private:
   void DoConnect(EventHandler handler);
