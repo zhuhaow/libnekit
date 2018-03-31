@@ -62,17 +62,12 @@ endif()
 add_definitions(-DBOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS)
 
 set(SOURCES
-  src/stream_coder/stream_coder_pipe.cc
-  src/stream_coder/socks5_server_stream_coder.cc
-  src/stream_coder/http_server_stream_coder.cc
-  src/stream_coder/direct_stream_coder.cc
   src/transport/tcp_socket.cc
   src/transport/tcp_listener.cc
   src/transport/tunnel.cc
   src/transport/tcp_connector.cc
-  src/transport/connection_interface.cc
+  src/transport/error_code.cc
   src/utils/boost_error.cc
-  src/utils/session.cc
   src/utils/system_resolver.cc
   src/utils/error.cc
   src/utils/logger.cc
@@ -81,7 +76,6 @@ set(SOURCES
   src/utils/subnet.cc
   src/utils/country_iso_code.cc
   src/utils/http_header_parser.cc
-  src/utils/endpoint.cc
   src/init.cc
   src/rule/rule_manager.cc
   src/rule/all_rule.cc
@@ -90,15 +84,13 @@ set(SOURCES
   src/rule/domain_rule.cc
   src/rule/domain_regex_rule.cc
   src/rule/subnet_rule.cc
-  src/transport/direct_adapter.cc
   src/instance.cc
-  src/stream_coder/shadowsocks_stream_coder.cc
-  src/stream_coder/shadowsocks_aead_stream_coder.cc
-  src/stream_coder/shadowsocks_stream_coder_error.cc
-  src/transport/server_adapter.cc
   src/crypto/random.cc
   src/crypto/key_generator.cc
   src/crypto/stream_cipher_interface.cc
+  src/utils/buffer.cc
+  src/utils/endpoint.cc
+  src/data_flow/socks5_server_data_flow.cc
   )
 
 set(SOURCES ${SOURCES}
