@@ -22,7 +22,10 @@
 
 #pragma once
 
+#include <memory>
+
 #include <boost/asio.hpp>
+#include <boost/thread/thread.hpp>
 
 #include "resolver_interface.h"
 
@@ -30,18 +33,26 @@ namespace nekit {
 namespace utils {
 class SystemResolver : public ResolverInterface, private LifeTime {
  public:
-  explicit SystemResolver(boost::asio::io_service& io);
+  SystemResolver(boost::asio::io_context* io, size_t thread_count);
+  ~SystemResolver();
 
-  Cancelable& Resolve(std::string domain, AddressPreference preference,
-                      EventHandler handler) override
+  const Cancelable& Resolve(std::string domain, AddressPreference preference,
+                            EventHandler handler) override
       __attribute__((warn_unused_result));
 
-  void Cancel() override;
+  void Stop() override;
+  void Reset() override;
+
+  boost::asio::io_context* io() override;
 
  private:
   std::error_code ConvertBoostError(const boost::system::error_code& ec);
 
-  boost::asio::ip::tcp::resolver resolver_;
+  boost::asio::io_context* main_io_;
+
+  size_t thread_count_;
+  boost::thread_group thread_group_;
+  std::unique_ptr<boost::asio::io_context> resolve_io_;
 };
 }  // namespace utils
 }  // namespace nekit

@@ -32,63 +32,98 @@
 namespace nekit {
 namespace utils {
 
-SystemResolver::SystemResolver(boost::asio::io_service& io)
-    : ResolverInterface{io}, resolver_{io} {}
+SystemResolver::SystemResolver(boost::asio::io_context* io, size_t thread_count)
+    : main_io_{io}, thread_count_{thread_count} {
+  Reset();
+}
 
-Cancelable& SystemResolver::Resolve(std::string domain,
-                                    AddressPreference preference,
-                                    EventHandler handler) {
-  // Preference is ignored. Let the OS do the choice.
+const Cancelable& SystemResolver::Resolve(std::string domain,
+                                          AddressPreference preference,
+                                          EventHandler handler) {
+  // Preference is ignored. Let the OS do the choice as of now.
   (void)preference;
-
-  decltype(resolver_)::query query(domain, "");
 
   NETRACE << "Start resolving " << domain << ".";
 
   auto cancelable = std::make_unique<Cancelable>();
   auto cancelable_ptr = cancelable.get();
 
-  resolver_.async_resolve(
-      query,
-      [
-        this, domain, handler, cancelable{std::move(cancelable)},
-        life_time{life_time_cancelable_pointer()}
-      ](const boost::system::error_code& ec,
-        boost::asio::ip::tcp::resolver::iterator iter) {
-        if (cancelable->canceled() || life_time->canceled()) {
+  boost::asio::post(
+      *resolve_io_.get(),
+      [this, domain, handler, cancelable{std::move(cancelable)}]() mutable {
+        // Note it should be guaranteed that one io_context should never be
+        // released before all the instances implementing `AsyncIoInterface`
+        // which will return that io_context are released. This resolver will
+        // never be released before `main_io_` is released. In the destructor
+        // this thread is guaranteed to exit before resolver is finished, so
+        // there is no need to worry any thread issues here, resolver and
+        // `main_io_` will exist when this thread is running.
+
+        if (cancelable->canceled()) {
           return;
         }
+
+        auto resolver = boost::asio::ip::tcp::resolver(*resolve_io_.get());
+
+        boost::system::error_code ec;
+        auto result = resolver.resolve(domain, "", ec);
 
         if (ec) {
           auto error = ConvertBoostError(ec);
           NEERROR << "Failed to resolve " << domain << " due to " << error
                   << ".";
 
-          if (error == NEKitErrorCode::Canceled) {
-            return;
-          }
+          boost::asio::post(
+              *main_io_, [handler, error, cancelable{std::move(cancelable)},
+                          life_time{life_time_cancelable_pointer()}]() {
+                if (cancelable->canceled() || life_time->canceled()) {
+                  return;
+                }
 
-          handler(nullptr, error);
+                handler(nullptr, error);
+              });
           return;
         }
 
         auto addresses =
             std::make_shared<std::vector<boost::asio::ip::address>>();
-        while (iter != decltype(iter)()) {
+
+        for (auto iter = result.begin(); iter != result.end(); iter++) {
           addresses->emplace_back(iter->endpoint().address());
           iter++;
         }
 
         NEINFO << "Successfully resolved domain " << domain << ".";
 
-        handler(addresses, NEKitErrorCode::NoError);
-        return;
+        boost::asio::post(
+            *main_io_, [handler, addresses, cancelable{std::move(cancelable)},
+                        life_time{life_time_cancelable_pointer()}]() {
+              if (cancelable->canceled() || life_time->canceled()) {
+                return;
+              }
+
+              handler(addresses, NEKitErrorCode::NoError);
+            });
       });
 
   return *cancelable_ptr;
 }
 
-void SystemResolver::Cancel() { resolver_.cancel(); }
+void SystemResolver::Stop() {
+  thread_group_.join_all();
+  resolve_io_.reset();
+}
+
+void SystemResolver::Reset() {
+  resolve_io_ = std::make_unique<boost::asio::io_context>();
+
+  for (size_t i = 0; i < thread_count_; i++) {
+    thread_group_.create_thread(
+        boost::bind(&boost::asio::io_context::run, resolve_io_.get()));
+  }
+}
+
+SystemResolver::~SystemResolver() { thread_group_.join_all(); }
 
 std::error_code SystemResolver::ConvertBoostError(
     const boost::system::error_code& ec) {
@@ -101,5 +136,6 @@ std::error_code SystemResolver::ConvertBoostError(
   return std::make_error_code(ec);
 }
 
+boost::asio::io_context* SystemResolver::io() { return main_io_; }
 }  // namespace utils
 }  // namespace nekit
