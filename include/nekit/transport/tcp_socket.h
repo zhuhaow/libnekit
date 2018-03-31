@@ -28,34 +28,30 @@
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
 
-#include "connection_interface.h"
-#include "connector_interface.h"
-#include "listener_interface.h"
+#include "../data_flow/local_data_flow_interface.h"
+#include "../data_flow/remote_data_flow_interface.h"
 #include "tcp_connector.h"
 #include "tcp_listener.h"
 
 namespace nekit {
 namespace transport {
 
-class TcpSocket final : public ConnectionInterface, private utils::LifeTime {
+class TcpSocket final : public data_flow::LocalDataFlowInterface,
+                        public data_flow::RemoteDataFlowInterface,
+                        private utils::LifeTime {
  public:
-  ~TcpSocket() = default;
+  explicit TcpSocket(std::shared_ptr<utils::Session> session);
 
-  utils::Cancelable& Read(std::unique_ptr<utils::Buffer>&&,
-                          TransportInterface::EventHandler) override
+  const utils::Cancelable& Read(std::unique_ptr<utils::Buffer>&&,
+                                DataEventHandler) override
       __attribute__((warn_unused_result));
-  utils::Cancelable& Write(std::unique_ptr<utils::Buffer>&&,
-                           TransportInterface::EventHandler) override
-      __attribute__((warn_unused_result));
-
-  utils::Cancelable& PollRead(TransportInterface::PollEventHandler) override
-      __attribute__((warn_unused_result));
-  utils::Cancelable& PollWrite(TransportInterface::PollEventHandler) override
+  const utils::Cancelable& Write(std::unique_ptr<utils::Buffer>&&,
+                                 EventHandler) override
       __attribute__((warn_unused_result));
 
-  void CloseRead() override;
-  void CloseWrite() override;
-  void Close() override;
+  // This should cancel the current write request.
+  const utils::Cancelable& CloseWrite(EventHandler) override
+      __attribute__((warn_unused_result));
 
   bool IsReadClosed() const override;
   bool IsWriteClosed() const override;
@@ -64,20 +60,49 @@ class TcpSocket final : public ConnectionInterface, private utils::LifeTime {
   bool IsReading() const override;
   bool IsWriting() const override;
 
-  boost::asio::ip::tcp::endpoint localEndpoint() const override;
-  boost::asio::ip::tcp::endpoint remoteEndpoint() const override;
+  bool IsIdle() const override;
+
+  data_flow::DataFlowInterface* NextHop() const override;
+
+  data_flow::DataType FlowDataType() const override;
+
+  std::shared_ptr<utils::Session> session() const override;
+
+  boost::asio::io_context* io() override;
+
+  const utils::Cancelable& Open(EventHandler) override
+      __attribute__((warn_unused_result));
+
+  const utils::Cancelable& Continue(EventHandler) override
+      __attribute__((warn_unused_result));
+
+  const utils::Cancelable& ReportError(std::error_code, EventHandler) override
+      __attribute__((warn_unused_result));
+
+  LocalDataFlowInterface* NextLocalHop() const override;
+
+  const utils::Cancelable& Connect(EventHandler) override
+      __attribute__((warn_unused_result));
+
+  RemoteDataFlowInterface* NextRemoteHop() const override;
 
   friend class TcpListener;
-  friend class TcpConnector;
 
  private:
-  explicit TcpSocket(boost::asio::ip::tcp::socket&& socket);
+  explicit TcpSocket(boost::asio::ip::tcp::socket&& socket,
+                     std::shared_ptr<utils::Session> session);
+
+  void DoWrite(std::unique_ptr<utils::Buffer>&&, EventHandler);
+
   std::error_code ConvertBoostError(const boost::system::error_code&) const;
 
   boost::asio::ip::tcp::socket socket_;
+  std::unique_ptr<TcpConnector> connector_;
+  std::shared_ptr<utils::Session> session_;
   bool read_closed_{false}, write_closed_{false};
-  bool reading_{false}, writing_{false};
-  utils::Cancelable read_cancelable_, write_cancelable_;
+  bool reading_{false}, writing_{false}, processing_{false};
+  utils::Cancelable read_cancelable_, write_cancelable_, report_cancelable_,
+      connect_cancelable_;
 };
 }  // namespace transport
 }  // namespace nekit
