@@ -29,13 +29,12 @@ namespace utils {
 
 class AsyncIoInterface {
  public:
-  explicit AsyncIoInterface(boost::asio::io_service& io) : io_{&io} {};
-  ~AsyncIoInterface() = default;
+  virtual ~AsyncIoInterface() = default;
 
-  boost::asio::io_service& io() const { return *io_; }
-
- private:
-  boost::asio::io_service* io_;
+  // It must be guaranteed that any `io_context` that will be returned by any
+  // instances of this interface should not be released before all instances are
+  // released.
+  virtual boost::asio::io_context* io() = 0;
 };
 
 }  // namespace utils
