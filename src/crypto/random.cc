@@ -27,7 +27,7 @@
 namespace nekit {
 namespace crypto {
 void Random::Bytes(uint8_t *data, size_t data_size) {
-  RAND_pseudo_bytes(data, data_size);
+  RAND_bytes(data, data_size);
 }
 }  // namespace crypto
 }  // namespace nekit
