@@ -26,23 +26,27 @@
 #include <memory>
 #include <system_error>
 
+#include "../data_flow/local_data_flow_interface.h"
 #include "../utils/async_io_interface.h"
-#include "connection_interface.h"
 
 namespace nekit {
 namespace transport {
 class ListenerInterface : public utils::AsyncIoInterface {
  public:
   using EventHandler = std::function<void(
-      std::unique_ptr<ConnectionInterface>&&, std::error_code)>;
+      std::unique_ptr<data_flow::LocalDataFlowInterface>&&, std::error_code)>;
 
-  explicit ListenerInterface(boost::asio::io_service& io) : AsyncIoInterface{io} {}
+  using DataFlowHandler =
+      std::function<std::unique_ptr<data_flow::LocalDataFlowInterface>(
+          std::unique_ptr<data_flow::LocalDataFlowInterface>&&)>;
 
   virtual ~ListenerInterface() = default;
 
   virtual void Accept(EventHandler) = 0;
 
   virtual void Close() = 0;
+
+  virtual boost::asio::io_context* io() = 0;
 };
 }  // namespace transport
 }  // namespace nekit
