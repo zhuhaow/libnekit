@@ -54,13 +54,17 @@ Cancelable& Cancelable::operator=(Cancelable&& cancelable) {
   return *this;
 }
 
-Cancelable::~Cancelable() { Cancel(); }
+Cancelable::~Cancelable() {
+  if (!disposed_) Cancel();
+}
 
 void Cancelable::Cancel() {
   if (canceled_) {
     *canceled_ = true;
   }
 }
+
+void Cancelable::Dispose() { disposed_ = true; }
 
 bool Cancelable::canceled() const { return *canceled_; }
 

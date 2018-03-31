@@ -41,10 +41,13 @@ class Cancelable {
   ~Cancelable();
 
   void Cancel();
+  void Dispose();
+
   bool canceled() const;
 
  private:
   std::shared_ptr<bool> canceled_;
+  bool disposed_{false};
 };
 
 class LifeTime : private boost::noncopyable {
@@ -54,9 +57,7 @@ class LifeTime : private boost::noncopyable {
         life_time_cancelable_pointer_{
             std::make_shared<Cancelable>(life_time_cancelable_)} {}
 
-  const Cancelable& life_time_cancelable() const {
-    return life_time_cancelable_;
-  }
+  Cancelable& life_time_cancelable() { return life_time_cancelable_; }
 
   std::shared_ptr<Cancelable> life_time_cancelable_pointer() const {
     return life_time_cancelable_pointer_;
