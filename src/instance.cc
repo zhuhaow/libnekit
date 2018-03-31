@@ -21,6 +21,8 @@
 
 #include "nekit/instance.h"
 
+#include <boost/assert.hpp>
+
 #include "nekit/utils/error.h"
 #include "nekit/utils/log.h"
 #include "nekit/utils/system_resolver.h"
@@ -29,63 +31,44 @@
 #define NECHANNEL "Instance"
 
 namespace nekit {
-using nekit::utils::LogLevel;
 
 Instance::Instance(std::string name)
-    : AsyncIoInterface{io_}, name_{name}, io_{} {}
+    : name_{name}, io_{std::make_unique<boost::asio::io_context>()} {}
 
-void Instance::SetRuleManager(
-    std::unique_ptr<rule::RuleManager> &&rule_manager) {
-  rule_manager_ = std::move(rule_manager);
-  NEDEBUG << "Set new rules for instance " << name_ << ".";
-}
+void Instance::AddProxyManager(std::unique_ptr<ProxyManager> &&proxy_manager) {
+  BOOST_ASSERT(proxy_manager->io() == io());
 
-void Instance::AddListener(
-    std::unique_ptr<transport::ServerListenerInterface> &&listener) {
-  listeners_.push_back(std::move(listener));
-  NEDEBUG << "Add new listener to instance " << name_ << ".";
+  proxy_managers_.emplace_back(std::move(proxy_manager));
 }
 
 void Instance::Run() {
-  assert(rule_manager_);
-  assert(ready_);
+  BOOST_ASSERT(ready_);
+  BOOST_ASSERT(proxy_managers_.size());
 
-  BOOST_LOG_SCOPED_THREAD_ATTR(
-      "Instance", boost::log::attributes::constant<std::string>(name_));
-
-  for (auto &listener : listeners_) {
-    listener->Accept(
-        [this](std::unique_ptr<transport::ConnectionInterface> &&conn,
-               std::unique_ptr<stream_coder::ServerStreamCoderInterface>
-                   &&stream_coder,
-               std::error_code ec) {
-          if (ec) {
-            NEERROR << "Error happened when accepting new socket " << ec;
-            exit(1);
-          }
-
-          tunnel_manager_
-              .Build(std::move(conn), std::move(stream_coder),
-                     rule_manager_.get())
-              .Open();
-        });
+  for (auto &manager : proxy_managers_) {
+    manager->Run();
   }
 
   NEINFO << "Start running instance.";
-  io_.run();
+  io_->run();
 
   NEINFO << "Instance stopped.";
 }
 
 void Instance::Stop() {
-  io_.stop();
+  io_->stop();
   ready_ = false;
 }
 
-void Instance::ResetNetwork() {
-  tunnel_manager_.CloseAll();
-  listeners_.clear();
+void Instance::Reset() {
+  for (auto &manager : proxy_managers_) {
+    manager->Reset();
+  }
+
+  io_ = std::make_unique<boost::asio::io_context>();
   ready_ = true;
 }
+
+boost::asio::io_context *Instance::io() { return io_.get(); }
 
 }  // namespace nekit

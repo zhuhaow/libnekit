@@ -27,32 +27,27 @@
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
 
-#include "rule/rule_manager.h"
-#include "transport/server_listener_interface.h"
-#include "transport/tunnel.h"
+#include "proxy_manager.h"
 #include "utils/async_io_interface.h"
-#include "utils/resolver_interface.h"
 
 namespace nekit {
 class Instance : public utils::AsyncIoInterface, private boost::noncopyable {
  public:
   explicit Instance(std::string name);
 
-  void SetRuleManager(std::unique_ptr<rule::RuleManager> &&rule_manager);
-  void AddListener(
-      std::unique_ptr<transport::ServerListenerInterface> &&listener);
+  void AddProxyManager(std::unique_ptr<ProxyManager> &&proxy_manager);
 
   void Run();
   void Stop();
-  void ResetNetwork();
+  void Reset();
+
+  boost::asio::io_context *io() override;
 
  private:
   std::string name_;
-  boost::asio::io_service io_;
+  std::unique_ptr<boost::asio::io_service> io_;
 
-  std::unique_ptr<rule::RuleManager> rule_manager_;
-  std::vector<std::unique_ptr<transport::ServerListenerInterface>> listeners_;
-  transport::TunnelManager tunnel_manager_;
+  std::vector<std::unique_ptr<ProxyManager>> proxy_managers_;
 
   bool ready_{true};
 };
