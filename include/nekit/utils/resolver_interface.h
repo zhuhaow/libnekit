@@ -40,23 +40,17 @@ class ResolverInterface : public AsyncIoInterface, private boost::noncopyable {
       std::shared_ptr<std::vector<boost::asio::ip::address>> addresses,
       std::error_code)>;
 
-  enum class AddressPreference {
-    IPv4Only,
-    IPv6Only,
-    IPv4OrIPv6,
-    IPv6OrIPv4,
-    Any
-  };
-
-  ResolverInterface(boost::asio::io_service& io) : AsyncIoInterface{io} {}
+  enum class AddressPreference { IPv4Only, IPv6Only, IPv4, IPv6, Any };
 
   virtual ~ResolverInterface() = default;
 
-  virtual Cancelable& Resolve(std::string domain, AddressPreference preference,
-                              EventHandler handler)
+  virtual const Cancelable& Resolve(std::string domain,
+                                    AddressPreference preference,
+                                    EventHandler handler)
       __attribute__((warn_unused_result)) = 0;
 
-  virtual void Cancel() = 0;
+  virtual void Stop() = 0;
+  virtual void Reset() = 0;
 };
 
 }  // namespace utils
