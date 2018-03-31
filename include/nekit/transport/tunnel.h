@@ -27,13 +27,11 @@
 
 #include <boost/noncopyable.hpp>
 
+#include "../data_flow/local_data_flow_interface.h"
+#include "../data_flow/remote_data_flow_interface.h"
 #include "../rule/rule_manager.h"
-#include "../stream_coder/server_stream_coder_interface.h"
-#include "../stream_coder/stream_coder_interface.h"
 #include "../utils/cancelable.h"
 #include "../utils/session.h"
-#include "adapter_interface.h"
-#include "transport_interface.h"
 
 namespace nekit {
 namespace transport {
@@ -42,9 +40,7 @@ class TunnelManager;
 
 class Tunnel final : private boost::noncopyable {
  public:
-  Tunnel(std::unique_ptr<ConnectionInterface>&& local_transport,
-         std::unique_ptr<stream_coder::ServerStreamCoderInterface>&&
-             local_stream_coder,
+  Tunnel(std::unique_ptr<data_flow::LocalDataFlowInterface>&& local_data_flow,
          rule::RuleManager* rule_manager);
 
   void Open();
@@ -52,52 +48,41 @@ class Tunnel final : private boost::noncopyable {
   friend class TunnelManager;
 
  private:
-  void ProcessLocalNegotiation(stream_coder::ActionRequest action_request);
-  void ProcessRemoteNegotiation(stream_coder::ActionRequest action_request);
-  void ProcessSession();
+  void MatchRule();
+  void ConnectToRemote();
+  void FinishLocalNegotiation();
   void BeginForward();
+
   void ForwardLocal();
   void ForwardRemote();
-
-  // Only handling error in forwarding state.
-  void HandleLocalReadError(std::error_code ec);
-  void HandleLocalWriteError(std::error_code ec);
-  void HandleRemoteReadError(std::error_code ec);
-  void HandleRemoteWriteError(std::error_code ec);
 
   void CheckTunnelStatus();
   void ReleaseTunnel();
 
-  void ResetIncomingBuffer(const utils::BufferReserveSize& reserve);
-  void ReturnIncomingBuffer(std::unique_ptr<utils::Buffer>&& buffer);
-  void ResetOutgoingBuffer(const utils::BufferReserveSize& reserve);
-  void ReturnOutgoingBuffer(std::unique_ptr<utils::Buffer>&& buffer);
+  void LocalReportError(std::error_code ec);
+
+  std::unique_ptr<utils::Buffer> CreateBuffer();
 
   std::shared_ptr<utils::Session> session_;
-  std::unique_ptr<AdapterInterface> adapter_;
 
   rule::RuleManager* rule_manager_;
   TunnelManager* tunnel_manager_;
 
-  std::unique_ptr<ConnectionInterface> local_transport_, remote_transport_;
-  std::unique_ptr<stream_coder::StreamCoderInterface> remote_stream_coder_;
-  std::unique_ptr<stream_coder::ServerStreamCoderInterface> local_stream_coder_;
-  std::unique_ptr<utils::Buffer> incoming_buffer_, outgoing_buffer_;
+  std::unique_ptr<data_flow::LocalDataFlowInterface> local_data_flow_;
+  std::unique_ptr<data_flow::RemoteDataFlowInterface> remote_data_flow_;
 
-  utils::Cancelable incoming_cancelable_, outgoing_cancelable_,
-      rule_cancelable_, poll_cancelable_;
+  utils::Cancelable open_cancelable_, local_read_cancelable_,
+      local_write_cancelable_, remote_read_cancelable_,
+      remote_write_cancelable_, rule_cancelable_;
 
-  bool polling_{false};
-  enum class PendingAction { None, NegotiationRead, Forward };
-  PendingAction pending_action_{PendingAction::None};
+  bool forwarding_{false};
 };
 
 class TunnelManager final : private boost::noncopyable {
  public:
-  Tunnel& Build(std::unique_ptr<ConnectionInterface>&& local_transport,
-                std::unique_ptr<stream_coder::ServerStreamCoderInterface>&&
-                    local_stream_coder,
-                rule::RuleManager* rule_manager);
+  Tunnel& Build(
+      std::unique_ptr<data_flow::LocalDataFlowInterface>&& local_data_flow,
+      rule::RuleManager* rule_manager);
 
   void CloseAll();
 
