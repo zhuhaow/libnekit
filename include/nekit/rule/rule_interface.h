@@ -20,28 +20,29 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef NEKIT_RULE_RULE_INTERFACE
-#define NEKIT_RULE_RULE_INTERFACE
+#pragma once
 
 #include <memory>
 
 #include <boost/noncopyable.hpp>
 
-#include "../transport/adapter_interface.h"
+#include "../data_flow/remote_data_flow_interface.h"
 #include "../utils/session.h"
 #include "match_result.h"
 
 namespace nekit {
 namespace rule {
-class RuleInterface : boost::noncopyable {
+class RuleInterface : private boost::noncopyable {
  public:
+  using RuleHandler =
+      std::function<std::unique_ptr<data_flow::RemoteDataFlowInterface>(
+          std::shared_ptr<utils::Session>)>;
+
   virtual ~RuleInterface() = default;
 
   virtual MatchResult Match(std::shared_ptr<utils::Session> session) = 0;
-  virtual std::unique_ptr<transport::AdapterInterface> GetAdapter(
+  virtual std::unique_ptr<data_flow::RemoteDataFlowInterface> GetDataFlow(
       std::shared_ptr<utils::Session> session) = 0;
 };
 }  // namespace rule
 }  // namespace nekit
-
-#endif /* NEKIT_RULE_RULE_INTERFACE */
