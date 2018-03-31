@@ -29,21 +29,37 @@
 
 #include <boost/asio.hpp>
 
+#include "async_io_interface.h"
 #include "endpoint.h"
 
 namespace nekit {
 namespace utils {
-struct Session {
+struct Session : public AsyncIoInterface {
  public:
-  Session(std::string host, uint16_t port = 0);
-  Session(boost::asio::ip::address ip, uint16_t port = 0);
+  Session(boost::asio::io_context* io) : io_{io} {}
+
+  Session(boost::asio::io_context* io, std::string host, uint16_t port = 0)
+      : io_{io}, endpoint_{std::make_shared<Endpoint>(host, port)} {}
+
+  Session(boost::asio::io_context* io, boost::asio::ip::address ip,
+          uint16_t port = 0)
+      : io_{io}, endpoint_{std::make_shared<Endpoint>(ip, port)} {}
+
+  Session(boost::asio::io_context* io, std::shared_ptr<Endpoint> endpoint)
+      : io_{io}, endpoint_{endpoint} {}
 
   std::map<std::string, int>& int_cache() { return int_cache_; }
   std::map<std::string, std::string>& string_cache() { return string_cache_; }
 
   std::shared_ptr<Endpoint>& endpoint() { return endpoint_; }
+  void set_endpoint(std::shared_ptr<Endpoint> endpoint) {
+    endpoint_ = endpoint;
+  }
+
+  boost::asio::io_context* io() override { return io_; };
 
  private:
+  boost::asio::io_context* io_;
   std::shared_ptr<Endpoint> endpoint_;
 
   // Keys begin with "NE" are reserved.
