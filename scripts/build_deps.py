@@ -45,8 +45,8 @@ OPENSSL_IOS = ('x2on/OpenSSL-for-iPhone', 'master', 'openssl')
 OPENSSL_LIB = ('openssl/openssl', 'OpenSSL_1_1_0f', 'openssl')
 
 DOWNLOAD_LIBRARIES = [(
-    'https://dl.bintray.com/boostorg/release/1.65.0/source/boost_1_65_0.tar.gz',
-    'boost', 'boost_1_65_0')]
+    'https://dl.bintray.com/boostorg/release/1.66.0/source/boost_1_66_0.tar.gz',
+    'boost', 'boost_1_66_0')]
 
 source_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 install_dir = os.path.abspath(os.path.join(source_dir, "deps"))
@@ -203,7 +203,7 @@ def cmake_compile(source_dir,
 
 def build_boost(boost_dir, install_prefix, target_platform):
     boost_build_module = "log,system"
-    boost_module = "core,boost/asio.hpp,system,log,phoenix,endian,range,assert"
+    boost_module = "core,boost/asio.hpp,system,log,phoenix,endian,range,assert,pool"
 
     if Platform.current_platform() in [Platform.OSX, Platform.Linux]:
         with local.cwd(boost_dir):
