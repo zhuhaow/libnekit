@@ -56,14 +56,14 @@ const Cancelable& Endpoint::Resolve(EventHandler handler) {
   if (resolved_) {
     NEDEBUG << "Already resolved, does nothing.";
 
-    resolver_->io().post(
-        [ handler, cancelable{life_time_cancelable_pointer()} ]() {
-          if (cancelable->canceled()) {
-            return;
-          }
+    boost::asio::post(*resolver_->io(),
+                      [handler, cancelable{life_time_cancelable_pointer()}]() {
+                        if (cancelable->canceled()) {
+                          return;
+                        }
 
-          handler(NEKitErrorCode::NoError);
-        });
+                        handler(NEKitErrorCode::NoError);
+                      });
     return life_time_cancelable();
   }
 
@@ -80,7 +80,7 @@ const Cancelable& Endpoint::ForceResolve(EventHandler handler) {
 
   resolve_cancelable_ = resolver_->Resolve(
       domain_, ResolverInterface::AddressPreference::Any,
-      [ this, handler, cancelable{life_time_cancelable_pointer()} ](
+      [this, handler, cancelable{life_time_cancelable_pointer()}](
           std::shared_ptr<std::vector<boost::asio::ip::address>> addresses,
           std::error_code ec) {
         if (cancelable->canceled()) {
