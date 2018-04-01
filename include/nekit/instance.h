@@ -45,7 +45,7 @@ class Instance : public utils::AsyncIoInterface, private boost::noncopyable {
 
  private:
   std::string name_;
-  std::unique_ptr<boost::asio::io_service> io_;
+  std::unique_ptr<boost::asio::io_context> io_;
 
   std::vector<std::unique_ptr<ProxyManager>> proxy_managers_;
 

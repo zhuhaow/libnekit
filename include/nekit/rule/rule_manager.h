@@ -61,7 +61,7 @@ class RuleManager final : public utils::AsyncIoInterface,
       std::shared_ptr<utils::Cancelable> cancelable, EventHandler handler);
 
   std::vector<std::shared_ptr<RuleInterface>> rules_;
-  boost::asio::io_service* io_;
+  boost::asio::io_context* io_;
 };
 
 std::error_code make_error_code(RuleManager::ErrorCode ec);
