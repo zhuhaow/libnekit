@@ -97,6 +97,10 @@ set(SOURCES ${SOURCES}
   modules/CxxUrl/url.cc
   modules/picohttpparser/picohttpparser.c)
 
+if(EXISTS "contrib" AND IS_DIRECTORY "contrib" AND EXISTS "contrib/CMakeLists.txt")
+  add_subdirectory("contrib")
+endif()
+
 cmake_policy(SET CMP0063 NEW)
 add_library(nekit ${SOURCES})
 set_target_properties(nekit PROPERTIES CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN YES)
@@ -131,6 +135,8 @@ target_link_libraries(nekit ${LIBS})
 if (NOT IOS AND NOT ANDROID)
   enable_testing()
   add_subdirectory(test)
+endif()
 
-  add_subdirectory(app)
+if(EXISTS "app" AND IS_DIRECTORY "app" AND EXISTS "app/CMakeLists.txt")
+  add_subdirectory("app")
 endif()
