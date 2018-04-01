@@ -24,6 +24,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <cstring>
 
 #include <boost/assert.hpp>
 
