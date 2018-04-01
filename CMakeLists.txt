@@ -97,8 +97,8 @@ set(SOURCES ${SOURCES}
   modules/CxxUrl/url.cc
   modules/picohttpparser/picohttpparser.c)
 
-if(EXISTS "contrib" AND IS_DIRECTORY "contrib" AND EXISTS "contrib/CMakeLists.txt")
-  add_subdirectory("contrib")
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/contrib" AND IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/contrib" AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/contrib/CMakeLists.txt")
+  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/contrib")
 endif()
 
 cmake_policy(SET CMP0063 NEW)
@@ -137,6 +137,6 @@ if (NOT IOS AND NOT ANDROID)
   add_subdirectory(test)
 endif()
 
-if(EXISTS "app" AND IS_DIRECTORY "app" AND EXISTS "app/CMakeLists.txt")
-  add_subdirectory("app")
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/app" AND IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/app" AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/app/CMakeLists.txt")
+  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/app")
 endif()
