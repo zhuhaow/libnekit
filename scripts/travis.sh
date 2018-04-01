@@ -28,5 +28,5 @@ then
         cd ..
     fi
 
-    sonar-scanner
+    sonar-scanner -Dsonar.branch.name="$TRAVIS_BRANCH"
 fi
