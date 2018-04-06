@@ -56,17 +56,24 @@ class DataFlowInterface : public utils::AsyncIoInterface,
                                          EventHandler)
       __attribute__((warn_unused_result)) = 0;
 
-  // This should cancel the current write request.
+  // This should cancel the current write request if there is one.
   virtual const utils::Cancelable& CloseWrite(EventHandler)
       __attribute__((warn_unused_result)) = 0;
 
+  // Whether the data flow will read more data.
   virtual bool IsReadClosed() const = 0;
+  // Whether the data flow can send more data.
   virtual bool IsWriteClosed() const = 0;
+  // Whether the data flow is still open. This does not mean the data flow
+  // should be released, there may be actions pending. Check `IsIdle` also.
   virtual bool IsClosed() const = 0;
 
+  // Whether the data flow is trying to read data.
   virtual bool IsReading() const = 0;
+  // Whether the data flow is writing data.
   virtual bool IsWriting() const = 0;
 
+  // Whether there is pending action.
   virtual bool IsIdle() const = 0;
 
   virtual DataFlowInterface* NextHop() const = 0;
