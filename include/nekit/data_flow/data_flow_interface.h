@@ -78,8 +78,6 @@ class DataFlowInterface : public utils::AsyncIoInterface,
 
   virtual DataFlowInterface* NextHop() const = 0;
 
-  virtual std::shared_ptr<utils::Endpoint> ConnectingTo() = 0;
-
   virtual DataType FlowDataType() const = 0;
 
   virtual std::shared_ptr<utils::Session> session() const = 0;
