@@ -24,6 +24,7 @@
 
 #include <functional>
 #include <system_error>
+#include <vector>
 
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
@@ -49,7 +50,6 @@ class TcpSocket final : public data_flow::LocalDataFlowInterface,
                                  EventHandler) override
       __attribute__((warn_unused_result));
 
-  // This should cancel the current write request.
   const utils::Cancelable& CloseWrite(EventHandler) override
       __attribute__((warn_unused_result));
 
@@ -63,6 +63,8 @@ class TcpSocket final : public data_flow::LocalDataFlowInterface,
   bool IsIdle() const override;
 
   data_flow::DataFlowInterface* NextHop() const override;
+
+  std::shared_ptr<utils::Endpoint> ConnectingTo() override;
 
   data_flow::DataType FlowDataType() const override;
 
@@ -92,14 +94,15 @@ class TcpSocket final : public data_flow::LocalDataFlowInterface,
   explicit TcpSocket(boost::asio::ip::tcp::socket&& socket,
                      std::shared_ptr<utils::Session> session);
 
-  void DoWrite(std::unique_ptr<utils::Buffer>&&, EventHandler);
-
   std::error_code ConvertBoostError(const boost::system::error_code&) const;
 
   boost::asio::ip::tcp::socket socket_;
   std::unique_ptr<TcpConnector> connector_;
   std::shared_ptr<utils::Session> session_;
-  bool read_closed_{false}, write_closed_{false};
+  std::shared_ptr<utils::Endpoint> connect_to_;
+  std::unique_ptr<std::vector<boost::asio::const_buffer>> write_buffer_;
+  std::unique_ptr<std::vector<boost::asio::mutable_buffer>> read_buffer_;
+  bool read_closed_{false}, write_closed_{false}, errored_{false};
   bool reading_{false}, writing_{false}, processing_{false};
   utils::Cancelable read_cancelable_, write_cancelable_, report_cancelable_,
       connect_cancelable_;

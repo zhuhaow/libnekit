@@ -37,41 +37,51 @@ namespace transport {
 
 TcpSocket::TcpSocket(boost::asio::ip::tcp::socket &&socket,
                      std::shared_ptr<utils::Session> session)
-    : socket_{std::move(socket)}, session_{session} {
+    : socket_{std::move(socket)},
+      session_{session},
+      write_buffer_{
+          std::make_unique<std::vector<boost::asio::const_buffer>>(0)},
+      read_buffer_{
+          std::make_unique<std::vector<boost::asio::mutable_buffer>>(0)} {
   BOOST_ASSERT(&socket_.get_io_context() == session->io());
 }
 
 TcpSocket::TcpSocket(std::shared_ptr<utils::Session> session)
-    : socket_{*session->io()}, session_{session} {}
+    : socket_{*session->io()},
+      session_{session},
+      connect_to_{session->current_endpoint()},
+      write_buffer_{
+          std::make_unique<std::vector<boost::asio::const_buffer>>(0)},
+      read_buffer_{
+          std::make_unique<std::vector<boost::asio::mutable_buffer>>(0)} {}
 
-const utils::Cancelable &TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
-                                   DataEventHandler handler) {
+const utils::Cancelable &TcpSocket::Read(
+    std::unique_ptr<utils::Buffer> &&buffer, DataEventHandler handler) {
   BOOST_ASSERT(socket_.is_open());
   BOOST_ASSERT(!read_closed_);
   BOOST_ASSERT(!reading_);
+  BOOST_ASSERT(!errored_);
   BOOST_ASSERT(buffer->size());
+  BOOST_ASSERT(read_buffer_ && !read_buffer_->size());
 
   NETRACE << "Start reading data.";
 
   read_cancelable_ = utils::Cancelable();
 
-  void *data;
-  size_t size;
   buffer->WalkInternalChunk(
-      [&data, &size](void *d, size_t s, void *c) {
+      [this](void *d, size_t s, void *c) {
         (void)c;
-        data = d;
-        size = s;
-        return false;
+        read_buffer_->push_back(boost::asio::mutable_buffer(d, s));
+        return true;
       },
       0, nullptr);
-  BOOST_ASSERT(size);
 
   reading_ = true;
 
   socket_.async_read_some(
-      boost::asio::mutable_buffer(data, size),
-      [this, buffer{std::move(buffer)}, handler, cancelable{read_cancelable_},
+      *read_buffer_,
+      [this, buffer{std::move(buffer)}, buffer_wrapper{std::move(read_buffer_)},
+       handler, cancelable{read_cancelable_},
        lifetime{life_time_cancelable_pointer()}](
           const boost::system::error_code &ec,
           std::size_t bytes_transferred) mutable {
@@ -89,10 +99,12 @@ const utils::Cancelable &TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer
           }
 
           if (error == ErrorCode::EndOfFile) {
-            this->read_closed_ = true;
+            read_closed_ = true;
             NEDEBUG << "Socket got EOF.";
           } else {
             NEERROR << "Reading from socket failed due to " << error << ".";
+            errored_ = true;
+            read_closed_ = true;
           }
 
           handler(std::move(buffer), error);
@@ -106,49 +118,43 @@ const utils::Cancelable &TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer
           buffer->ShrinkBack(buffer->size() - bytes_transferred);
         }
 
+        read_buffer_ = std::move(buffer_wrapper);
+        read_buffer_->clear();
+
         handler(std::move(buffer), ErrorCode::NoError);
         return;
       });
   return read_cancelable_;
 }
 
-const utils::Cancelable &TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
-                                    EventHandler handler) {
+const utils::Cancelable &TcpSocket::Write(
+    std::unique_ptr<utils::Buffer> &&buffer, EventHandler handler) {
   BOOST_ASSERT(socket_.is_open());
   BOOST_ASSERT(!write_closed_);
   BOOST_ASSERT(!writing_);
+  BOOST_ASSERT(!errored_);
   BOOST_ASSERT(buffer->size());
+  BOOST_ASSERT(write_buffer_ && !write_buffer_->size());
 
   NETRACE << "Start writing data.";
 
   write_cancelable_ = utils::Cancelable();
 
-  DoWrite(std::move(buffer), handler);
-
-  return write_cancelable_;
-}
-
-void TcpSocket::DoWrite(std::unique_ptr<utils::Buffer> &&buffer,
-                        EventHandler handler) {
-  void *data;
-  size_t size;
   buffer->WalkInternalChunk(
-      [&data, &size](void *d, size_t s, void *c) {
+      [this](void *d, size_t s, void *c) {
         (void)c;
-        data = d;
-        size = s;
+        write_buffer_->push_back(boost::asio::const_buffer(d, s));
         return false;
       },
       0, nullptr);
 
-  BOOST_ASSERT(size);
-
   writing_ = true;
 
   boost::asio::async_write(
-      socket_, boost::asio::const_buffer(data, size),
-      [this, buffer{std::move(buffer)}, handler, cancelable{write_cancelable_},
-       lifetime{life_time_cancelable_pointer()}](
+      socket_, *write_buffer_,
+      [this, buffer{std::move(buffer)},
+       buffer_wrapper{std::move(write_buffer_)}, handler,
+       cancelable{write_cancelable_}, lifetime{life_time_cancelable_pointer()}](
           const boost::system::error_code &ec,
           std::size_t bytes_transferred) mutable {
         if (cancelable.canceled() || lifetime->canceled()) {
@@ -165,6 +171,8 @@ void TcpSocket::DoWrite(std::unique_ptr<utils::Buffer> &&buffer,
             return;
           }
 
+          errored_ = true;
+
           handler(error);
           return;
         }
@@ -172,18 +180,12 @@ void TcpSocket::DoWrite(std::unique_ptr<utils::Buffer> &&buffer,
         NETRACE << "Successfully write " << bytes_transferred
                 << " bytes to socket.";
 
-        BOOST_ASSERT(bytes_transferred <= buffer->size());
-        if (bytes_transferred < buffer->size()) {
-          buffer->ShrinkFront(bytes_transferred);
-          NETRACE << "Continue to write rest data in buffer.";
-          cancelable.Dispose();
-          DoWrite(std::move(buffer), handler);
-          return;
-        }
+        BOOST_ASSERT(bytes_transferred == buffer->size());
 
         handler(ErrorCode::NoError);
         return;
       });
+  return write_cancelable_;
 }
 
 const utils::Cancelable &TcpSocket::CloseWrite(EventHandler handler) {
@@ -210,19 +212,18 @@ const utils::Cancelable &TcpSocket::CloseWrite(EventHandler handler) {
   }
 
   write_cancelable_ = utils::Cancelable();
-  writing_ = true;
+  writing_ = true;  // Probably not necessary, just guard some strange usage.
 
-  boost::asio::post(socket_.get_executor(),
-                    [this, handler, cancelable{write_cancelable_},
-                     lifetime{life_time_cancelable_pointer()}, error]() {
-                      if (cancelable.canceled() || lifetime->canceled()) {
-                        return;
-                      }
+  boost::asio::post(*io(), [this, handler, cancelable{write_cancelable_},
+                            lifetime{life_time_cancelable_pointer()}, error]() {
+    if (cancelable.canceled() || lifetime->canceled()) {
+      return;
+    }
 
-                      writing_ = false;
+    writing_ = false;
 
-                      handler(error);
-                    });
+    handler(error);
+  });
   return write_cancelable_;
 }
 
@@ -242,6 +243,10 @@ bool TcpSocket::IsIdle() const {
 
 data_flow::DataFlowInterface *TcpSocket::NextHop() const { return nullptr; }
 
+std::shared_ptr<utils::Endpoint> TcpSocket::ConnectingTo() {
+  return connect_to_;
+}
+
 data_flow::DataType TcpSocket::FlowDataType() const {
   return data_flow::DataType::Stream;
 }
@@ -252,47 +257,51 @@ boost::asio::io_context *TcpSocket::io() { return &socket_.get_io_context(); }
 
 const utils::Cancelable &TcpSocket::Open(EventHandler handler) {
   BOOST_ASSERT(socket_.is_open());
+  BOOST_ASSERT(!processing_);
 
-  report_cancelable_ = utils::Cancelable();
+  report_cancelable_ =
+      utils::Cancelable();  // Report error request will invalid this callback,
+                            // so we just use report cancelable to guard the
+                            // lifetime here then there is no need to cancel it
+                            // explicitly when report error is requested.
   processing_ = true;
 
-  boost::asio::post(socket_.get_executor(),
-                    [this, handler, cancelable{report_cancelable_},
-                     lifetime{life_time_cancelable_pointer()}]() {
-                      if (cancelable.canceled() || lifetime->canceled()) {
-                        return;
-                      }
+  boost::asio::post(*io(), [this, handler, cancelable{report_cancelable_},
+                            lifetime{life_time_cancelable_pointer()}]() {
+    if (cancelable.canceled() || lifetime->canceled()) {
+      return;
+    }
 
-                      processing_ = false;
+    processing_ = false;
 
-                      handler(ErrorCode::NoError);
-                    });
+    handler(ErrorCode::NoError);
+  });
   return report_cancelable_;
 }
 
 const utils::Cancelable &TcpSocket::Continue(EventHandler handler) {
   BOOST_ASSERT(socket_.is_open());
+  BOOST_ASSERT(!processing_);
 
   report_cancelable_ = utils::Cancelable();
 
   processing_ = true;
 
-  boost::asio::post(socket_.get_executor(),
-                    [this, handler, cancelable{report_cancelable_},
-                     lifetime{life_time_cancelable_pointer()}]() {
-                      if (cancelable.canceled() || lifetime->canceled()) {
-                        return;
-                      }
+  boost::asio::post(*io(), [this, handler, cancelable{report_cancelable_},
+                            lifetime{life_time_cancelable_pointer()}]() {
+    if (cancelable.canceled() || lifetime->canceled()) {
+      return;
+    }
 
-                      processing_ = false;
+    processing_ = false;
 
-                      handler(ErrorCode::NoError);
-                    });
+    handler(ErrorCode::NoError);
+  });
   return report_cancelable_;
 }
 
 const utils::Cancelable &TcpSocket::ReportError(std::error_code ec,
-                                          EventHandler handler) {
+                                                EventHandler handler) {
   (void)ec;
 
   read_cancelable_.Dispose();
@@ -302,17 +311,16 @@ const utils::Cancelable &TcpSocket::ReportError(std::error_code ec,
   report_cancelable_ = utils::Cancelable();
   processing_ = true;
 
-  boost::asio::post(socket_.get_executor(),
-                    [this, handler, cancelable{report_cancelable_},
-                     lifetime{life_time_cancelable_pointer()}]() {
-                      if (cancelable.canceled() || lifetime->canceled()) {
-                        return;
-                      }
+  boost::asio::post(*io(), [this, handler, cancelable{report_cancelable_},
+                            lifetime{life_time_cancelable_pointer()}]() {
+    if (cancelable.canceled() || lifetime->canceled()) {
+      return;
+    }
 
-                      processing_ = false;
+    processing_ = false;
 
-                      handler(ErrorCode::NoError);
-                    });
+    handler(ErrorCode::NoError);
+  });
   return report_cancelable_;
 }
 
@@ -322,8 +330,9 @@ data_flow::LocalDataFlowInterface *TcpSocket::NextLocalHop() const {
 
 const utils::Cancelable &TcpSocket::Connect(EventHandler handler) {
   BOOST_ASSERT(!processing_);
+  BOOST_ASSERT(connect_to_);
 
-  connector_ = std::make_unique<TcpConnector>(session_->endpoint(), io());
+  connector_ = std::make_unique<TcpConnector>(connect_to_, io());
 
   processing_ = true;
 
@@ -352,20 +361,6 @@ const utils::Cancelable &TcpSocket::Connect(EventHandler handler) {
 data_flow::RemoteDataFlowInterface *TcpSocket::NextRemoteHop() const {
   return nullptr;
 }
-
-// boost::asio::ip::tcp::endpoint TcpSocket::localEndpoint() const {
-//   boost::system::error_code ec;
-//   boost::asio::ip::tcp::endpoint endpoint = socket_.local_endpoint(ec);
-//   BOOST_ASSERT(!ec);
-//   return endpoint;
-// }
-
-// boost::asio::ip::tcp::endpoint TcpSocket::remoteEndpoint() const {
-//   boost::system::error_code ec;
-//   boost::asio::ip::tcp::endpoint endpoint = socket_.remote_endpoint(ec);
-//   BOOST_ASSERT(!ec);
-//   return endpoint;
-// }
 
 std::error_code TcpSocket::ConvertBoostError(
     const boost::system::error_code &ec) const {
