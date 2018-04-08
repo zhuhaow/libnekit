@@ -56,7 +56,7 @@ class DataFlowInterface : public utils::AsyncIoInterface,
                                          EventHandler)
       __attribute__((warn_unused_result)) = 0;
 
-  // This should cancel the current write request if there is one.
+  // Must not be writing.
   virtual const utils::Cancelable& CloseWrite(EventHandler)
       __attribute__((warn_unused_result)) = 0;
 
@@ -77,6 +77,8 @@ class DataFlowInterface : public utils::AsyncIoInterface,
   virtual bool IsIdle() const = 0;
 
   virtual DataFlowInterface* NextHop() const = 0;
+
+  virtual std::shared_ptr<utils::Endpoint> ConnectingTo() = 0;
 
   virtual DataType FlowDataType() const = 0;
 
