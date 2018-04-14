@@ -57,6 +57,7 @@ TcpSocket::TcpSocket(std::shared_ptr<utils::Session> session)
 
 const utils::Cancelable &TcpSocket::Read(
     std::unique_ptr<utils::Buffer> &&buffer, DataEventHandler handler) {
+  BOOST_ASSERT(ready_);
   BOOST_ASSERT(socket_.is_open());
   BOOST_ASSERT(!read_closed_);
   BOOST_ASSERT(!reading_);
@@ -129,6 +130,7 @@ const utils::Cancelable &TcpSocket::Read(
 
 const utils::Cancelable &TcpSocket::Write(
     std::unique_ptr<utils::Buffer> &&buffer, EventHandler handler) {
+  BOOST_ASSERT(ready_);
   BOOST_ASSERT(socket_.is_open());
   BOOST_ASSERT(!write_closed_);
   BOOST_ASSERT(!writing_);
@@ -189,6 +191,7 @@ const utils::Cancelable &TcpSocket::Write(
 }
 
 const utils::Cancelable &TcpSocket::CloseWrite(EventHandler handler) {
+  BOOST_ASSERT(ready_);
   BOOST_ASSERT(!writing_);
 
   NEDEBUG << "Closing socket writing.";
@@ -227,19 +230,37 @@ const utils::Cancelable &TcpSocket::CloseWrite(EventHandler handler) {
   return write_cancelable_;
 }
 
-bool TcpSocket::IsReadClosed() const { return read_closed_; }
+bool TcpSocket::IsReadClosed() const {
+  BOOST_ASSERT(ready_);
+  return read_closed_;
+}
 
-bool TcpSocket::IsWriteClosed() const { return write_closed_; }
+bool TcpSocket::IsWriteClosed() const {
+  BOOST_ASSERT(ready_);
+  return write_closed_;
+}
 
-bool TcpSocket::IsClosed() const { return IsReadClosed() && IsWriteClosed(); }
+bool TcpSocket::IsClosed() const {
+  BOOST_ASSERT(ready_);
+  return IsReadClosed() && IsWriteClosed();
+}
 
-bool TcpSocket::IsReading() const { return reading_; }
+bool TcpSocket::IsReading() const {
+  BOOST_ASSERT(ready_);
+  return reading_;
+}
 
-bool TcpSocket::IsWriting() const { return writing_; }
+bool TcpSocket::IsWriting() const {
+  BOOST_ASSERT(ready_);
+  return writing_;
+}
 
 bool TcpSocket::IsIdle() const {
+  BOOST_ASSERT(ready_);
   return !writing_ && !reading_ && !processing_;
 }
+
+bool TcpSocket::IsReady() const { return ready_; }
 
 data_flow::DataFlowInterface *TcpSocket::NextHop() const { return nullptr; }
 
@@ -256,6 +277,7 @@ std::shared_ptr<utils::Session> TcpSocket::session() const { return session_; }
 boost::asio::io_context *TcpSocket::io() { return &socket_.get_io_context(); }
 
 const utils::Cancelable &TcpSocket::Open(EventHandler handler) {
+  BOOST_ASSERT(!ready_);
   BOOST_ASSERT(socket_.is_open());
   BOOST_ASSERT(!processing_);
 
@@ -280,6 +302,7 @@ const utils::Cancelable &TcpSocket::Open(EventHandler handler) {
 }
 
 const utils::Cancelable &TcpSocket::Continue(EventHandler handler) {
+  BOOST_ASSERT(!ready_);
   BOOST_ASSERT(socket_.is_open());
   BOOST_ASSERT(!processing_);
 
@@ -293,6 +316,7 @@ const utils::Cancelable &TcpSocket::Continue(EventHandler handler) {
       return;
     }
 
+    ready_ = true;
     processing_ = false;
 
     handler(ErrorCode::NoError);
@@ -329,6 +353,7 @@ data_flow::LocalDataFlowInterface *TcpSocket::NextLocalHop() const {
 }
 
 const utils::Cancelable &TcpSocket::Connect(EventHandler handler) {
+  BOOST_ASSERT(!ready_);
   BOOST_ASSERT(!processing_);
   BOOST_ASSERT(connect_to_);
 
@@ -343,7 +368,8 @@ const utils::Cancelable &TcpSocket::Connect(EventHandler handler) {
           return;
         }
 
-        processing_ = true;
+        processing_ = false;
+        ready_ = true;
 
         if (ec) {
           handler(ec);

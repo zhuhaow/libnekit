@@ -62,6 +62,8 @@ class TcpSocket final : public data_flow::LocalDataFlowInterface,
 
   bool IsIdle() const override;
 
+  bool IsReady() const override;
+
   data_flow::DataFlowInterface* NextHop() const override;
 
   std::shared_ptr<utils::Endpoint> ConnectingTo() override;
@@ -104,6 +106,7 @@ class TcpSocket final : public data_flow::LocalDataFlowInterface,
   std::unique_ptr<std::vector<boost::asio::mutable_buffer>> read_buffer_;
   bool read_closed_{false}, write_closed_{false}, errored_{false};
   bool reading_{false}, writing_{false}, processing_{false};
+  bool ready_{false};
   utils::Cancelable read_cancelable_, write_cancelable_, report_cancelable_,
       connect_cancelable_;
 };
