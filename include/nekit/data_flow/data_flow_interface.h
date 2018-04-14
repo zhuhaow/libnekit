@@ -73,7 +73,7 @@ class DataFlowInterface : public utils::AsyncIoInterface,
   // Whether the data flow is writing data.
   virtual bool IsWriting() const = 0;
 
-  // Whether there is pending action.
+  // Whether there is any pending action.
   virtual bool IsIdle() const = 0;
 
   virtual DataFlowInterface* NextHop() const = 0;
