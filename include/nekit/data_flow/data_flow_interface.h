@@ -76,6 +76,9 @@ class DataFlowInterface : public utils::AsyncIoInterface,
   // Whether there is any pending action.
   virtual bool IsIdle() const = 0;
 
+  // Whether the results of above methods make sense or not.
+  virtual bool IsReady() const = 0;
+
   virtual DataFlowInterface* NextHop() const = 0;
 
   virtual DataType FlowDataType() const = 0;
