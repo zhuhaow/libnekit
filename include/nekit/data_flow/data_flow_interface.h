@@ -65,7 +65,7 @@ class DataFlowInterface : public utils::AsyncIoInterface,
   // Whether the data flow can send more data.
   virtual bool IsWriteClosed() const = 0;
   // Whether the data flow is still open. This does not mean the data flow
-  // should be released, there may be actions pending. Check `IsIdle` also.
+  // should be released, there may be actions pending.
   virtual bool IsClosed() const = 0;
 
   // Whether the data flow is trying to read data.
@@ -73,11 +73,13 @@ class DataFlowInterface : public utils::AsyncIoInterface,
   // Whether the data flow is writing data.
   virtual bool IsWriting() const = 0;
 
-  // Whether there is any pending action.
-  virtual bool IsIdle() const = 0;
-
   // Whether the results of above methods make sense or not.
   virtual bool IsReady() const = 0;
+
+  // Return true when:
+  // 1. The data flow is not "ready" and is not preparing to become ready.
+  // 2. The data flow is ready but closed and there is no action pending or running.
+  virtual bool IsStopped() const = 0;
 
   virtual DataFlowInterface* NextHop() const = 0;
 
