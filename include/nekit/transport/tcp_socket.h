@@ -60,9 +60,9 @@ class TcpSocket final : public data_flow::LocalDataFlowInterface,
   bool IsReading() const override;
   bool IsWriting() const override;
 
-  bool IsIdle() const override;
-
   bool IsReady() const override;
+
+  bool IsStopped() const override;
 
   data_flow::DataFlowInterface* NextHop() const override;
 

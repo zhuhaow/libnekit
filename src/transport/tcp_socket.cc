@@ -255,12 +255,11 @@ bool TcpSocket::IsWriting() const {
   return writing_;
 }
 
-bool TcpSocket::IsIdle() const {
-  BOOST_ASSERT(ready_);
-  return !writing_ && !reading_ && !processing_;
-}
-
 bool TcpSocket::IsReady() const { return ready_; }
+
+bool TcpSocket::IsStopped() const {
+  return ready_ ? !writing_ && !reading_ && !processing_ : !processing_;
+}
 
 data_flow::DataFlowInterface *TcpSocket::NextHop() const { return nullptr; }
 
@@ -326,11 +325,19 @@ const utils::Cancelable &TcpSocket::Continue(EventHandler handler) {
 
 const utils::Cancelable &TcpSocket::ReportError(std::error_code ec,
                                                 EventHandler handler) {
+  BOOST_ASSERT(errored_);
+
   (void)ec;
 
   read_cancelable_.Dispose();
   write_cancelable_.Dispose();
   connect_cancelable_.Dispose();
+
+  reading_ = false;
+  writing_ = false;
+  ready_ = false;
+  read_closed_ = true;
+  write_closed_ = true;
 
   report_cancelable_ = utils::Cancelable();
   processing_ = true;
