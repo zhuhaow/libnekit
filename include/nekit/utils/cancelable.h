@@ -38,34 +38,28 @@ class Cancelable {
   Cancelable(Cancelable&& cancelable);
   Cancelable& operator=(Cancelable&& cancelable);
 
-  ~Cancelable();
-
+  // There is no automatic cancellation on destruction. Although it works most
+  // of the time, but it depends on the use of RVO and some other techniques
+  // that I'm not sure will hold for every scenario. Cancel the request
+  // explicitly.
   void Cancel();
-  void Dispose();
+  void Reset();
 
   bool canceled() const;
 
  private:
   std::shared_ptr<bool> canceled_;
-  bool disposed_{false};
 };
 
 class LifeTime : private boost::noncopyable {
  public:
-  LifeTime()
-      : life_time_cancelable_{},
-        life_time_cancelable_pointer_{
-            std::make_shared<Cancelable>(life_time_cancelable_)} {}
+  LifeTime() : life_time_cancelable_{} {}
+  ~LifeTime() { life_time_cancelable_.Cancel(); }
 
-  Cancelable& life_time_cancelable() { return life_time_cancelable_; }
-
-  std::shared_ptr<Cancelable> life_time_cancelable_pointer() const {
-    return life_time_cancelable_pointer_;
-  }
+  Cancelable life_time_cancelable() { return life_time_cancelable_; }
 
  private:
   Cancelable life_time_cancelable_;
-  std::shared_ptr<Cancelable> life_time_cancelable_pointer_;
 };
 }  // namespace utils
 }  // namespace nekit

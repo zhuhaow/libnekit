@@ -32,11 +32,7 @@ Cancelable::Cancelable(const Cancelable& cancelable) {
   canceled_ = cancelable.canceled_;
 }
 
-Cancelable& Cancelable::operator=(const Cancelable& cancelable) {
-  if (this == &cancelable) {
-    return *this;
-  }
-
+Cancelable& Cancelable::operator=(const nekit::utils::Cancelable& cancelable) {
   canceled_ = cancelable.canceled_;
   return *this;
 }
@@ -54,17 +50,9 @@ Cancelable& Cancelable::operator=(Cancelable&& cancelable) {
   return *this;
 }
 
-Cancelable::~Cancelable() {
-  if (!disposed_) Cancel();
-}
+void Cancelable::Cancel() { *canceled_ = true; }
 
-void Cancelable::Cancel() {
-  if (canceled_) {
-    *canceled_ = true;
-  }
-}
-
-void Cancelable::Dispose() { disposed_ = true; }
+void Cancelable::Reset() { *canceled_ = false; }
 
 bool Cancelable::canceled() const { return *canceled_; }
 
