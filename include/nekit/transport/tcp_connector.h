@@ -48,7 +48,7 @@ class TcpConnector : public utils::AsyncIoInterface, private utils::LifeTime {
   TcpConnector(std::shared_ptr<utils::Endpoint> endpoint,
                boost::asio::io_context* io);
 
-  const utils::Cancelable& Connect(EventHandler handler)
+  utils::Cancelable Connect(EventHandler handler)
       __attribute__((warn_unused_result));
 
   void Bind(std::shared_ptr<utils::DeviceInterface> device);
@@ -65,7 +65,6 @@ class TcpConnector : public utils::AsyncIoInterface, private utils::LifeTime {
 
   uint16_t port_;
   std::shared_ptr<utils::DeviceInterface> device_;
-  utils::Cancelable resolve_cancelable_;
 
   std::error_code last_error_;
 

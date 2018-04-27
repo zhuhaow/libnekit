@@ -47,7 +47,7 @@ TcpConnector::TcpConnector(std::shared_ptr<utils::Endpoint> endpoint,
                            boost::asio::io_context* io)
     : socket_{*io}, endpoint_{endpoint}, port_{endpoint->port()} {}
 
-const utils::Cancelable& TcpConnector::Connect(EventHandler handler) {
+utils::Cancelable TcpConnector::Connect(EventHandler handler) {
   assert(!connecting_);
 
   NEDEBUG << "Begin connecting to remote.";
@@ -65,6 +65,7 @@ const utils::Cancelable& TcpConnector::Connect(EventHandler handler) {
 
       NEDEBUG << "Addresses are available, connect directly.";
       DoConnect(handler);
+      // Note connector is disposable.
       return life_time_cancelable();
     } else {
       if (!endpoint_->IsResolvable()) {
@@ -73,8 +74,8 @@ const utils::Cancelable& TcpConnector::Connect(EventHandler handler) {
 
         boost::asio::post(
             socket_.get_executor(),
-            [this, handler, cancelable{life_time_cancelable_pointer()}]() {
-              if (cancelable->canceled()) {
+            [this, handler, cancelable{life_time_cancelable()}]() {
+              if (cancelable.canceled()) {
                 return;
               }
 
@@ -82,10 +83,10 @@ const utils::Cancelable& TcpConnector::Connect(EventHandler handler) {
             });
         return life_time_cancelable();
       } else {
-        resolve_cancelable_ = endpoint_->Resolve(
-            [this, handler, cancelable{life_time_cancelable_pointer()}](
-                std::error_code ec) mutable {
-              if (cancelable->canceled()) {
+        (void)endpoint_->Resolve(
+            [this, handler,
+             cancelable{life_time_cancelable()}](std::error_code ec) mutable {
+              if (cancelable.canceled()) {
                 return;
               }
 
@@ -145,9 +146,9 @@ void TcpConnector::DoConnect(EventHandler handler) {
 
   socket_.async_connect(
       boost::asio::ip::tcp::endpoint(*address, port_),
-      [this, handler, cancelable{life_time_cancelable_pointer()}](
+      [this, handler, cancelable{life_time_cancelable()}](
           const boost::system::error_code& ec) mutable {
-        if (cancelable->canceled()) {
+        if (cancelable.canceled()) {
           return;
         }
 
