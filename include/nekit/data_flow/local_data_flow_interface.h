@@ -30,13 +30,15 @@ class LocalDataFlowInterface : public DataFlowInterface {
  public:
   virtual ~LocalDataFlowInterface() = default;
 
-  virtual const utils::Cancelable& Open(EventHandler)
+  virtual utils::Cancelable Open(EventHandler)
       __attribute__((warn_unused_result)) = 0;
 
-  virtual const utils::Cancelable& Continue(EventHandler)
+  virtual utils::Cancelable Continue(EventHandler)
       __attribute__((warn_unused_result)) = 0;
 
-  virtual const utils::Cancelable& ReportError(std::error_code, EventHandler)
+  // Close read and write now and change state to `Closing` until finishing the
+  // report.
+  virtual utils::Cancelable ReportError(std::error_code, EventHandler)
       __attribute__((warn_unused_result)) = 0;
 
   virtual LocalDataFlowInterface* NextLocalHop() const = 0;

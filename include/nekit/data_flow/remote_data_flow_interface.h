@@ -30,7 +30,7 @@ class RemoteDataFlowInterface : public DataFlowInterface {
  public:
   virtual ~RemoteDataFlowInterface() = default;
 
-  virtual const utils::Cancelable& Connect(EventHandler)
+  virtual utils::Cancelable Connect(EventHandler)
       __attribute__((warn_unused_result)) = 0;
 
   virtual RemoteDataFlowInterface* NextRemoteHop() const = 0;
