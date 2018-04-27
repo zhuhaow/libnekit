@@ -23,8 +23,8 @@
 #include "nekit/utils/buffer.h"
 
 #include <algorithm>
-#include <memory>
 #include <cstring>
+#include <memory>
 
 #include <boost/assert.hpp>
 
@@ -41,7 +41,7 @@ struct Buf {
   size_t offset_;
   size_t size_;
 
-  Buf* next_buf_;
+  std::unique_ptr<Buf> next_buf_;
 
   Buf(size_t size)
       : data_{std::make_unique<int8_t[]>(size)},
@@ -52,125 +52,88 @@ struct Buf {
     BOOST_ASSERT(size);
   }
 
-  // Let's hope the buf chain won't be too long.
-  ~Buf() { delete next_buf_; }
-
-  void Append(Buf* buf) {
+  void Append(std::unique_ptr<Buf> buf) {
     BOOST_ASSERT(buf);
 
     if (buf == next_buf_) {
       return;
     }
 
-    delete next_buf_;
-    next_buf_ = buf;
+    next_buf_ = std::move(buf);
   }
 
-  Buf* Break(size_t pos) {
-    BOOST_ASSERT(pos);
+  std::unique_ptr<Buf> Break(size_t poj) {
+    BOOST_ASSERT(poj);
+    BOOST_ASSERT(poj <= size_);
 
-    if (pos == size_) {
-      auto temp = next_buf_;
+    if (poj == size_) {
+      auto temp = std::move(next_buf_);
       next_buf_ = nullptr;
       return temp;
     }
 
-    Buf* result = new Buf(size_ - pos);
-    std::memcpy(result->data_.get(), data_.get() + offset_ + pos, size_ - pos);
-    result->next_buf_ = next_buf_;
+    auto result = std::make_unique<Buf>(size_ - poj);
+    std::memcpy(result->data_.get(), data_.get() + offset_ + poj, size_ - poj);
+    result->next_buf_ = std::move(next_buf_);
     next_buf_ = nullptr;
-    size_ -= pos;
+    size_ -= poj;
 
     return result;
-  }
-
-  void CopyFromMemory(const void* source, size_t pos, size_t len) {
-    // Copy only to dest beginning in the current Buf.
-    BOOST_ASSERT(pos <= size_);
-
-    auto current = this;
-    while (len) {
-      BOOST_ASSERT(current);
-
-      size_t copy_len = std::min(len, current->size_ - pos);
-      std::memcpy(current->data_.get() + current->offset_ + pos, source,
-                  copy_len);
-      len -= copy_len;
-      current = current->next_buf_;
-      source = static_cast<const char*>(source) + copy_len;
-      pos = 0;
-    }
-  }
-
-  void CopyToMemory(void* target, size_t pos, size_t len) {
-    // Copy only from source beginning in the current Buf.
-    BOOST_ASSERT(pos <= size_);
-
-    auto current = this;
-    while (len) {
-      BOOST_ASSERT(current);
-
-      size_t copy_len = std::min(len, current->size_ - pos);
-      std::memcpy(target, current->data_.get() + current->offset_ + pos,
-                  copy_len);
-      len -= copy_len;
-      current = current->next_buf_;
-      target = static_cast<char*>(target) + copy_len;
-      pos = 0;
-    }
   }
 };
 
 Buffer::Buffer(size_t size) {
   if (size) {
-    head_ = new Buf(size);
-    tail_ = head_;
+    head_ = std::make_unique<Buf>(size);
+    tail_ = head_.get();
   } else {
-    head_ = tail_ = nullptr;
+    head_ = nullptr;
+    tail_ = nullptr;
   }
 
   size_ = size;
 }
 
-Buffer::~Buffer() { delete head_; }
+Buffer::~Buffer() = default;
 
-void Buffer::Insert(nekit::utils::Buffer&& buffer, size_t pos) {
-  BOOST_ASSERT(pos <= size());
+void Buffer::Insert(nekit::utils::Buffer&& buffer, size_t poj) {
+  BOOST_ASSERT(poj <= size());
+  // Insert a null buffer is not allowed.
   BOOST_ASSERT(buffer.size());
 
-  if (pos == size()) {
+  if (poj == size()) {
     return InsertBack(std::move(buffer));
   }
 
-  if (pos == 0) {
+  if (poj == 0) {
     return InsertFront(std::move(buffer));
   }
 
-  Buf* current = head_;
-  while (pos > current->size_) {
-    pos -= current->size_;
-    current = current->next_buf_;
+  Buf* current = head_.get();
+  while (poj > current->size_) {
+    poj -= current->size_;
+    current = current->next_buf_.get();
   }
 
-  InsertBufAt(current, std::move(buffer), pos);
+  InsertBufAt(current, std::move(buffer), poj);
 }
 
-void Buffer::Insert(size_t buf_size, size_t pos) {
-  BOOST_ASSERT(pos <= this->size());
+void Buffer::Insert(size_t buf_size, size_t poj) {
+  BOOST_ASSERT(poj <= this->size());
   BOOST_ASSERT(buf_size);
 
-  if (pos == size()) {
+  if (poj == size()) {
     return InsertBack(buf_size);
   }
 
-  if (pos == 0) {
+  if (poj == 0) {
     return InsertFront(buf_size);
   }
 
-  Buf* current = head_;
-  while (pos > current->size_) {
-    pos -= current->size_;
-    current = current->next_buf_;
+  Buf* current = head_.get();
+  while (poj > current->size_) {
+    poj -= current->size_;
+    current = current->next_buf_.get();
   }
 
   if (current->size_ == buf_size) {
@@ -191,18 +154,16 @@ void Buffer::Insert(size_t buf_size, size_t pos) {
     }
   }
 
-  InsertBufAt(current, Buffer(buf_size), pos);
+  InsertBufAt(current, Buffer(buf_size), poj);
 }
 
 void Buffer::InsertFront(nekit::utils::Buffer&& buffer) {
   BOOST_ASSERT(buffer.size());
 
-  auto prev_head = head_;
-  head_ = buffer.head_;
-  buffer.tail_->next_buf_ = prev_head;
+  auto prev_head = std::move(head_);
+  head_ = std::move(buffer.head_);
+  buffer.tail_->next_buf_ = std::move(prev_head);
   size_ += buffer.size();
-
-  buffer.ResetWithoutFree();
 }
 
 void Buffer::InsertFront(size_t size) {
@@ -220,15 +181,14 @@ void Buffer::InsertBack(Buffer&& buffer) {
   BOOST_ASSERT(buffer.size());
 
   if (head_) {
-    tail_->next_buf_ = buffer.head_;
+    tail_->next_buf_ = std::move(buffer.head_);
     tail_ = buffer.tail_;
   } else {
-    head_ = buffer.head_;
+    head_ = std::move(buffer.head_);
     tail_ = buffer.tail_;
   }
-  size_ += buffer.size();
 
-  buffer.ResetWithoutFree();
+  size_ += buffer.size();
 }
 
 void Buffer::InsertBack(size_t size) {
@@ -244,27 +204,29 @@ void Buffer::InsertBack(size_t size) {
 void Buffer::Shrink(size_t skip, size_t len) {
   BOOST_ASSERT(skip < size());
   BOOST_ASSERT(len < size());
-  BOOST_ASSERT(skip + len < size());
+  BOOST_ASSERT(skip + len <= size());
 
-  Buf *current = head_, *prev = nullptr;
+  Buf *current = head_.get(), *prev = nullptr;
   while (skip >= current->size_) {
     skip -= current->size_;
     prev = current;
-    current = current->next_buf_;
+    current = current->next_buf_.get();
   }
 
   if (skip) {
-    if (len >= current->size_ - skip) {
+    size_t buf_remain = current->size_ - skip;
+    if (len >= buf_remain) {
+      len -= buf_remain;
+      size_ -= buf_remain;
       current->size_ = skip;
-      len -= skip;
       prev = current;
-      current = current->next_buf_;
-      skip = 0;
+      current = current->next_buf_.get();
     } else {
       std::memmove(current->data_.get() + current->offset_ + skip,
                    current->data_.get() + current->offset_ + skip + len,
                    current->size_ - skip - len);
-      current->size_ -= skip;
+      current->size_ -= len;
+      size_ -= len;
       return;
     }
   }
@@ -279,13 +241,14 @@ void Buffer::Shrink(size_t skip, size_t len) {
     }
 
     len -= remove_length;
+    size_ -= remove_length;
 
     if (!prev) {
-      head_ = current->next_buf_;
-      current = current->next_buf_;
+      head_ = std::move(current->next_buf_);
+      current = head_.get();
     } else {
-      prev->next_buf_ = current->next_buf_;
-      current = current->next_buf_;
+      prev->next_buf_ = std::move(current->next_buf_);
+      current = prev->next_buf_.get();
     }
   }
 
@@ -302,36 +265,46 @@ void Buffer::ShrinkBack(size_t size) {
 }
 
 uint8_t Buffer::GetByte(size_t skip) const {
-  BOOST_ASSERT(skip <= size());
+  BOOST_ASSERT(skip < size());
 
-  auto current = head_;
+  auto current = head_.get();
 
   while (skip >= current->size_) {
     skip -= current->size_;
-    current = current->next_buf_;
+    current = current->next_buf_.get();
   }
 
   return *(current->data_.get() + skip);
 }
 
 void Buffer::GetData(size_t skip, size_t len, void* target) const {
-  BOOST_ASSERT(skip <= size());
+  BOOST_ASSERT(skip < size());
   BOOST_ASSERT(len <= size());
   BOOST_ASSERT(skip + len <= size());
 
-  auto current = head_;
+  auto current = head_.get();
 
   while (skip >= current->size_) {
     skip -= current->size_;
-    current = current->next_buf_;
+    current = current->next_buf_.get();
   }
 
-  current->CopyToMemory(target, skip, len);
+  while (len) {
+    BOOST_ASSERT(current);
+
+    size_t copy_len = std::min(len, current->size_ - skip);
+    std::memcpy(target, current->data_.get() + current->offset_ + skip,
+                copy_len);
+    len -= copy_len;
+    current = current->next_buf_.get();
+    target = static_cast<char*>(target) + copy_len;
+    skip = 0;
+  }
 }
 
 void Buffer::GetData(size_t skip, size_t len, nekit::utils::Buffer* target,
                      size_t offset) const {
-  BOOST_ASSERT(skip <= size());
+  BOOST_ASSERT(skip < size());
   BOOST_ASSERT(len <= size());
   BOOST_ASSERT(skip + len <= size());
 
@@ -339,16 +312,16 @@ void Buffer::GetData(size_t skip, size_t len, nekit::utils::Buffer* target,
   BOOST_ASSERT(len <= target->size());
   BOOST_ASSERT(offset + len <= target->size());
 
-  auto tcurrent = target->head_;
+  auto tcurrent = target->head_.get();
   while (offset >= tcurrent->size_) {
     offset -= tcurrent->size_;
-    tcurrent = tcurrent->next_buf_;
+    tcurrent = tcurrent->next_buf_.get();
   }
 
-  auto scurrent = head_;
+  auto scurrent = head_.get();
   while (skip >= scurrent->size_) {
     skip -= scurrent->size_;
-    scurrent = scurrent->next_buf_;
+    scurrent = scurrent->next_buf_.get();
   }
 
   while (len) {
@@ -362,42 +335,52 @@ void Buffer::GetData(size_t skip, size_t len, nekit::utils::Buffer* target,
     len -= copy_len;
 
     if (skip == scurrent->size_) {
-      scurrent = scurrent->next_buf_;
+      scurrent = scurrent->next_buf_.get();
       skip = 0;
     }
     if (offset == tcurrent->size_) {
-      tcurrent = tcurrent->next_buf_;
+      tcurrent = tcurrent->next_buf_.get();
       offset = 0;
     }
   }
 }
 
 void Buffer::SetByte(size_t skip, uint8_t data) {
-  BOOST_ASSERT(skip <= size());
+  BOOST_ASSERT(skip < size());
 
-  auto current = head_;
+  auto current = head_.get();
 
   while (skip >= current->size_) {
     skip -= current->size_;
-    current = current->next_buf_;
+    current = current->next_buf_.get();
   }
 
   *(current->data_.get() + skip) = data;
 }
 
 void Buffer::SetData(size_t skip, size_t len, const void* source) {
-  BOOST_ASSERT(skip <= size());
+  BOOST_ASSERT(skip < size());
   BOOST_ASSERT(len <= size());
   BOOST_ASSERT(skip + len <= size());
 
-  auto current = head_;
+  auto current = head_.get();
 
   while (skip >= current->size_) {
     skip -= current->size_;
-    current = current->next_buf_;
+    current = current->next_buf_.get();
   }
 
-  current->CopyFromMemory(source, skip, len);
+  while (len) {
+    BOOST_ASSERT(current);
+
+    size_t copy_len = std::min(len, current->size_ - skip);
+    std::memcpy(current->data_.get() + current->offset_ + skip, source,
+                copy_len);
+    len -= copy_len;
+    current = current->next_buf_.get();
+    source = static_cast<const char*>(source) + copy_len;
+    skip = 0;
+  }
 }
 
 void Buffer::SetData(size_t skip, size_t len,
@@ -410,11 +393,15 @@ void Buffer::WalkInternalChunk(
     void* context) {
   BOOST_ASSERT(from <= size());
 
-  Buf* current = head_;
+  if (from == size()) {
+    return;
+  }
+
+  Buf* current = head_.get();
 
   while (from >= current->size_) {
     from -= current->size_;
-    current = current->next_buf_;
+    current = current->next_buf_.get();
   }
 
   while (current) {
@@ -422,36 +409,53 @@ void Buffer::WalkInternalChunk(
       return;
     }
     from = 0;
-    current = current->next_buf_;
+    current = current->next_buf_.get();
+  }
+}
+
+void Buffer::WalkInternalChunk(
+    const std::function<bool(const void*, size_t, void*)>& walker, size_t from,
+    void* context) const {
+  BOOST_ASSERT(from <= size());
+
+  if (from == size()) {
+    return;
+  }
+
+  Buf* current = head_.get();
+
+  while (from >= current->size_) {
+    from -= current->size_;
+    current = current->next_buf_.get();
+  }
+
+  while (current) {
+    if (!walker(current->data_.get() + from, current->size_ - from, context)) {
+      return;
+    }
+    from = 0;
+    current = current->next_buf_.get();
   }
 }
 
 size_t Buffer::size() const { return size_; }
 
-// pos may be the size of buf
-void Buffer::InsertBufAt(Buf* buf, Buffer&& buffer, size_t pos) {
-  Buf* new_buf = buf->Break(pos);
-  buf->next_buf_ = buffer.head_;
-  buffer.tail_->next_buf_ = new_buf;
+// poj may be the size of buf
+void Buffer::InsertBufAt(Buf* buf, Buffer&& buffer, size_t poj) {
+  auto new_buf = buf->Break(poj);
+  auto new_buf_ptr = new_buf.get();
+  buf->next_buf_ = std::move(buffer.head_);
+  buffer.tail_->next_buf_ = std::move(new_buf);
 
   if (buf == tail_) {
-    if (new_buf) {
-      tail_ = new_buf;
+    if (new_buf_ptr) {
+      tail_ = new_buf_ptr;
     } else {
       tail_ = buffer.tail_;
     }
+
+    size_ += buffer.size();
   }
-
-  size_ += buffer.size();
-
-  buffer.ResetWithoutFree();
 }
-
-void Buffer::ResetWithoutFree() {
-  head_ = nullptr;
-  tail_ = nullptr;
-  size_ = 0;
-}
-
 }  // namespace utils
 }  // namespace nekit

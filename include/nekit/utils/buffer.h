@@ -25,6 +25,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <utility>
 
 #include <boost/noncopyable.hpp>
@@ -64,14 +65,16 @@ class Buffer final : private boost::noncopyable {
   void WalkInternalChunk(
       const std::function<bool(void* data, size_t len, void* context)>& walker,
       size_t from, void* context);
+  void WalkInternalChunk(const std::function<bool(const void* data, size_t len,
+                                                  void* context)>& walker,
+                         size_t from, void* context) const;
 
   size_t size() const;
 
  private:
-  void ResetWithoutFree();
   void InsertBufAt(Buf* buf, Buffer&& buffer, size_t pos);
 
-  Buf* head_;
+  std::unique_ptr<Buf> head_;
   Buf* tail_;
   size_t size_;
 };
