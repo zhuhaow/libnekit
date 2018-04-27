@@ -77,6 +77,7 @@ set(SOURCES
   src/utils/country_iso_code.cc
   src/utils/http_header_parser.cc
   src/init.cc
+  src/proxy_manager.cc
   src/rule/rule_manager.cc
   src/rule/all_rule.cc
   src/rule/dns_fail_rule.cc
