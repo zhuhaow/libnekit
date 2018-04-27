@@ -176,23 +176,5 @@ boost::asio::io_context* TcpConnector::io() {
   return &socket_.get_io_context();
 }
 
-// TcpConnectorFactory::TcpConnectorFactory(boost::asio::io_context* io)
-//     : ConnectorFactoryInterface{io} {}
-
-// std::unique_ptr<ConnectorInterface> TcpConnectorFactory::Build(
-//     const boost::asio::ip::address& address, uint16_t port) {
-//   return std::make_unique<TcpConnector>(address, port, io());
-// }
-
-// std::unique_ptr<ConnectorInterface> TcpConnectorFactory::Build(
-//     std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses,
-//     uint16_t port) {
-//   return std::make_unique<TcpConnector>(addresses, port, io());
-// }
-
-// std::unique_ptr<ConnectorInterface> TcpConnectorFactory::Build(
-//     std::shared_ptr<utils::Endpoint> endpoint) {
-//   return std::make_unique<TcpConnector>(endpoint, io());
-// }
 }  // namespace transport
 }  // namespace nekit
