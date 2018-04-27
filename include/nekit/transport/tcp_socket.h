@@ -38,31 +38,29 @@ namespace nekit {
 namespace transport {
 
 class TcpSocket final : public data_flow::LocalDataFlowInterface,
-                        public data_flow::RemoteDataFlowInterface,
-                        private utils::LifeTime {
+                        public data_flow::RemoteDataFlowInterface {
  public:
   explicit TcpSocket(std::shared_ptr<utils::Session> session);
+  ~TcpSocket();
 
-  const utils::Cancelable& Read(std::unique_ptr<utils::Buffer>&&,
-                                DataEventHandler) override
+  utils::Cancelable Read(std::unique_ptr<utils::Buffer>&&,
+                         DataEventHandler) override
       __attribute__((warn_unused_result));
-  const utils::Cancelable& Write(std::unique_ptr<utils::Buffer>&&,
-                                 EventHandler) override
+  utils::Cancelable Write(std::unique_ptr<utils::Buffer>&&,
+                          EventHandler) override
       __attribute__((warn_unused_result));
 
-  const utils::Cancelable& CloseWrite(EventHandler) override
+  utils::Cancelable CloseWrite(EventHandler) override
       __attribute__((warn_unused_result));
 
   bool IsReadClosed() const override;
   bool IsWriteClosed() const override;
-  bool IsClosed() const override;
+  bool IsWriteClosing() const override;
 
   bool IsReading() const override;
   bool IsWriting() const override;
 
-  bool IsReady() const override;
-
-  bool IsStopped() const override;
+  data_flow::State State() const override;
 
   data_flow::DataFlowInterface* NextHop() const override;
 
@@ -70,22 +68,22 @@ class TcpSocket final : public data_flow::LocalDataFlowInterface,
 
   data_flow::DataType FlowDataType() const override;
 
-  std::shared_ptr<utils::Session> session() const override;
+  std::shared_ptr<utils::Session> Session() const override;
 
   boost::asio::io_context* io() override;
 
-  const utils::Cancelable& Open(EventHandler) override
+  utils::Cancelable Open(EventHandler) override
       __attribute__((warn_unused_result));
 
-  const utils::Cancelable& Continue(EventHandler) override
+  utils::Cancelable Continue(EventHandler) override
       __attribute__((warn_unused_result));
 
-  const utils::Cancelable& ReportError(std::error_code, EventHandler) override
+  utils::Cancelable ReportError(std::error_code, EventHandler) override
       __attribute__((warn_unused_result));
 
   LocalDataFlowInterface* NextLocalHop() const override;
 
-  const utils::Cancelable& Connect(EventHandler) override
+  utils::Cancelable Connect(EventHandler) override
       __attribute__((warn_unused_result));
 
   RemoteDataFlowInterface* NextRemoteHop() const override;
@@ -104,11 +102,11 @@ class TcpSocket final : public data_flow::LocalDataFlowInterface,
   std::shared_ptr<utils::Endpoint> connect_to_;
   std::unique_ptr<std::vector<boost::asio::const_buffer>> write_buffer_;
   std::unique_ptr<std::vector<boost::asio::mutable_buffer>> read_buffer_;
-  bool read_closed_{false}, write_closed_{false}, errored_{false};
-  bool reading_{false}, writing_{false}, processing_{false};
-  bool ready_{false};
+  bool read_closed_{false}, write_closed_{false}, reading_{false},
+      writing_{false};
   utils::Cancelable read_cancelable_, write_cancelable_, report_cancelable_,
       connect_cancelable_;
+  data_flow::State state_{data_flow::State::Closed};
 };
 }  // namespace transport
 }  // namespace nekit
