@@ -31,6 +31,7 @@
 
 #include "async_io_interface.h"
 #include "endpoint.h"
+#include "resolver_interface.h"
 
 namespace nekit {
 namespace utils {
@@ -58,11 +59,23 @@ struct Session : public AsyncIoInterface {
   std::shared_ptr<Endpoint>& endpoint() { return endpoint_; }
   void set_endpoint(std::shared_ptr<Endpoint> endpoint) {
     endpoint_ = endpoint;
+    endpoint_->set_resolver(resolver_);
+
+    if (!current_endpoint_) current_endpoint_ = endpoint_;
   }
 
   std::shared_ptr<Endpoint>& current_endpoint() { return current_endpoint_; }
   void set_current_endpoint(std::shared_ptr<Endpoint> endpoint) {
     current_endpoint_ = endpoint;
+    current_endpoint_->set_resolver(resolver_);
+  }
+
+  void set_resolver(ResolverInterface* resolver) {
+    BOOST_ASSERT(resolver->io() == io_);
+
+    resolver_ = resolver;
+    if (current_endpoint_) current_endpoint_->set_resolver(resolver);
+    if (endpoint_) endpoint_->set_resolver(resolver);
   }
 
   boost::asio::io_context* io() override { return io_; };
@@ -71,6 +84,8 @@ struct Session : public AsyncIoInterface {
   boost::asio::io_context* io_;
   std::shared_ptr<Endpoint> endpoint_;
   std::shared_ptr<Endpoint> current_endpoint_;
+
+  ResolverInterface* resolver_{nullptr};
 
   // Keys begin with "NE" are reserved.
   std::map<std::string, int> int_cache_;
