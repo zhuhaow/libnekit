@@ -99,7 +99,7 @@ class DataFlowInterface : public utils::AsyncIoInterface,
   // and `Closing`. Use `NE_DATA_FLOW_CAN_CHECK_DATA_STATE` to check.
   virtual bool IsWriting() const = 0;
 
-  virtual State State() const = 0;
+  virtual data_flow::State State() const = 0;
 
   virtual DataFlowInterface* NextHop() const = 0;
 
