@@ -60,6 +60,8 @@ void ProxyManager::Run() {
           exit(1);
         }
 
+        data_flow->Session()->set_resolver(resolver_.get());
+
         tunnel_manager_.Build(std::move(data_flow), rule_manager_.get()).Open();
       };
 
