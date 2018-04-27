@@ -45,6 +45,9 @@ void Instance::Run() {
   BOOST_ASSERT(ready_);
   BOOST_ASSERT(proxy_managers_.size());
 
+  BOOST_LOG_SCOPED_THREAD_ATTR(
+      "Instance", boost::log::attributes::constant<std::string>(name_));
+
   for (auto &manager : proxy_managers_) {
     manager->Run();
   }
