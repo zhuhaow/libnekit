@@ -48,8 +48,8 @@ class RuleManager final : public utils::AsyncIoInterface,
 
   void AppendRule(std::shared_ptr<RuleInterface> rule);
 
-  const utils::Cancelable& Match(std::shared_ptr<utils::Session> session,
-                                 EventHandler handler)
+  utils::Cancelable Match(std::shared_ptr<utils::Session> session,
+                          EventHandler handler)
       __attribute__((warn_unused_result));
 
   boost::asio::io_context* io() override;
@@ -57,8 +57,8 @@ class RuleManager final : public utils::AsyncIoInterface,
  private:
   void MatchIterator(
       std::vector<std::shared_ptr<RuleInterface>>::const_iterator iter,
-      std::shared_ptr<utils::Session> session,
-      std::shared_ptr<utils::Cancelable> cancelable, EventHandler handler);
+      std::shared_ptr<utils::Session> session, utils::Cancelable cancelable,
+      EventHandler handler);
 
   std::vector<std::shared_ptr<RuleInterface>> rules_;
   boost::asio::io_context* io_;

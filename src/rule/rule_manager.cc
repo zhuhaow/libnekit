@@ -31,27 +31,26 @@ void RuleManager::AppendRule(std::shared_ptr<RuleInterface> rule) {
   rules_.push_back(rule);
 }
 
-const utils::Cancelable& RuleManager::Match(
-    std::shared_ptr<utils::Session> session, EventHandler handler) {
-  std::shared_ptr<utils::Cancelable> cancelable =
-      std::make_shared<utils::Cancelable>();
-  boost::asio::post(
-      *io(), [this, session, cancelable,
-              lifetime{life_time_cancelable_pointer()}, handler]() {
-        if (lifetime->canceled()) {
-          return;
-        }
+utils::Cancelable RuleManager::Match(std::shared_ptr<utils::Session> session,
+                                     EventHandler handler) {
+  auto cancelable = utils::Cancelable();
+  boost::asio::post(*io(), [this, session, cancelable,
+                            lifetime{life_time_cancelable()}, handler]() {
+    if (cancelable.canceled() || lifetime.canceled()) {
+      return;
+    }
 
-        MatchIterator(rules_.cbegin(), session, cancelable, handler);
-      });
-  return *cancelable;
+    MatchIterator(rules_.cbegin(), session, cancelable, handler);
+  });
+
+  return cancelable;
 }
 
 void RuleManager::MatchIterator(
     std::vector<std::shared_ptr<RuleInterface>>::const_iterator iter,
-    std::shared_ptr<utils::Session> session,
-    std::shared_ptr<utils::Cancelable> cancelable, EventHandler handler) {
-  if (cancelable->canceled()) {
+    std::shared_ptr<utils::Session> session, utils::Cancelable cancelable,
+    EventHandler handler) {
+  if (cancelable.canceled()) {
     return;
   }
 
@@ -68,13 +67,12 @@ void RuleManager::MatchIterator(
         // `Match` and `this`. There is no need to guard the lifetime of the
         // callback in another `Cancelable`.
         (void)session->endpoint()->Resolve(
-            [this, handler, cancelable,
-             lifetime{life_time_cancelable_pointer()}, session,
-             iter](std::error_code ec) mutable {
+            [this, handler, cancelable, lifetime{life_time_cancelable()},
+             session, iter](std::error_code ec) mutable {
               // Resolve failure should be handled by rules.
               (void)ec;
 
-              if (cancelable->canceled() || lifetime->canceled()) {
+              if (cancelable.canceled() || lifetime.canceled()) {
                 return;
               }
 
@@ -86,6 +84,8 @@ void RuleManager::MatchIterator(
   }
   handler(nullptr, ErrorCode::NoMatch);
 }
+
+boost::asio::io_context* RuleManager::io() { return io_; }
 
 namespace {
 struct RuleManagerErrorCategory : std::error_category {
