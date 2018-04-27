@@ -52,6 +52,9 @@ class SystemResolver : public ResolverInterface, private LifeTime {
 
   size_t thread_count_;
   boost::thread_group thread_group_;
+  std::unique_ptr<
+      boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>
+      work_guard_;
   std::unique_ptr<boost::asio::io_context> resolve_io_;
 };
 }  // namespace utils

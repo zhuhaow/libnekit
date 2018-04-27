@@ -118,6 +118,10 @@ void SystemResolver::Reset() {
 
   resolve_io_ = std::make_unique<boost::asio::io_context>();
 
+  work_guard_ = std::make_unique<
+      boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>(
+      boost::asio::make_work_guard(*resolve_io_));
+
   for (size_t i = 0; i < thread_count_; i++) {
     thread_group_.create_thread(
         boost::bind(&boost::asio::io_context::run, resolve_io_.get()));
