@@ -33,10 +33,30 @@
 #include "../utils/cancelable.h"
 #include "../utils/session.h"
 
+#define NE_DATA_FLOW_CAN_CHECK_CLOSE_STATE(__state) \
+  (__state == nekit::data_flow::State::Closing)
+
+#define NE_DATA_FLOW_CAN_CHECK_DATA_STATE(__state)                 \
+  (__state == nekit::data_flow::State::Established || \
+   __state == nekit::data_flow::State::Closing)
+
+#define NE_DATA_FLOW_WRITE_CLOSABLE(__data_flow)                         \
+  (__data_flow->State() == data_flow::State::Established || \
+   (__data_flow->State() == data_flow::State::Closing &&    \
+    !__data_flow->IsWriteClosed()))
+
 namespace nekit {
 namespace data_flow {
 
 enum class DataType { Stream, Packet };
+
+enum class State {
+  Closed,
+  Establishing,
+  Established,
+  Closing  // Note even read and write are both closed, it doesn't mean the
+           // data flow is ready to be released. Check for the `Closed` flag.
+};
 
 class DataFlowInterface : public utils::AsyncIoInterface,
                           // This is probably not necessary, but we enforce it
@@ -49,43 +69,43 @@ class DataFlowInterface : public utils::AsyncIoInterface,
       std::function<void(std::unique_ptr<utils::Buffer>&&, std::error_code)>;
   using EventHandler = std::function<void(std::error_code)>;
 
-  virtual const utils::Cancelable& Read(std::unique_ptr<utils::Buffer>&&,
-                                        DataEventHandler)
+  virtual utils::Cancelable Read(std::unique_ptr<utils::Buffer>&&,
+                                 DataEventHandler)
       __attribute__((warn_unused_result)) = 0;
-  virtual const utils::Cancelable& Write(std::unique_ptr<utils::Buffer>&&,
-                                         EventHandler)
+  virtual utils::Cancelable Write(std::unique_ptr<utils::Buffer>&&,
+                                  EventHandler)
       __attribute__((warn_unused_result)) = 0;
 
   // Must not be writing.
-  virtual const utils::Cancelable& CloseWrite(EventHandler)
+  virtual utils::Cancelable CloseWrite(EventHandler)
       __attribute__((warn_unused_result)) = 0;
 
-  // Whether the data flow will read more data.
+  // Whether the data flow will read more data, only valid when in state
+  // `Closing`. Use `NE_DATA_FLOW_CAN_CHECK_CLOSE_STATE` to check.
   virtual bool IsReadClosed() const = 0;
-  // Whether the data flow can send more data.
-  virtual bool IsWriteClosed() const = 0;
-  // Whether the data flow is still open. This does not mean the data flow
-  // should be released, there may be actions pending.
-  virtual bool IsClosed() const = 0;
 
-  // Whether the data flow is trying to read data.
+  // Whether the data flow can send more data, only valid when in state
+  // `Closing`. Use `NE_DATA_FLOW_CAN_CHECK_CLOSE_STATE` to check.
+  virtual bool IsWriteClosed() const = 0;
+
+  // Whether the socket is closing, only valid in state `Closing`. Use
+  // `NE_DATA_FLOW_CAN_CHECK_CLOSE_STATE` to check.
+  virtual bool IsWriteClosing() const = 0;
+
+  // Whether the data flow is trying to read data, only valid in state
+  // `Established` and `Closing`. Use `NE_DATA_FLOW_CAN_CHECK_DATA_STATE` to check.
   virtual bool IsReading() const = 0;
-  // Whether the data flow is writing data.
+  // Whether the data flow is writing data, only valid in state `Established`
+  // and `Closing`. Use `NE_DATA_FLOW_CAN_CHECK_DATA_STATE` to check.
   virtual bool IsWriting() const = 0;
 
-  // Whether the results of above methods make sense or not.
-  virtual bool IsReady() const = 0;
-
-  // Return true when:
-  // 1. The data flow is not "ready" and is not preparing to become ready.
-  // 2. The data flow is ready but closed and there is no action pending or running.
-  virtual bool IsStopped() const = 0;
+  virtual State State() const = 0;
 
   virtual DataFlowInterface* NextHop() const = 0;
 
   virtual DataType FlowDataType() const = 0;
 
-  virtual std::shared_ptr<utils::Session> session() const = 0;
+  virtual std::shared_ptr<utils::Session> Session() const = 0;
 };
 }  // namespace data_flow
 }  // namespace nekit
