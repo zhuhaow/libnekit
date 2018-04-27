@@ -50,29 +50,16 @@ Endpoint::Endpoint(const boost::asio::ip::address& ip, uint16_t port)
       address_{ip},
       port_{port} {}
 
-const Cancelable& Endpoint::Resolve(EventHandler handler) {
-  assert(resolver_);
-
-  if (resolved_) {
-    NEDEBUG << "Already resolved, does nothing.";
-
-    boost::asio::post(*resolver_->io(),
-                      [handler, cancelable{life_time_cancelable_pointer()}]() {
-                        if (cancelable->canceled()) {
-                          return;
-                        }
-
-                        handler(NEKitErrorCode::NoError);
-                      });
-    return life_time_cancelable();
-  }
+Cancelable Endpoint::Resolve(EventHandler handler) {
+  BOOST_ASSERT(resolver_);
+  BOOST_ASSERT(!resolved_ && !resolving_);
 
   return ForceResolve(handler);
 }
 
-const Cancelable& Endpoint::ForceResolve(EventHandler handler) {
-  assert(resolver_);
-  assert(!resolving_);
+Cancelable Endpoint::ForceResolve(EventHandler handler) {
+  BOOST_ASSERT(resolver_);
+  BOOST_ASSERT(!resolving_);
 
   NETRACE << "Start resolving domain " << domain_ << ".";
 
@@ -80,10 +67,10 @@ const Cancelable& Endpoint::ForceResolve(EventHandler handler) {
 
   resolve_cancelable_ = resolver_->Resolve(
       domain_, ResolverInterface::AddressPreference::Any,
-      [this, handler, cancelable{life_time_cancelable_pointer()}](
+      [this, handler, cancelable{life_time_cancelable()}](
           std::shared_ptr<std::vector<boost::asio::ip::address>> addresses,
           std::error_code ec) {
-        if (cancelable->canceled()) {
+        if (cancelable.canceled()) {
           return;
         }
 
@@ -104,16 +91,7 @@ const Cancelable& Endpoint::ForceResolve(EventHandler handler) {
         handler(ec);
       });
 
-  return life_time_cancelable();
-}
-
-void Endpoint::CancelResolve() {
-  if (!resolving_) {
-    NEDEBUG << "Canceling a domain not resolving, do nothing.";
-    return;
-  }
-
-  resolve_cancelable_.Cancel();
+  return resolve_cancelable_;
 }
 
 std::shared_ptr<Endpoint> Endpoint::Dup() const {

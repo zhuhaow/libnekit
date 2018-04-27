@@ -85,11 +85,10 @@ class Endpoint : LifeTime {
 
   void set_resolver(ResolverInterface* resolver) { resolver_ = resolver; }
 
-  const Cancelable& Resolve(EventHandler handler)
+  Cancelable Resolve(EventHandler handler)
       __attribute__((warn_unused_result));
-  const Cancelable& ForceResolve(EventHandler handler)
+  Cancelable ForceResolve(EventHandler handler)
       __attribute__((warn_unused_result));
-  void CancelResolve();
 
   std::shared_ptr<const std::vector<boost::asio::ip::address>>
   resolved_addresses() const {
@@ -107,7 +106,7 @@ class Endpoint : LifeTime {
 
   std::shared_ptr<std::vector<boost::asio::ip::address>> resolved_addresses_;
   std::error_code error_;
-  ResolverInterface* resolver_;
+  ResolverInterface* resolver_{nullptr};
   bool resolved_{false};
   bool resolving_{false};
   Cancelable resolve_cancelable_;
