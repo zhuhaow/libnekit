@@ -32,7 +32,7 @@ class Socks5ServerDataFlow final : public LocalDataFlowInterface,
  public:
   enum class ErrorCode {
     NoError = 0,
-    RequestIncomplete,
+    IllegalRequest,
     UnsupportedVersion,
     UnsupportedAuthenticationMethod,
     UnsupportedCommand,
@@ -41,52 +41,69 @@ class Socks5ServerDataFlow final : public LocalDataFlowInterface,
 
   Socks5ServerDataFlow(std::unique_ptr<LocalDataFlowInterface>&& data_flow,
                        std::shared_ptr<utils::Session> session);
+  ~Socks5ServerDataFlow();
 
-  const utils::Cancelable& Read(std::unique_ptr<utils::Buffer>&&,
-                          DataEventHandler) override
+  utils::Cancelable Read(std::unique_ptr<utils::Buffer>&&,
+                         DataEventHandler) override
       __attribute__((warn_unused_result));
-  const utils::Cancelable& Write(std::unique_ptr<utils::Buffer>&&,
-                           EventHandler) override
+  utils::Cancelable Write(std::unique_ptr<utils::Buffer>&&,
+                          EventHandler) override
       __attribute__((warn_unused_result));
 
   // This should cancel the current write request.
-  const utils::Cancelable& CloseWrite(EventHandler) override
+  utils::Cancelable CloseWrite(EventHandler) override
       __attribute__((warn_unused_result));
 
   bool IsReadClosed() const override;
   bool IsWriteClosed() const override;
-  bool IsClosed() const override;
+  bool IsWriteClosing() const override;
 
   bool IsReading() const override;
   bool IsWriting() const override;
 
-  bool IsIdle() const override;
+  data_flow::State State() const override;
 
   data_flow::DataFlowInterface* NextHop() const override;
 
   data_flow::DataType FlowDataType() const override;
 
-  std::shared_ptr<utils::Session> session() const override;
+  std::shared_ptr<utils::Session> Session() const override;
 
   boost::asio::io_context* io() override;
 
-  const utils::Cancelable& Open(EventHandler) override
+  utils::Cancelable Open(EventHandler) override
       __attribute__((warn_unused_result));
 
-  const utils::Cancelable& Continue(EventHandler) override
+  utils::Cancelable Continue(EventHandler) override
       __attribute__((warn_unused_result));
 
-  const utils::Cancelable& ReportError(std::error_code, EventHandler) override
+  utils::Cancelable ReportError(std::error_code, EventHandler) override
       __attribute__((warn_unused_result));
 
   LocalDataFlowInterface* NextLocalHop() const override;
 
  private:
+  void EnsurePendingAuthBuffer();
+  void AppendToAuthBuffer(const utils::Buffer* buffer);
+  void NegotiateRead(EventHandler handler);
+
   std::unique_ptr<LocalDataFlowInterface> data_flow_;
   std::shared_ptr<utils::Session> session_;
 
-  bool reporting_{false}, forwarding_{false}, reportable_{false};
-  uint8_t pending_action_{0};
+  std::unique_ptr<uint8_t[]> pending_auth_;
+  size_t pending_auth_length_{0};
+
+  bool reporting_{false},  // Reporting error
+      reportable_{false},  // Can report error
+      reading_{false},     // Processing reading request
+      writing_{false},     // Processing writing request
+      opening_{false},     // Negotiating
+      read_closed_{false}, write_closed_{false};
+
+  enum class NegotiateState { ReadingVersion, ReadingRequest };
+  NegotiateState negotiation_state_{NegotiateState::ReadingVersion};
+  data_flow::State state_{data_flow::State::Closed};
+
   utils::Cancelable open_cancelable_, read_cancelable_, write_cancelable_;
 };
 
