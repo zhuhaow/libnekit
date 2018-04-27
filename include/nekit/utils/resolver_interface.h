@@ -44,7 +44,7 @@ class ResolverInterface : public AsyncIoInterface, private boost::noncopyable {
 
   virtual ~ResolverInterface() = default;
 
-  virtual const Cancelable& Resolve(std::string domain,
+  virtual Cancelable Resolve(std::string domain,
                                     AddressPreference preference,
                                     EventHandler handler)
       __attribute__((warn_unused_result)) = 0;

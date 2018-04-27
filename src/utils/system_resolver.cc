@@ -37,33 +37,34 @@ SystemResolver::SystemResolver(boost::asio::io_context* io, size_t thread_count)
   Reset();
 }
 
-const Cancelable& SystemResolver::Resolve(std::string domain,
-                                          AddressPreference preference,
-                                          EventHandler handler) {
+Cancelable SystemResolver::Resolve(std::string domain,
+                                   AddressPreference preference,
+                                   EventHandler handler) {
   // Preference is ignored. Let the OS do the choice as of now.
   (void)preference;
 
   NETRACE << "Start resolving " << domain << ".";
 
-  auto cancelable = std::make_unique<Cancelable>();
-  auto cancelable_ptr = cancelable.get();
+  Cancelable cancelable{};
 
   boost::asio::post(
-      *resolve_io_.get(),
-      [this, domain, handler, cancelable{std::move(cancelable)}]() mutable {
+      *resolve_io_.get(), [this, domain, handler, cancelable,
+                           lifetime{life_time_cancelable()}]() mutable {
         // Note it should be guaranteed that one io_context should never be
         // released before all the instances implementing `AsyncIoInterface`
         // which will return that io_context are released. This resolver will
         // never be released before `main_io_` is released. In the destructor
         // this thread is guaranteed to exit before resolver is finished, so
-        // there is no need to worry any thread issues here, resolver and
+        // there is no need to worry any thread issues here. Resolver and
         // `main_io_` will exist when this thread is running.
 
-        if (cancelable->canceled()) {
+        if (cancelable.canceled() || lifetime.canceled()) {
           return;
         }
 
         auto resolver = boost::asio::ip::tcp::resolver(*resolve_io_.get());
+
+        NEDEBUG << "Trying to resolve " << domain << ".";
 
         boost::system::error_code ec;
         auto result = resolver.resolve(domain, "", ec);
@@ -73,15 +74,14 @@ const Cancelable& SystemResolver::Resolve(std::string domain,
           NEERROR << "Failed to resolve " << domain << " due to " << error
                   << ".";
 
-          boost::asio::post(
-              *main_io_, [handler, error, cancelable{std::move(cancelable)},
-                          life_time{life_time_cancelable_pointer()}]() {
-                if (cancelable->canceled() || life_time->canceled()) {
-                  return;
-                }
+          boost::asio::post(*main_io_, [handler, error, cancelable,
+                                        life_time{life_time_cancelable()}]() {
+            if (cancelable.canceled() || life_time.canceled()) {
+              return;
+            }
 
-                handler(nullptr, error);
-              });
+            handler(nullptr, error);
+          });
           return;
         }
 
@@ -90,31 +90,32 @@ const Cancelable& SystemResolver::Resolve(std::string domain,
 
         for (auto iter = result.begin(); iter != result.end(); iter++) {
           addresses->emplace_back(iter->endpoint().address());
-          iter++;
         }
 
         NEINFO << "Successfully resolved domain " << domain << ".";
 
-        boost::asio::post(
-            *main_io_, [handler, addresses, cancelable{std::move(cancelable)},
-                        life_time{life_time_cancelable_pointer()}]() {
-              if (cancelable->canceled() || life_time->canceled()) {
-                return;
-              }
+        boost::asio::post(*main_io_, [handler, addresses, cancelable,
+                                      life_time{life_time_cancelable()}]() {
+          if (cancelable.canceled() || life_time.canceled()) {
+            return;
+          }
 
-              handler(addresses, NEKitErrorCode::NoError);
-            });
+          handler(addresses, NEKitErrorCode::NoError);
+        });
       });
 
-  return *cancelable_ptr;
+  return cancelable;
 }
 
 void SystemResolver::Stop() {
+  work_guard_.reset();
   thread_group_.join_all();
   resolve_io_.reset();
 }
 
 void SystemResolver::Reset() {
+  NEDEBUG << "Resetting system resolver";
+
   resolve_io_ = std::make_unique<boost::asio::io_context>();
 
   for (size_t i = 0; i < thread_count_; i++) {

@@ -36,8 +36,8 @@ class SystemResolver : public ResolverInterface, private LifeTime {
   SystemResolver(boost::asio::io_context* io, size_t thread_count);
   ~SystemResolver();
 
-  const Cancelable& Resolve(std::string domain, AddressPreference preference,
-                            EventHandler handler) override
+  Cancelable Resolve(std::string domain, AddressPreference preference,
+                     EventHandler handler) override
       __attribute__((warn_unused_result));
 
   void Stop() override;
