@@ -42,6 +42,7 @@ class Tunnel final : private boost::noncopyable {
  public:
   Tunnel(std::unique_ptr<data_flow::LocalDataFlowInterface>&& local_data_flow,
          rule::RuleManager* rule_manager);
+  ~Tunnel();
 
   void Open();
 
@@ -74,8 +75,6 @@ class Tunnel final : private boost::noncopyable {
   utils::Cancelable open_cancelable_, local_read_cancelable_,
       local_write_cancelable_, remote_read_cancelable_,
       remote_write_cancelable_, rule_cancelable_;
-
-  bool forwarding_{false};
 };
 
 class TunnelManager final : private boost::noncopyable {

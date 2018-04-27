@@ -23,6 +23,7 @@
 #include "nekit/transport/tunnel.h"
 
 #include "nekit/config.h"
+#include "nekit/transport/error_code.h"
 #include "nekit/utils/log.h"
 
 #undef NECHANNEL
@@ -34,16 +35,32 @@ namespace transport {
 Tunnel::Tunnel(
     std::unique_ptr<data_flow::LocalDataFlowInterface>&& local_data_flow,
     rule::RuleManager* rule_manager)
-    : session_{local_data_flow->session()},
+    : session_{local_data_flow->Session()},
       rule_manager_{rule_manager},
       local_data_flow_{std::move(local_data_flow)} {}
 
+Tunnel::~Tunnel() {
+  open_cancelable_.Cancel();
+  local_read_cancelable_.Cancel();
+  local_write_cancelable_.Cancel();
+  remote_read_cancelable_.Cancel();
+  remote_write_cancelable_.Cancel();
+  rule_cancelable_.Cancel();
+}
+
 void Tunnel::Open() {
+  NEDEBUG << "Open a new tunnel.";
+
   open_cancelable_ = local_data_flow_->Open([this](std::error_code ec) {
     if (ec) {
+      NEERROR << "Error happened when opening a new tunnel, error code is: "
+              << ec << ".";
+
       ReleaseTunnel();
       return;
     }
+
+    NEDEBUG << "Tunnel successfully opened, matching rule.";
 
     MatchRule();
   });
@@ -73,6 +90,7 @@ void Tunnel::ConnectToRemote() {
     FinishLocalNegotiation();
   });
 }
+
 void Tunnel::FinishLocalNegotiation() {
   open_cancelable_ = local_data_flow_->Continue([this](std::error_code ec) {
     if (ec) {
@@ -85,35 +103,52 @@ void Tunnel::FinishLocalNegotiation() {
 }
 
 void Tunnel::BeginForward() {
-  // This flag is not necessary, but we still use it for simplicity.
-  // Without it, one has to make sure that remote data flow will cancel or read
-  // and write operation callbacks when error happens.
-  // It is probably better to handler it here to make developing new data flow
-  // simpler.
-  forwarding_ = true;
   ForwardLocal();
   ForwardRemote();
 }
 
 void Tunnel::ForwardLocal() {
-  if (!forwarding_) {
-    return;
-  }
+  CheckTunnelStatus();
 
   BOOST_ASSERT(!local_data_flow_->IsReading());
   BOOST_ASSERT(!remote_data_flow_->IsWriting());
-  BOOST_ASSERT(!local_data_flow_->IsClosed());
-  BOOST_ASSERT(!remote_data_flow_->IsClosed());
+  BOOST_ASSERT(local_data_flow_->State() != data_flow::State::Closing ||
+               !local_data_flow_->IsReadClosed());
+  BOOST_ASSERT(remote_data_flow_->State() != data_flow::State::Closing ||
+               remote_data_flow_->IsWriteClosed());
 
   local_read_cancelable_ = local_data_flow_->Read(
       CreateBuffer(),
       [this](std::unique_ptr<utils::Buffer>&& buffer, std::error_code ec) {
         if (ec) {
+          if (ec == nekit::transport::ErrorCode::EndOfFile) {
+            // Close remote write if it is not closed yet.
+            if (NE_DATA_FLOW_WRITE_CLOSABLE(remote_data_flow_)) {
+              remote_write_cancelable_ =
+                  remote_data_flow_->CloseWrite([this](std::error_code ec) {
+                    (void)ec;
+                    CheckTunnelStatus();
+                  });
+              return;
+            } else {
+              CheckTunnelStatus();
+            }
+
+            return;
+          }
+
           ReleaseTunnel();
           return;
         }
 
-        if (!forwarding_) {
+        if ((remote_data_flow_->State() == data_flow::State::Closing &&
+             remote_data_flow_->IsWriteClosed()) ||
+            remote_data_flow_->State() == data_flow::State::Closed) {
+          // This can't happen! Since we don't close the write yet, it
+          // must be closed due to error. Then `ReportError` should be called
+          // and the read callback should have been canceled.
+          BOOST_ASSERT(false);
+          ReleaseTunnel();
           return;
         }
 
@@ -130,24 +165,39 @@ void Tunnel::ForwardLocal() {
 }
 
 void Tunnel::ForwardRemote() {
-  if (!forwarding_) {
-    return;
-  }
+  CheckTunnelStatus();
 
   BOOST_ASSERT(!remote_data_flow_->IsReading());
   BOOST_ASSERT(!local_data_flow_->IsWriting());
-  BOOST_ASSERT(!remote_data_flow_->IsClosed());
-  BOOST_ASSERT(!local_data_flow_->IsClosed());
+  BOOST_ASSERT(remote_data_flow_->State() != data_flow::State::Closing ||
+               !remote_data_flow_->IsReadClosed());
+  BOOST_ASSERT(local_data_flow_->State() != data_flow::State::Closing ||
+               !local_data_flow_->IsWriteClosed());
 
   remote_read_cancelable_ = remote_data_flow_->Read(
       CreateBuffer(),
       [this](std::unique_ptr<utils::Buffer>&& buffer, std::error_code ec) {
         if (ec) {
+          if (ec == nekit::transport::ErrorCode::EndOfFile) {
+            if (NE_DATA_FLOW_WRITE_CLOSABLE(local_data_flow_)) {
+              local_write_cancelable_ =
+                  local_data_flow_->CloseWrite([this](std::error_code ec) {
+                    (void)ec;
+                    CheckTunnelStatus();
+                  });
+            } else {
+              CheckTunnelStatus();
+            }
+            return;
+          }
+
           LocalReportError(ec);
           return;
         }
 
-        if (!forwarding_) {
+        if (local_data_flow_->IsWriteClosed()) {
+          BOOST_ASSERT(false);
+          ReleaseTunnel();
           return;
         }
 
@@ -164,10 +214,6 @@ void Tunnel::ForwardRemote() {
 }
 
 void Tunnel::LocalReportError(std::error_code ec) {
-  BOOST_ASSERT(!local_data_flow_->IsClosed());
-
-  forwarding_ = false;
-
   local_write_cancelable_ =
       local_data_flow_->ReportError(ec, [this](std::error_code ec) {
         (void)ec;
@@ -177,9 +223,9 @@ void Tunnel::LocalReportError(std::error_code ec) {
 }
 
 void Tunnel::CheckTunnelStatus() {
-  if (local_data_flow_->IsClosed() && local_data_flow_->IsIdle() &&
+  if (local_data_flow_->State() == data_flow::State::Closed &&
       (!remote_data_flow_ ||
-       (remote_data_flow_->IsClosed() && remote_data_flow_->IsIdle()))) {
+       (remote_data_flow_->State() == data_flow::State::Closed))) {
     ReleaseTunnel();
   }
 }
