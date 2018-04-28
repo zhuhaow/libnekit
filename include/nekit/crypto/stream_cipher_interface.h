@@ -58,6 +58,9 @@ std::error_code make_error_code(StreamCipherInterface::ErrorCode ec);
 
 template <typename Cipher>
 struct is_aead_cipher : std::false_type {};
+
+template <typename Cipher>
+struct is_block_cipher : std::false_type {};
 }  // namespace crypto
 }  // namespace nekit
 

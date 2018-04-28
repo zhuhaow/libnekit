@@ -149,29 +149,52 @@ using ChaCha20Cipher =
                        crypto_stream_chacha20_KEYBYTES,
                        crypto_stream_chacha20_NONCEBYTES, 64>;
 
+template <>
+struct is_block_cipher<ChaCha20Cipher<Action::Decryption>> : std::true_type {};
+template <>
+struct is_block_cipher<ChaCha20Cipher<Action::Encryption>> : std::true_type {};
+
 template <Action action_>
 using ChaCha20IetfCipher =
     SodiumStreamCipher<action_, uint32_t, crypto_stream_chacha20_ietf_xor_ic,
                        crypto_stream_chacha20_IETF_KEYBYTES,
                        crypto_stream_chacha20_IETF_NONCEBYTES, 64>;
+template <>
+struct is_block_cipher<ChaCha20IetfCipher<Action::Decryption>>
+    : std::true_type {};
+template <>
+struct is_block_cipher<ChaCha20IetfCipher<Action::Encryption>>
+    : std::true_type {};
 
 template <Action action_>
 using XChaCha20Cipher =
     SodiumStreamCipher<action_, uint64_t, crypto_stream_xchacha20_xor_ic,
                        crypto_stream_xchacha20_KEYBYTES,
                        crypto_stream_xchacha20_NONCEBYTES, 64>;
+template <>
+struct is_block_cipher<XChaCha20Cipher<Action::Decryption>> : std::true_type {};
+template <>
+struct is_block_cipher<XChaCha20Cipher<Action::Encryption>> : std::true_type {};
 
 template <Action action_>
 using Salsa20Cipher =
     SodiumStreamCipher<action_, uint64_t, crypto_stream_salsa20_xor_ic,
                        crypto_stream_salsa20_KEYBYTES,
                        crypto_stream_salsa20_NONCEBYTES, 64>;
+template <>
+struct is_block_cipher<Salsa20Cipher<Action::Decryption>> : std::true_type {};
+template <>
+struct is_block_cipher<Salsa20Cipher<Action::Encryption>> : std::true_type {};
 
 template <Action action_>
 using XSalsa20Cipher =
     SodiumStreamCipher<action_, uint64_t, crypto_stream_xsalsa20_xor_ic,
                        crypto_stream_xsalsa20_KEYBYTES,
                        crypto_stream_xsalsa20_NONCEBYTES, 64>;
+template <>
+struct is_block_cipher<XSalsa20Cipher<Action::Decryption>> : std::true_type {};
+template <>
+struct is_block_cipher<XSalsa20Cipher<Action::Encryption>> : std::true_type {};
 
 }  // namespace crypto
 }  // namespace nekit
