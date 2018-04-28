@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 3.2.0)
 
 if (CMAKE_VERSION VERSION_LESS "3.7.1")
   message(WARNING "It is highly recommended to used the latest version of CMake.")
@@ -14,54 +14,49 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+cmake_policy(SET CMP0063 NEW)
+add_library(nekit "")
+
 include(CheckCXXCompilerFlag)
 
 check_cxx_compiler_flag(-Wall HAS_WALL)
-if(HAS_WALL)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
-endif()
+target_compile_options(nekit PRIVATE $<$<BOOL:HAS_WALL>:-Wall>)
 
 check_cxx_compiler_flag(-Wextra HAS_WEXTRA)
-if(HAS_WEXTRA)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra")
-endif()
+target_compile_options(nekit PRIVATE $<$<BOOL:HAS_WEXTRA>:-Wextra>)
 
 check_cxx_compiler_flag(-pedantic HAS_PEDANTIC)
-if(HAS_PEDANTIC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic")
-endif()
+target_compile_options(nekit PRIVATE $<$<BOOL:HAS_PEDANTIC>:-Wpedantic>)
 
 check_cxx_compiler_flag(-Wno-pragma-once-outside-header HAS_PRAGMA_ONCE_WARNING)
-if(HAS_PRAGMA_ONCE_WARNING)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-pragma-once-outside-header")
-endif()
+target_compile_options(nekit PRIVATE $<$<BOOL:HAS_PRAGMA_ONCE_WARNING>:-Wno-pragma-once-outside-header>)
 
 option(COVERAGE "Generate coverage report" OFF)
 if(COVERAGE)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 --coverage")
+  target_compile_options(nekit PRIVATE -g -O0 --converage)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
 endif()
 
-include_directories("include")
-include_directories("modules")
-include_directories(SYSTEM "deps/${PLATFORM}/include")
+target_include_directories(nekit PUBLIC "include")
+target_include_directories(nekit PRIVATE "modules")
+target_include_directories(nekit SYSTEM PUBLIC "deps/${PLATFORM}/include")
 
 set(CMAKE_FIND_ROOT_PATH "${PROJECT_SOURCE_DIR}/deps/${PLATFORM}")
 
 if(APPLE AND NOT IOS)
   execute_process(COMMAND scripts/find_include_path.sh WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE INCLUDE_DIRS)
   string(REPLACE "\n" ";" INCLUDE_DIRS ${INCLUDE_DIRS})
-  include_directories(AFTER SYSTEM ${INCLUDE_DIRS})
+  target_include_directories(nekit SYSTEM PRIVATE ${INCLUDE_DIRS})
   message(STATUS "Added more include dirs for apple clang")
 endif()
 
 if(WIN32)
-  add_definitions(-DELPP_WINSOCK2 -DWIN32_LEAN_AND_MEAN)
+  target_compile_definitions(nekit PUBLIC -DELPP_WINSOCK2 -DWIN32_LEAN_AND_MEAN)
 endif()
 
-add_definitions(-DBOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS)
+target_compile_definitions(nekit PUBLIC -DBOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS)
 
-set(SOURCES
+target_sources(nekit PRIVATE
   src/transport/tcp_socket.cc
   src/transport/tcp_listener.cc
   src/transport/tunnel.cc
@@ -92,18 +87,15 @@ set(SOURCES
   src/utils/buffer.cc
   src/utils/endpoint.cc
   src/data_flow/socks5_server_data_flow.cc
+  modules/CxxUrl/url.cc
+  modules/picohttpparser/picohttpparser.c
   )
 
-set(SOURCES ${SOURCES}
-  modules/CxxUrl/url.cc
-  modules/picohttpparser/picohttpparser.c)
-
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/contrib" AND IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/contrib" AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/contrib/CMakeLists.txt")
-  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/contrib")
+  message(STATUS "Add contrib folder.")
+  add_subdirectory("contrib")
 endif()
 
-cmake_policy(SET CMP0063 NEW)
-add_library(nekit ${SOURCES})
 set_target_properties(nekit PROPERTIES CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN YES)
 
 find_library(BOOST boost
