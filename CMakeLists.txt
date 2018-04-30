@@ -33,8 +33,8 @@ target_compile_options(nekit PRIVATE $<$<BOOL:HAS_PRAGMA_ONCE_WARNING>:-Wno-prag
 
 option(COVERAGE "Generate coverage report" OFF)
 if(COVERAGE)
-  target_compile_options(nekit PRIVATE -g -O0 --converage)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
+  target_compile_options(nekit PRIVATE -g -O0 -coverage)
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -coverage")
 endif()
 
 target_compile_options(nekit PRIVATE $<$<CONFIG:DEBUG>:-g -O0>)
