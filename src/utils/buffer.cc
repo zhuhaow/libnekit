@@ -163,6 +163,11 @@ void Buffer::InsertFront(nekit::utils::Buffer&& buffer) {
   auto prev_head = std::move(head_);
   head_ = std::move(buffer.head_);
   buffer.tail_->next_buf_ = std::move(prev_head);
+
+  if (!tail_) {
+    tail_ = buffer.tail_;
+  }
+
   size_ += buffer.size();
 }
 
@@ -235,13 +240,13 @@ void Buffer::Shrink(size_t skip, size_t len) {
     auto remove_length = std::min(len, current->size_);
     current->offset_ += remove_length;
     current->size_ -= remove_length;
+    size_ -= remove_length;
 
     if (current->size_) {
       return;
     }
 
     len -= remove_length;
-    size_ -= remove_length;
 
     if (!prev) {
       head_ = std::move(current->next_buf_);
@@ -405,7 +410,7 @@ void Buffer::WalkInternalChunk(
   }
 
   while (current) {
-    if (!walker(current->data_.get() + from, current->size_ - from, context)) {
+    if (!walker(current->data_.get() + current->offset_ + from, current->size_ - from, context)) {
       return;
     }
     from = 0;
@@ -430,7 +435,7 @@ void Buffer::WalkInternalChunk(
   }
 
   while (current) {
-    if (!walker(current->data_.get() + from, current->size_ - from, context)) {
+    if (!walker(current->data_.get() + current->offset_ + from, current->size_ - from, context)) {
       return;
     }
     from = 0;
