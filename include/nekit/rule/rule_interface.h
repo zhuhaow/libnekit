@@ -32,6 +32,10 @@
 
 namespace nekit {
 namespace rule {
+typedef std::function<std::unique_ptr<data_flow::RemoteDataFlowInterface>(
+    std::shared_ptr<utils::Session>)>
+    RuleHandler;
+
 class RuleInterface : private boost::noncopyable {
  public:
   using RuleHandler =
