@@ -39,12 +39,12 @@ class StreamCipherInterface : private boost::noncopyable {
 
   virtual ~StreamCipherInterface() = default;
 
-  virtual void SetKey(const uint8_t *data, bool copy) = 0;
-  virtual void SetIv(const uint8_t *data, bool copy) = 0;
+  virtual void SetKey(const void *data) = 0;
+  virtual void SetIv(const void *data) = 0;
 
-  virtual ErrorCode Process(const uint8_t *input, size_t len,
-                            const uint8_t *input_tag, uint8_t *output,
-                            uint8_t *output_tag) = 0;
+  virtual ErrorCode Process(const void *input, size_t len,
+                            const void *input_tag, void *output,
+                            void *output_tag) = 0;
 
   virtual void Reset() = 0;
 
