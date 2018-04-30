@@ -21,10 +21,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <cassert>
 #include <cstdint>
 
 #include <openssl/evp.h>
+#include <boost/assert.hpp>
 
 #include "stream_cipher_interface.h"
 
@@ -42,82 +42,58 @@ class OpenSslStreamCipher : public StreamCipherInterface {
                            static_cast<int>(action_))) {
       exit(1);
     }
+
+    key_ = std::make_unique<uint8_t[]>(key_size());
+    iv_ = std::make_unique<uint8_t[]>(iv_size());
   }
 
-  ~OpenSslStreamCipher() {
-    if (free_key_) {
-      ::operator delete(
-          const_cast<void *>(reinterpret_cast<const void *>(key_)));
-    }
-    if (free_iv_) {
-      ::operator delete(
-          const_cast<void *>(reinterpret_cast<const void *>(iv_)));
-    }
+  ~OpenSslStreamCipher() { EVP_CIPHER_CTX_free(context_); }
 
-    EVP_CIPHER_CTX_free(context_);
-  }
-
-  void SetKey(const uint8_t *data, bool copy) override {
-    if (copy) {
-      uint8_t *key = static_cast<uint8_t *>(::operator new(key_size()));
-      std::memcpy(key, data, key_size());
-      free_key_ = true;
-      key_ = key;
-    } else {
-      key_ = data;
-    }
-
-    if (!EVP_CipherInit_ex(context_, nullptr, nullptr, key_, nullptr,
+  void SetKey(const void *data) override {
+    std::memcpy(key_.get(), data, key_size());
+    if (!EVP_CipherInit_ex(context_, nullptr, nullptr, key_.get(), nullptr,
                            static_cast<int>(action_))) {
       exit(1);
     }
   }
 
-  void SetIv(const uint8_t *data, bool copy) override {
-    if (copy) {
-      uint8_t *iv = static_cast<uint8_t *>(::operator new(iv_size()));
-      std::memcpy(iv, data, iv_size());
-      free_iv_ = true;
-      iv_ = iv;
-    } else {
-      iv_ = data;
-    }
-
-    if (!EVP_CipherInit_ex(context_, nullptr, nullptr, nullptr, iv_,
+  void SetIv(const void *data) override {
+    std::memcpy(iv_.get(), data, iv_size());
+    if (!EVP_CipherInit_ex(context_, nullptr, nullptr, nullptr, iv_.get(),
                            static_cast<int>(action_))) {
       exit(1);
     }
   }
 
-  ErrorCode Process(const uint8_t *input, size_t len, const uint8_t *input_tag,
-                    uint8_t *output, uint8_t *output_tag) override {
+  ErrorCode Process(const void *input, size_t len, const void *input_tag,
+                    void *output, void *output_tag) override {
     int output_len;
 
     if (action_ == Action::Decryption && input_tag != nullptr) {
       if (!EVP_CIPHER_CTX_ctrl(context_, EVP_CTRL_AEAD_SET_TAG, int(tag_size_),
-                               const_cast<uint8_t *>(input_tag))) {
+                               const_cast<void *>(input_tag))) {
         return ErrorCode::UnknownError;
       }
     }
 
-    if (!EVP_CipherUpdate(context_, output, &output_len,
-                          const_cast<uint8_t *>(input), int(len))) {
+    if (!EVP_CipherUpdate(context_, static_cast<uint8_t *>(output), &output_len,
+                          static_cast<const uint8_t*>(input), int(len))) {
       return ErrorCode::UnknownError;
     }
-    assert(output_len == int(len));
+    BOOST_ASSERT(output_len == int(len));
 
     if (action_ == Action::Decryption && input_tag != nullptr) {
-      if (EVP_CipherFinal_ex(context_, output, &output_len) <= 0) {
+      if (EVP_CipherFinal_ex(context_, static_cast<uint8_t*>(output), &output_len) <= 0) {
         return ErrorCode::ValidationFailed;
       }
 
-      assert(output_len == 0);
+      BOOST_ASSERT(output_len == 0);
     } else if (action_ == Action::Encryption && output_tag != nullptr) {
-      if (!EVP_CipherFinal_ex(context_, output, &output_len)) {
+      if (!EVP_CipherFinal_ex(context_, static_cast<uint8_t*>(output), &output_len)) {
         return ErrorCode::UnknownError;
       }
 
-      assert(output_len == 0);
+      BOOST_ASSERT(output_len == 0);
 
       if (!EVP_CIPHER_CTX_ctrl(context_, EVP_CTRL_AEAD_GET_TAG, tag_size_,
                                output_tag)) {
@@ -129,20 +105,9 @@ class OpenSslStreamCipher : public StreamCipherInterface {
   }
 
   void Reset() override {
-    if (free_key_) {
-      ::operator delete(
-          const_cast<void *>(reinterpret_cast<const void *>(key_)));
-    }
-    if (free_iv_) {
-      ::operator delete(
-          const_cast<void *>(reinterpret_cast<const void *>(iv_)));
-    }
+    EVP_CIPHER_CTX_reset(context_);
     key_ = nullptr;
     iv_ = nullptr;
-    free_key_ = false;
-    free_iv_ = false;
-
-    EVP_CIPHER_CTX_reset(context_);
 
     EVP_CipherInit_ex(context_, type_(), nullptr, nullptr, nullptr,
                       static_cast<int>(action_));
@@ -155,9 +120,8 @@ class OpenSslStreamCipher : public StreamCipherInterface {
 
  private:
   EVP_CIPHER_CTX *context_;
-  const uint8_t *key_{nullptr}, *iv_{nullptr};
-  bool free_key_{false}, free_iv_{false};
-};
+  std::unique_ptr<uint8_t[]> key_, iv_;
+};  // namespace crypto
 
 template <Action action_>
 using Aes128CfbCipher = OpenSslStreamCipher<action_, EVP_aes_128_cfb, 0>;
@@ -189,8 +153,8 @@ struct is_aead_cipher<ChaCha20IetfPoly1305Cipher<Action::Decryption>>
 
 template <Action action_>
 using Aes128Gcm = OpenSslStreamCipher<action_, EVP_aes_128_gcm, 16>;
-template <>
-struct is_aead_cipher<Aes128Gcm<Action::Encryption>> : std::true_type {};
+template <Action action_>
+struct is_aead_cipher<Aes128Gcm<action_>> : std::true_type {};
 template <>
 struct is_aead_cipher<Aes128Gcm<Action::Decryption>> : std::true_type {};
 

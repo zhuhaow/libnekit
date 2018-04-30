@@ -23,9 +23,9 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <cstring>
-#include <new>
 
 #include <sodium/crypto_stream_chacha20.h>
 #include <sodium/crypto_stream_salsa20.h>
@@ -49,47 +49,18 @@ template <Action action_, typename BlockCounterLengthType,
           size_t key_size_, size_t iv_size_, size_t block_size_>
 class SodiumStreamCipher : public StreamCipherInterface {
  public:
-  SodiumStreamCipher() {
-    block_buffer_ = static_cast<uint8_t *>(::operator new(block_size_));
+  SodiumStreamCipher() {}
+
+  void SetKey(const void *data) override {
+    std::memcpy(key_.get(), data, key_size_);
   }
 
-  ~SodiumStreamCipher() {
-    ::operator delete(block_buffer_);
-
-    if (free_key_) {
-      ::operator delete(
-          const_cast<void *>(reinterpret_cast<const void *>(key_)));
-    }
-    if (free_iv_) {
-      ::operator delete(
-          const_cast<void *>(reinterpret_cast<const void *>(iv_)));
-    }
+  void SetIv(const void *data) override {
+    std::memcpy(iv_.get(), data, iv_size_);
   }
 
-  void SetKey(const uint8_t *data, bool copy) override {
-    if (copy) {
-      uint8_t *key = static_cast<uint8_t *>(::operator new(key_size_));
-      std::memcpy(key, data, key_size_);
-      free_key_ = true;
-      key_ = key;
-    } else {
-      key_ = data;
-    }
-  }
-
-  void SetIv(const uint8_t *data, bool copy) override {
-    if (copy) {
-      uint8_t *iv = static_cast<uint8_t *>(::operator new(iv_size_));
-      std::memcpy(iv, data, iv_size_);
-      free_iv_ = true;
-      iv_ = iv;
-    } else {
-      iv_ = data;
-    }
-  }
-
-  ErrorCode Process(const uint8_t *input, size_t len, const uint8_t *input_tag,
-                    uint8_t *output, uint8_t *output_tag) override {
+  ErrorCode Process(const void *input, size_t len, const void *input_tag,
+                    void *output, void *output_tag) override {
     (void)input_tag;
     (void)output_tag;
 
@@ -97,37 +68,27 @@ class SodiumStreamCipher : public StreamCipherInterface {
     size_t content_size =
         std::min(static_cast<size_t>((-counter) % block_size_), len);
     if (content_size != 0) {
-      uint8_t *buf = block_buffer_ + block_size_ - content_size;
+      uint8_t *buf = block_buffer_.data() + block_size_ - content_size;
       std::memcpy(buf, input, content_size);
-      method_(block_buffer_, block_buffer_, block_size_, iv_,
+      method_(block_buffer_.data(), block_buffer_.data(), block_size_, iv_,
               counter / block_size_, key_);
       std::memcpy(output, buf, content_size);
-      output += content_size;
+      output = static_cast<uint8_t *>(output) + content_size;
       counter += content_size;
-      input += content_size;
+      input = static_cast<uint8_t *>(output) + content_size;
       len -= content_size;
     }
 
     // Process all left over content
-    method_(output, input, len, iv_, counter / block_size_, key_);
+    method_(output, input, len, iv_.data(), counter / block_size_, key_.data());
     counter += len;
     return ErrorCode::NoError;
   }
 
   void Reset() override {
     counter = 0;
-    if (free_key_) {
-      ::operator delete(
-          const_cast<void *>(reinterpret_cast<const void *>(key_)));
-    }
-    if (free_iv_) {
-      ::operator delete(
-          const_cast<void *>(reinterpret_cast<const void *>(iv_)));
-    }
     key_ = nullptr;
     iv_ = nullptr;
-    free_key_ = false;
-    free_iv_ = false;
   }
 
   size_t key_size() override { return key_size_; }
@@ -137,10 +98,10 @@ class SodiumStreamCipher : public StreamCipherInterface {
 
  private:
   uint64_t counter{0};
-  const uint8_t *key_{nullptr}, *iv_{nullptr};
-  bool free_key_{false}, free_iv_{false};
 
-  uint8_t *block_buffer_;
+  std::array<uint8_t, block_size_> block_buffer_;
+  std::array<uint8_t, key_size_> key_;
+  std::array<uint8_t, iv_size_> iv_;
 };
 
 template <Action action_>
