@@ -1,3 +1,4 @@
 ignore:
   - "test"
   - "boost"
+  - "module"
