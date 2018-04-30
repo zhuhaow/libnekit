@@ -115,7 +115,7 @@ void Tunnel::ForwardLocal() {
   BOOST_ASSERT(local_data_flow_->State() != data_flow::State::Closing ||
                !local_data_flow_->IsReadClosed());
   BOOST_ASSERT(remote_data_flow_->State() != data_flow::State::Closing ||
-               remote_data_flow_->IsWriteClosed());
+               !remote_data_flow_->IsWriteClosed());
 
   local_read_cancelable_ = local_data_flow_->Read(
       CreateBuffer(),
