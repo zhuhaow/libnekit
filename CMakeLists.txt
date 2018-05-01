@@ -68,6 +68,7 @@ target_sources(nekit PRIVATE
   src/utils/boost_error.cc
   src/utils/system_resolver.cc
   src/utils/error.cc
+  src/utils/timer.cc
   src/utils/logger.cc
   src/utils/cancelable.cc
   src/utils/maxmind.cc
