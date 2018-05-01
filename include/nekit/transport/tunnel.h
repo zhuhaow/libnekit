@@ -32,6 +32,7 @@
 #include "../rule/rule_manager.h"
 #include "../utils/cancelable.h"
 #include "../utils/session.h"
+#include "../utils/timer.h"
 
 namespace nekit {
 namespace transport {
@@ -62,6 +63,8 @@ class Tunnel final : private boost::noncopyable {
 
   void LocalReportError(std::error_code ec);
 
+  void ResetTimer();
+
   std::unique_ptr<utils::Buffer> CreateBuffer();
 
   std::shared_ptr<utils::Session> session_;
@@ -75,6 +78,8 @@ class Tunnel final : private boost::noncopyable {
   utils::Cancelable open_cancelable_, local_read_cancelable_,
       local_write_cancelable_, remote_read_cancelable_,
       remote_write_cancelable_, rule_cancelable_;
+
+  utils::Timer timeout_timer_;
 };
 
 class TunnelManager final : private boost::noncopyable {
