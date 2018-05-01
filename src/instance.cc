@@ -60,6 +60,9 @@ void Instance::Run() {
 
 void Instance::Stop() {
   io_->stop();
+  for (auto &manager : proxy_managers_) {
+    manager->Stop();
+  }
   ready_ = false;
 }
 
