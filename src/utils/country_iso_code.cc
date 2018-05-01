@@ -22,509 +22,144 @@
 
 #include "nekit/utils/country_iso_code.h"
 
+#include <unordered_map>
+
 namespace nekit {
 namespace utils {
+
+static const std::unordered_map<std::string, CountryIsoCode> country_code_map =
+    {{"AF", CountryIsoCode::AF}, {"AX", CountryIsoCode::AX},
+     {"AL", CountryIsoCode::AL}, {"DZ", CountryIsoCode::DZ},
+     {"AS", CountryIsoCode::AS}, {"AD", CountryIsoCode::AD},
+     {"AO", CountryIsoCode::AO}, {"AI", CountryIsoCode::AI},
+     {"AQ", CountryIsoCode::AQ}, {"AG", CountryIsoCode::AG},
+     {"AR", CountryIsoCode::AR}, {"AM", CountryIsoCode::AM},
+     {"AW", CountryIsoCode::AW}, {"AU", CountryIsoCode::AU},
+     {"AT", CountryIsoCode::AT}, {"AZ", CountryIsoCode::AZ},
+     {"BS", CountryIsoCode::BS}, {"BH", CountryIsoCode::BH},
+     {"BD", CountryIsoCode::BD}, {"BB", CountryIsoCode::BB},
+     {"BY", CountryIsoCode::BY}, {"BE", CountryIsoCode::BE},
+     {"BZ", CountryIsoCode::BZ}, {"BJ", CountryIsoCode::BJ},
+     {"BM", CountryIsoCode::BM}, {"BT", CountryIsoCode::BT},
+     {"BO", CountryIsoCode::BO}, {"BQ", CountryIsoCode::BQ},
+     {"BA", CountryIsoCode::BA}, {"BW", CountryIsoCode::BW},
+     {"BV", CountryIsoCode::BV}, {"BR", CountryIsoCode::BR},
+     {"IO", CountryIsoCode::IO}, {"BN", CountryIsoCode::BN},
+     {"BG", CountryIsoCode::BG}, {"BF", CountryIsoCode::BF},
+     {"BI", CountryIsoCode::BI}, {"CV", CountryIsoCode::CV},
+     {"KH", CountryIsoCode::KH}, {"CM", CountryIsoCode::CM},
+     {"CA", CountryIsoCode::CA}, {"KY", CountryIsoCode::KY},
+     {"CF", CountryIsoCode::CF}, {"TD", CountryIsoCode::TD},
+     {"CL", CountryIsoCode::CL}, {"CN", CountryIsoCode::CN},
+     {"CX", CountryIsoCode::CX}, {"CC", CountryIsoCode::CC},
+     {"CO", CountryIsoCode::CO}, {"KM", CountryIsoCode::KM},
+     {"CG", CountryIsoCode::CG}, {"CD", CountryIsoCode::CD},
+     {"CK", CountryIsoCode::CK}, {"CR", CountryIsoCode::CR},
+     {"CI", CountryIsoCode::CI}, {"HR", CountryIsoCode::HR},
+     {"CU", CountryIsoCode::CU}, {"CW", CountryIsoCode::CW},
+     {"CY", CountryIsoCode::CY}, {"CZ", CountryIsoCode::CZ},
+     {"DK", CountryIsoCode::DK}, {"DJ", CountryIsoCode::DJ},
+     {"DM", CountryIsoCode::DM}, {"DO", CountryIsoCode::DO},
+     {"EC", CountryIsoCode::EC}, {"EG", CountryIsoCode::EG},
+     {"SV", CountryIsoCode::SV}, {"GQ", CountryIsoCode::GQ},
+     {"ER", CountryIsoCode::ER}, {"EE", CountryIsoCode::EE},
+     {"ET", CountryIsoCode::ET}, {"FK", CountryIsoCode::FK},
+     {"FO", CountryIsoCode::FO}, {"FJ", CountryIsoCode::FJ},
+     {"FI", CountryIsoCode::FI}, {"FR", CountryIsoCode::FR},
+     {"GF", CountryIsoCode::GF}, {"PF", CountryIsoCode::PF},
+     {"TF", CountryIsoCode::TF}, {"GA", CountryIsoCode::GA},
+     {"GM", CountryIsoCode::GM}, {"GE", CountryIsoCode::GE},
+     {"DE", CountryIsoCode::DE}, {"GH", CountryIsoCode::GH},
+     {"GI", CountryIsoCode::GI}, {"GR", CountryIsoCode::GR},
+     {"GL", CountryIsoCode::GL}, {"GD", CountryIsoCode::GD},
+     {"GP", CountryIsoCode::GP}, {"GU", CountryIsoCode::GU},
+     {"GT", CountryIsoCode::GT}, {"GG", CountryIsoCode::GG},
+     {"GN", CountryIsoCode::GN}, {"GW", CountryIsoCode::GW},
+     {"GY", CountryIsoCode::GY}, {"HT", CountryIsoCode::HT},
+     {"HM", CountryIsoCode::HM}, {"VA", CountryIsoCode::VA},
+     {"HN", CountryIsoCode::HN}, {"HK", CountryIsoCode::HK},
+     {"HU", CountryIsoCode::HU}, {"IS", CountryIsoCode::IS},
+     {"IN", CountryIsoCode::IN}, {"ID", CountryIsoCode::ID},
+     {"IR", CountryIsoCode::IR}, {"IQ", CountryIsoCode::IQ},
+     {"IE", CountryIsoCode::IE}, {"IM", CountryIsoCode::IM},
+     {"IL", CountryIsoCode::IL}, {"IT", CountryIsoCode::IT},
+     {"JM", CountryIsoCode::JM}, {"JP", CountryIsoCode::JP},
+     {"JE", CountryIsoCode::JE}, {"JO", CountryIsoCode::JO},
+     {"KZ", CountryIsoCode::KZ}, {"KE", CountryIsoCode::KE},
+     {"KI", CountryIsoCode::KI}, {"KP", CountryIsoCode::KP},
+     {"KR", CountryIsoCode::KR}, {"KW", CountryIsoCode::KW},
+     {"KG", CountryIsoCode::KG}, {"LA", CountryIsoCode::LA},
+     {"LV", CountryIsoCode::LV}, {"LB", CountryIsoCode::LB},
+     {"LS", CountryIsoCode::LS}, {"LR", CountryIsoCode::LR},
+     {"LY", CountryIsoCode::LY}, {"LI", CountryIsoCode::LI},
+     {"LT", CountryIsoCode::LT}, {"LU", CountryIsoCode::LU},
+     {"MO", CountryIsoCode::MO}, {"MK", CountryIsoCode::MK},
+     {"MG", CountryIsoCode::MG}, {"MW", CountryIsoCode::MW},
+     {"MY", CountryIsoCode::MY}, {"MV", CountryIsoCode::MV},
+     {"ML", CountryIsoCode::ML}, {"MT", CountryIsoCode::MT},
+     {"MH", CountryIsoCode::MH}, {"MQ", CountryIsoCode::MQ},
+     {"MR", CountryIsoCode::MR}, {"MU", CountryIsoCode::MU},
+     {"YT", CountryIsoCode::YT}, {"MX", CountryIsoCode::MX},
+     {"FM", CountryIsoCode::FM}, {"MD", CountryIsoCode::MD},
+     {"MC", CountryIsoCode::MC}, {"MN", CountryIsoCode::MN},
+     {"ME", CountryIsoCode::ME}, {"MS", CountryIsoCode::MS},
+     {"MA", CountryIsoCode::MA}, {"MZ", CountryIsoCode::MZ},
+     {"MM", CountryIsoCode::MM}, {"NA", CountryIsoCode::NA},
+     {"NR", CountryIsoCode::NR}, {"NP", CountryIsoCode::NP},
+     {"NL", CountryIsoCode::NL}, {"NC", CountryIsoCode::NC},
+     {"NZ", CountryIsoCode::NZ}, {"NI", CountryIsoCode::NI},
+     {"NE", CountryIsoCode::NE}, {"NG", CountryIsoCode::NG},
+     {"NU", CountryIsoCode::NU}, {"NF", CountryIsoCode::NF},
+     {"MP", CountryIsoCode::MP}, {"NO", CountryIsoCode::NO},
+     {"OM", CountryIsoCode::OM}, {"PK", CountryIsoCode::PK},
+     {"PW", CountryIsoCode::PW}, {"PS", CountryIsoCode::PS},
+     {"PA", CountryIsoCode::PA}, {"PG", CountryIsoCode::PG},
+     {"PY", CountryIsoCode::PY}, {"PE", CountryIsoCode::PE},
+     {"PH", CountryIsoCode::PH}, {"PN", CountryIsoCode::PN},
+     {"PL", CountryIsoCode::PL}, {"PT", CountryIsoCode::PT},
+     {"PR", CountryIsoCode::PR}, {"QA", CountryIsoCode::QA},
+     {"RE", CountryIsoCode::RE}, {"RO", CountryIsoCode::RO},
+     {"RU", CountryIsoCode::RU}, {"RW", CountryIsoCode::RW},
+     {"BL", CountryIsoCode::BL}, {"SH", CountryIsoCode::SH},
+     {"KN", CountryIsoCode::KN}, {"LC", CountryIsoCode::LC},
+     {"MF", CountryIsoCode::MF}, {"PM", CountryIsoCode::PM},
+     {"VC", CountryIsoCode::VC}, {"WS", CountryIsoCode::WS},
+     {"SM", CountryIsoCode::SM}, {"ST", CountryIsoCode::ST},
+     {"SA", CountryIsoCode::SA}, {"SN", CountryIsoCode::SN},
+     {"RS", CountryIsoCode::RS}, {"SC", CountryIsoCode::SC},
+     {"SL", CountryIsoCode::SL}, {"SG", CountryIsoCode::SG},
+     {"SX", CountryIsoCode::SX}, {"SK", CountryIsoCode::SK},
+     {"SI", CountryIsoCode::SI}, {"SB", CountryIsoCode::SB},
+     {"SO", CountryIsoCode::SO}, {"ZA", CountryIsoCode::ZA},
+     {"GS", CountryIsoCode::GS}, {"SS", CountryIsoCode::SS},
+     {"ES", CountryIsoCode::ES}, {"LK", CountryIsoCode::LK},
+     {"SD", CountryIsoCode::SD}, {"SR", CountryIsoCode::SR},
+     {"SJ", CountryIsoCode::SJ}, {"SZ", CountryIsoCode::SZ},
+     {"SE", CountryIsoCode::SE}, {"CH", CountryIsoCode::CH},
+     {"SY", CountryIsoCode::SY}, {"TW", CountryIsoCode::TW},
+     {"TJ", CountryIsoCode::TJ}, {"TZ", CountryIsoCode::TZ},
+     {"TH", CountryIsoCode::TH}, {"TL", CountryIsoCode::TL},
+     {"TG", CountryIsoCode::TG}, {"TK", CountryIsoCode::TK},
+     {"TO", CountryIsoCode::TO}, {"TT", CountryIsoCode::TT},
+     {"TN", CountryIsoCode::TN}, {"TR", CountryIsoCode::TR},
+     {"TM", CountryIsoCode::TM}, {"TC", CountryIsoCode::TC},
+     {"TV", CountryIsoCode::TV}, {"UG", CountryIsoCode::UG},
+     {"UA", CountryIsoCode::UA}, {"AE", CountryIsoCode::AE},
+     {"GB", CountryIsoCode::GB}, {"US", CountryIsoCode::US},
+     {"UM", CountryIsoCode::UM}, {"UY", CountryIsoCode::UY},
+     {"UZ", CountryIsoCode::UZ}, {"VU", CountryIsoCode::VU},
+     {"VE", CountryIsoCode::VE}, {"VN", CountryIsoCode::VN},
+     {"VG", CountryIsoCode::VG}, {"VI", CountryIsoCode::VI},
+     {"WF", CountryIsoCode::WF}, {"EH", CountryIsoCode::EH},
+     {"YE", CountryIsoCode::YE}, {"ZM", CountryIsoCode::ZM},
+     {"ZW", CountryIsoCode::ZW}, {"XX", CountryIsoCode::XX}};
+
 CountryIsoCode CountryIsoCodeFromString(std::string code) {
-  if (code == "CN")
-    return CountryIsoCode::CN;
-  else if (code == "HK")
-    return CountryIsoCode::HK;
-  else if (code == "TW")
-    return CountryIsoCode::TW;
-  else if (code == "US")
-    return CountryIsoCode::US;
-  else if (code == "JP")
-    return CountryIsoCode::JP;
-  else if (code == "KR")
-    return CountryIsoCode::KR;
-  else if (code == "GB")
-    return CountryIsoCode::GB;
-  else if (code == "AF")
-    return CountryIsoCode::AF;
-  else if (code == "AX")
-    return CountryIsoCode::AX;
-  else if (code == "AL")
-    return CountryIsoCode::AL;
-  else if (code == "DZ")
-    return CountryIsoCode::DZ;
-  else if (code == "AS")
-    return CountryIsoCode::AS;
-  else if (code == "AD")
-    return CountryIsoCode::AD;
-  else if (code == "AO")
-    return CountryIsoCode::AO;
-  else if (code == "AI")
-    return CountryIsoCode::AI;
-  else if (code == "AQ")
-    return CountryIsoCode::AQ;
-  else if (code == "AG")
-    return CountryIsoCode::AG;
-  else if (code == "AR")
-    return CountryIsoCode::AR;
-  else if (code == "AM")
-    return CountryIsoCode::AM;
-  else if (code == "AW")
-    return CountryIsoCode::AW;
-  else if (code == "AU")
-    return CountryIsoCode::AU;
-  else if (code == "AT")
-    return CountryIsoCode::AT;
-  else if (code == "AZ")
-    return CountryIsoCode::AZ;
-  else if (code == "BS")
-    return CountryIsoCode::BS;
-  else if (code == "BH")
-    return CountryIsoCode::BH;
-  else if (code == "BD")
-    return CountryIsoCode::BD;
-  else if (code == "BB")
-    return CountryIsoCode::BB;
-  else if (code == "BY")
-    return CountryIsoCode::BY;
-  else if (code == "BE")
-    return CountryIsoCode::BE;
-  else if (code == "BZ")
-    return CountryIsoCode::BZ;
-  else if (code == "BJ")
-    return CountryIsoCode::BJ;
-  else if (code == "BM")
-    return CountryIsoCode::BM;
-  else if (code == "BT")
-    return CountryIsoCode::BT;
-  else if (code == "BO")
-    return CountryIsoCode::BO;
-  else if (code == "BQ")
-    return CountryIsoCode::BQ;
-  else if (code == "BA")
-    return CountryIsoCode::BA;
-  else if (code == "BW")
-    return CountryIsoCode::BW;
-  else if (code == "BV")
-    return CountryIsoCode::BV;
-  else if (code == "BR")
-    return CountryIsoCode::BR;
-  else if (code == "IO")
-    return CountryIsoCode::IO;
-  else if (code == "BN")
-    return CountryIsoCode::BN;
-  else if (code == "BG")
-    return CountryIsoCode::BG;
-  else if (code == "BF")
-    return CountryIsoCode::BF;
-  else if (code == "BI")
-    return CountryIsoCode::BI;
-  else if (code == "CV")
-    return CountryIsoCode::CV;
-  else if (code == "KH")
-    return CountryIsoCode::KH;
-  else if (code == "CM")
-    return CountryIsoCode::CM;
-  else if (code == "CA")
-    return CountryIsoCode::CA;
-  else if (code == "KY")
-    return CountryIsoCode::KY;
-  else if (code == "CF")
-    return CountryIsoCode::CF;
-  else if (code == "TD")
-    return CountryIsoCode::TD;
-  else if (code == "CL")
-    return CountryIsoCode::CL;
-  else if (code == "CX")
-    return CountryIsoCode::CX;
-  else if (code == "CC")
-    return CountryIsoCode::CC;
-  else if (code == "CO")
-    return CountryIsoCode::CO;
-  else if (code == "KM")
-    return CountryIsoCode::KM;
-  else if (code == "CG")
-    return CountryIsoCode::CG;
-  else if (code == "CD")
-    return CountryIsoCode::CD;
-  else if (code == "CK")
-    return CountryIsoCode::CK;
-  else if (code == "CR")
-    return CountryIsoCode::CR;
-  else if (code == "CI")
-    return CountryIsoCode::CI;
-  else if (code == "HR")
-    return CountryIsoCode::HR;
-  else if (code == "CU")
-    return CountryIsoCode::CU;
-  else if (code == "CW")
-    return CountryIsoCode::CW;
-  else if (code == "CY")
-    return CountryIsoCode::CY;
-  else if (code == "CZ")
-    return CountryIsoCode::CZ;
-  else if (code == "DK")
-    return CountryIsoCode::DK;
-  else if (code == "DJ")
-    return CountryIsoCode::DJ;
-  else if (code == "DM")
-    return CountryIsoCode::DM;
-  else if (code == "DO")
-    return CountryIsoCode::DO;
-  else if (code == "EC")
-    return CountryIsoCode::EC;
-  else if (code == "EG")
-    return CountryIsoCode::EG;
-  else if (code == "SV")
-    return CountryIsoCode::SV;
-  else if (code == "GQ")
-    return CountryIsoCode::GQ;
-  else if (code == "ER")
-    return CountryIsoCode::ER;
-  else if (code == "EE")
-    return CountryIsoCode::EE;
-  else if (code == "ET")
-    return CountryIsoCode::ET;
-  else if (code == "FK")
-    return CountryIsoCode::FK;
-  else if (code == "FO")
-    return CountryIsoCode::FO;
-  else if (code == "FJ")
-    return CountryIsoCode::FJ;
-  else if (code == "FI")
-    return CountryIsoCode::FI;
-  else if (code == "FR")
-    return CountryIsoCode::FR;
-  else if (code == "GF")
-    return CountryIsoCode::GF;
-  else if (code == "PF")
-    return CountryIsoCode::PF;
-  else if (code == "TF")
-    return CountryIsoCode::TF;
-  else if (code == "GA")
-    return CountryIsoCode::GA;
-  else if (code == "GM")
-    return CountryIsoCode::GM;
-  else if (code == "GE")
-    return CountryIsoCode::GE;
-  else if (code == "DE")
-    return CountryIsoCode::DE;
-  else if (code == "GH")
-    return CountryIsoCode::GH;
-  else if (code == "GI")
-    return CountryIsoCode::GI;
-  else if (code == "GR")
-    return CountryIsoCode::GR;
-  else if (code == "GL")
-    return CountryIsoCode::GL;
-  else if (code == "GD")
-    return CountryIsoCode::GD;
-  else if (code == "GP")
-    return CountryIsoCode::GP;
-  else if (code == "GU")
-    return CountryIsoCode::GU;
-  else if (code == "GT")
-    return CountryIsoCode::GT;
-  else if (code == "GG")
-    return CountryIsoCode::GG;
-  else if (code == "GN")
-    return CountryIsoCode::GN;
-  else if (code == "GW")
-    return CountryIsoCode::GW;
-  else if (code == "GY")
-    return CountryIsoCode::GY;
-  else if (code == "HT")
-    return CountryIsoCode::HT;
-  else if (code == "HM")
-    return CountryIsoCode::HM;
-  else if (code == "VA")
-    return CountryIsoCode::VA;
-  else if (code == "HN")
-    return CountryIsoCode::HN;
-  else if (code == "HU")
-    return CountryIsoCode::HU;
-  else if (code == "IS")
-    return CountryIsoCode::IS;
-  else if (code == "IN")
-    return CountryIsoCode::IN;
-  else if (code == "ID")
-    return CountryIsoCode::ID;
-  else if (code == "IR")
-    return CountryIsoCode::IR;
-  else if (code == "IQ")
-    return CountryIsoCode::IQ;
-  else if (code == "IE")
-    return CountryIsoCode::IE;
-  else if (code == "IM")
-    return CountryIsoCode::IM;
-  else if (code == "IL")
-    return CountryIsoCode::IL;
-  else if (code == "IT")
-    return CountryIsoCode::IT;
-  else if (code == "JM")
-    return CountryIsoCode::JM;
-  else if (code == "JE")
-    return CountryIsoCode::JE;
-  else if (code == "JO")
-    return CountryIsoCode::JO;
-  else if (code == "KZ")
-    return CountryIsoCode::KZ;
-  else if (code == "KE")
-    return CountryIsoCode::KE;
-  else if (code == "KI")
-    return CountryIsoCode::KI;
-  else if (code == "KP")
-    return CountryIsoCode::KP;
-  else if (code == "KW")
-    return CountryIsoCode::KW;
-  else if (code == "KG")
-    return CountryIsoCode::KG;
-  else if (code == "LA")
-    return CountryIsoCode::LA;
-  else if (code == "LV")
-    return CountryIsoCode::LV;
-  else if (code == "LB")
-    return CountryIsoCode::LB;
-  else if (code == "LS")
-    return CountryIsoCode::LS;
-  else if (code == "LR")
-    return CountryIsoCode::LR;
-  else if (code == "LY")
-    return CountryIsoCode::LY;
-  else if (code == "LI")
-    return CountryIsoCode::LI;
-  else if (code == "LT")
-    return CountryIsoCode::LT;
-  else if (code == "LU")
-    return CountryIsoCode::LU;
-  else if (code == "MO")
-    return CountryIsoCode::MO;
-  else if (code == "MK")
-    return CountryIsoCode::MK;
-  else if (code == "MG")
-    return CountryIsoCode::MG;
-  else if (code == "MW")
-    return CountryIsoCode::MW;
-  else if (code == "MY")
-    return CountryIsoCode::MY;
-  else if (code == "MV")
-    return CountryIsoCode::MV;
-  else if (code == "ML")
-    return CountryIsoCode::ML;
-  else if (code == "MT")
-    return CountryIsoCode::MT;
-  else if (code == "MH")
-    return CountryIsoCode::MH;
-  else if (code == "MQ")
-    return CountryIsoCode::MQ;
-  else if (code == "MR")
-    return CountryIsoCode::MR;
-  else if (code == "MU")
-    return CountryIsoCode::MU;
-  else if (code == "YT")
-    return CountryIsoCode::YT;
-  else if (code == "MX")
-    return CountryIsoCode::MX;
-  else if (code == "FM")
-    return CountryIsoCode::FM;
-  else if (code == "MD")
-    return CountryIsoCode::MD;
-  else if (code == "MC")
-    return CountryIsoCode::MC;
-  else if (code == "MN")
-    return CountryIsoCode::MN;
-  else if (code == "ME")
-    return CountryIsoCode::ME;
-  else if (code == "MS")
-    return CountryIsoCode::MS;
-  else if (code == "MA")
-    return CountryIsoCode::MA;
-  else if (code == "MZ")
-    return CountryIsoCode::MZ;
-  else if (code == "MM")
-    return CountryIsoCode::MM;
-  else if (code == "NA")
-    return CountryIsoCode::NA;
-  else if (code == "NR")
-    return CountryIsoCode::NR;
-  else if (code == "NP")
-    return CountryIsoCode::NP;
-  else if (code == "NL")
-    return CountryIsoCode::NL;
-  else if (code == "NC")
-    return CountryIsoCode::NC;
-  else if (code == "NZ")
-    return CountryIsoCode::NZ;
-  else if (code == "NI")
-    return CountryIsoCode::NI;
-  else if (code == "NE")
-    return CountryIsoCode::NE;
-  else if (code == "NG")
-    return CountryIsoCode::NG;
-  else if (code == "NU")
-    return CountryIsoCode::NU;
-  else if (code == "NF")
-    return CountryIsoCode::NF;
-  else if (code == "MP")
-    return CountryIsoCode::MP;
-  else if (code == "NO")
-    return CountryIsoCode::NO;
-  else if (code == "OM")
-    return CountryIsoCode::OM;
-  else if (code == "PK")
-    return CountryIsoCode::PK;
-  else if (code == "PW")
-    return CountryIsoCode::PW;
-  else if (code == "PS")
-    return CountryIsoCode::PS;
-  else if (code == "PA")
-    return CountryIsoCode::PA;
-  else if (code == "PG")
-    return CountryIsoCode::PG;
-  else if (code == "PY")
-    return CountryIsoCode::PY;
-  else if (code == "PE")
-    return CountryIsoCode::PE;
-  else if (code == "PH")
-    return CountryIsoCode::PH;
-  else if (code == "PN")
-    return CountryIsoCode::PN;
-  else if (code == "PL")
-    return CountryIsoCode::PL;
-  else if (code == "PT")
-    return CountryIsoCode::PT;
-  else if (code == "PR")
-    return CountryIsoCode::PR;
-  else if (code == "QA")
-    return CountryIsoCode::QA;
-  else if (code == "RE")
-    return CountryIsoCode::RE;
-  else if (code == "RO")
-    return CountryIsoCode::RO;
-  else if (code == "RU")
-    return CountryIsoCode::RU;
-  else if (code == "RW")
-    return CountryIsoCode::RW;
-  else if (code == "BL")
-    return CountryIsoCode::BL;
-  else if (code == "SH")
-    return CountryIsoCode::SH;
-  else if (code == "KN")
-    return CountryIsoCode::KN;
-  else if (code == "LC")
-    return CountryIsoCode::LC;
-  else if (code == "MF")
-    return CountryIsoCode::MF;
-  else if (code == "PM")
-    return CountryIsoCode::PM;
-  else if (code == "VC")
-    return CountryIsoCode::VC;
-  else if (code == "WS")
-    return CountryIsoCode::WS;
-  else if (code == "SM")
-    return CountryIsoCode::SM;
-  else if (code == "ST")
-    return CountryIsoCode::ST;
-  else if (code == "SA")
-    return CountryIsoCode::SA;
-  else if (code == "SN")
-    return CountryIsoCode::SN;
-  else if (code == "RS")
-    return CountryIsoCode::RS;
-  else if (code == "SC")
-    return CountryIsoCode::SC;
-  else if (code == "SL")
-    return CountryIsoCode::SL;
-  else if (code == "SG")
-    return CountryIsoCode::SG;
-  else if (code == "SX")
-    return CountryIsoCode::SX;
-  else if (code == "SK")
-    return CountryIsoCode::SK;
-  else if (code == "SI")
-    return CountryIsoCode::SI;
-  else if (code == "SB")
-    return CountryIsoCode::SB;
-  else if (code == "SO")
-    return CountryIsoCode::SO;
-  else if (code == "ZA")
-    return CountryIsoCode::ZA;
-  else if (code == "GS")
-    return CountryIsoCode::GS;
-  else if (code == "SS")
-    return CountryIsoCode::SS;
-  else if (code == "ES")
-    return CountryIsoCode::ES;
-  else if (code == "LK")
-    return CountryIsoCode::LK;
-  else if (code == "SD")
-    return CountryIsoCode::SD;
-  else if (code == "SR")
-    return CountryIsoCode::SR;
-  else if (code == "SJ")
-    return CountryIsoCode::SJ;
-  else if (code == "SZ")
-    return CountryIsoCode::SZ;
-  else if (code == "SE")
-    return CountryIsoCode::SE;
-  else if (code == "CH")
-    return CountryIsoCode::CH;
-  else if (code == "SY")
-    return CountryIsoCode::SY;
-  else if (code == "TJ")
-    return CountryIsoCode::TJ;
-  else if (code == "TZ")
-    return CountryIsoCode::TZ;
-  else if (code == "TH")
-    return CountryIsoCode::TH;
-  else if (code == "TL")
-    return CountryIsoCode::TL;
-  else if (code == "TG")
-    return CountryIsoCode::TG;
-  else if (code == "TK")
-    return CountryIsoCode::TK;
-  else if (code == "TO")
-    return CountryIsoCode::TO;
-  else if (code == "TT")
-    return CountryIsoCode::TT;
-  else if (code == "TN")
-    return CountryIsoCode::TN;
-  else if (code == "TR")
-    return CountryIsoCode::TR;
-  else if (code == "TM")
-    return CountryIsoCode::TM;
-  else if (code == "TC")
-    return CountryIsoCode::TC;
-  else if (code == "TV")
-    return CountryIsoCode::TV;
-  else if (code == "UG")
-    return CountryIsoCode::UG;
-  else if (code == "UA")
-    return CountryIsoCode::UA;
-  else if (code == "AE")
-    return CountryIsoCode::AE;
-  else if (code == "UM")
-    return CountryIsoCode::UM;
-  else if (code == "UY")
-    return CountryIsoCode::UY;
-  else if (code == "UZ")
-    return CountryIsoCode::UZ;
-  else if (code == "VU")
-    return CountryIsoCode::VU;
-  else if (code == "VE")
-    return CountryIsoCode::VE;
-  else if (code == "VN")
-    return CountryIsoCode::VN;
-  else if (code == "VG")
-    return CountryIsoCode::VG;
-  else if (code == "VI")
-    return CountryIsoCode::VI;
-  else if (code == "WF")
-    return CountryIsoCode::WF;
-  else if (code == "EH")
-    return CountryIsoCode::EH;
-  else if (code == "YE")
-    return CountryIsoCode::YE;
-  else if (code == "ZM")
-    return CountryIsoCode::ZM;
-  else if (code == "ZW")
-    return CountryIsoCode::ZW;
-  else
-    return CountryIsoCode::XX;
+  auto iter = country_code_map.find(code);
+  if (iter != country_code_map.end()) {
+    return iter->second;
+  }
+  return CountryIsoCode::XX;
 }
 }  // namespace utils
 }  // namespace nekit
