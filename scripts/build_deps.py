@@ -166,6 +166,10 @@ def download_library(path, url, name, content_dir):
                     os.path.join(tempd, content_dir), os.path.join(path, name))
 
 
+def mac_sdk_path():
+    return local["xcrun"]["--sdk", "macosx", "--show-sdk-path"]()[:-1]
+
+
 def cmake_compile(source_dir,
                   install_prefix,
                   target_platform,
@@ -234,7 +238,10 @@ def build_boost(boost_dir, install_prefix, target_platform):
                 ] & FG
                 local[os.path.join(boost_dir, "b2")]["--stagedir={}".format(
                     os.path.join(tempd, "boost_tmp")), "link=static",
-                                                     "variant=release", "-j4"
+                                                     "variant=release",
+                                                     "cxxflags=-isysroot {} -mmacosx-version-min=10.10 -fvisibility=hidden -fvisibility-inlines-hidden -fembed-bitcode".format(mac_sdk_path()),
+                                                     "linkflags=-isysroot {} -mmacosx-version-min=10.10 -fvisibility=hidden -fvisibility-inlines-hidden -fembed-bitcode".format(mac_sdk_path()),
+                                                     "-j4", 
                                                      "stage"] & FG
 
                 # Linking all modules into one binary file
@@ -268,7 +275,8 @@ def build_openssl(openssl_dir, install_prefix, target_platform):
             local[local.cwd /
                   "Configure"]["darwin64-x86_64-cc", "no-shared",
                                "enable-ec_nistp_64_gcc_128", "no-comp",
-                               "--prefix={}".format(install_prefix)] & FG
+                  "--prefix={}".format(install_prefix)] & FG
+            local["sed"]["-ie", 's!^CFLAGS=!CFLAGS=-isysroot {} -mmacosx-version-min=10.10 !'.format(mac_sdk_path()), "Makefile"] &FG
             local["make"]["install_sw"] & FG
 
     elif target_platform in [Platform.Linux]:
