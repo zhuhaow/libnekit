@@ -41,3 +41,7 @@ configure_file(GeoLite2-Country.mmdb GeoLite2-Country.mmdb COPYONLY)
 add_executable(subnet_test subnet_test.cc)
 target_link_libraries(subnet_test nekit ${LIBS})
 add_mem_test(subnet_test)
+
+add_executable(http_message_stream_rewriter_test http_message_stream_rewriter_test.cc)
+target_link_libraries(http_message_stream_rewriter_test nekit ${LIBS})
+add_mem_test(http_message_stream_rewriter_test)
