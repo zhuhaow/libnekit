@@ -46,13 +46,6 @@ target_include_directories(nekit SYSTEM PUBLIC "deps/${PLATFORM}/include")
 
 set(CMAKE_FIND_ROOT_PATH "${PROJECT_SOURCE_DIR}/deps/${PLATFORM}")
 
-if(APPLE AND NOT IOS)
-  execute_process(COMMAND scripts/find_include_path.sh WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE INCLUDE_DIRS)
-  string(REPLACE "\n" ";" INCLUDE_DIRS ${INCLUDE_DIRS})
-  target_include_directories(nekit SYSTEM PRIVATE ${INCLUDE_DIRS})
-  message(STATUS "Added more include dirs for apple clang")
-endif()
-
 if(WIN32)
   target_compile_definitions(nekit PUBLIC -DELPP_WINSOCK2 -DWIN32_LEAN_AND_MEAN)
 endif()
