@@ -443,6 +443,27 @@ void Buffer::WalkInternalChunk(
   }
 }
 
+size_t Buffer::FindLocation(const void* pointer) {
+  size_t offset = 0;
+  WalkInternalChunk(
+      [&offset, pointer](const void* data, size_t len, void* context) {
+        (void)context;
+
+        const uint8_t* data__ = static_cast<const uint8_t*>(data);
+
+        if (pointer >= data__ && pointer < data__ + len) {
+          offset += (static_cast<const uint8_t*>(pointer) - data__);
+          return false;
+        }
+
+        offset += len;
+        return true;
+      },
+      0, nullptr);
+
+  return offset;
+}
+
 size_t Buffer::size() const { return size_; }
 
 // poj may be the size of buf

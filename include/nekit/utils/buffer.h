@@ -69,6 +69,8 @@ class Buffer final : private boost::noncopyable {
                                                   void* context)>& walker,
                          size_t from, void* context) const;
 
+  size_t FindLocation(const void* pointer);
+
   size_t size() const;
 
  private:
