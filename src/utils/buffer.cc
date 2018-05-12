@@ -410,7 +410,8 @@ void Buffer::WalkInternalChunk(
   }
 
   while (current) {
-    if (!walker(current->data_.get() + current->offset_ + from, current->size_ - from, context)) {
+    if (!walker(current->data_.get() + current->offset_ + from,
+                current->size_ - from, context)) {
       return;
     }
     from = 0;
@@ -435,7 +436,8 @@ void Buffer::WalkInternalChunk(
   }
 
   while (current) {
-    if (!walker(current->data_.get() + current->offset_ + from, current->size_ - from, context)) {
+    if (!walker(current->data_.get() + current->offset_ + from,
+                current->size_ - from, context)) {
       return;
     }
     from = 0;
