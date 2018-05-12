@@ -236,13 +236,17 @@ def build_boost(boost_dir, install_prefix, target_platform):
                 local[os.path.join(boost_dir, "bootstrap.sh")][
                     "--with-libraries={}".format(boost_build_module),
                 ] & FG
-                local[os.path.join(boost_dir, "b2")]["--stagedir={}".format(
+
+                args = ["--stagedir={}".format(
                     os.path.join(tempd, "boost_tmp")), "link=static",
-                                                     "variant=release",
-                                                     "cxxflags=-isysroot {} -mmacosx-version-min=10.10 -fvisibility=hidden -fvisibility-inlines-hidden -fembed-bitcode".format(mac_sdk_path()),
-                                                     "linkflags=-isysroot {} -mmacosx-version-min=10.10 -fvisibility=hidden -fvisibility-inlines-hidden -fembed-bitcode".format(mac_sdk_path()),
-                                                     "-j4", 
-                                                     "stage"] & FG
+                        "variant=release"]
+                if target_platform == Platform.OSX:
+                    args.extend(["cxxflags=-isysroot {} -mmacosx-version-min=10.10 -fvisibility=hidden -fvisibility-inlines-hidden -fembed-bitcode".format(mac_sdk_path()),
+                                 "linkflags=-isysroot {} -mmacosx-version-min=10.10 -fvisibility=hidden -fvisibility-inlines-hidden -fembed-bitcode".format(mac_sdk_path())])
+                args.extend(["-j4", 
+                             "stage"])
+
+                local[os.path.join(boost_dir, "b2")][args] & FG
 
                 # Linking all modules into one binary file
                 with local.cwd(os.path.join(tempd, "boost_tmp", "lib")):
