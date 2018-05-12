@@ -71,7 +71,6 @@ target_sources(nekit PRIVATE
   src/utils/maxmind.cc
   src/utils/subnet.cc
   src/utils/country_iso_code.cc
-  src/utils/http_header_parser.cc
   src/init.cc
   src/proxy_manager.cc
   src/rule/rule_manager.cc
@@ -88,8 +87,6 @@ target_sources(nekit PRIVATE
   src/utils/buffer.cc
   src/utils/endpoint.cc
   src/data_flow/socks5_server_data_flow.cc
-  modules/CxxUrl/url.cc
-  modules/picohttpparser/picohttpparser.c
   )
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/contrib" AND IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/contrib" AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/contrib/CMakeLists.txt")
