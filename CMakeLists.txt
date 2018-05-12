@@ -14,6 +14,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_C_VISIBILITY_PRESET hidden)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
+
 cmake_policy(SET CMP0063 NEW)
 add_library(nekit "")
 
@@ -92,8 +96,6 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/contrib" AND IS_DIRECTORY "${CMAKE_CURREN
   message(STATUS "Add contrib folder.")
   add_subdirectory("contrib")
 endif()
-
-set_target_properties(nekit PROPERTIES CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN YES)
 
 find_library(BOOST boost
   NO_SYSTEM_ENVIROMENT_PATH)
