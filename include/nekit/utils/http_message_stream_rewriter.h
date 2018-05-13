@@ -60,7 +60,7 @@ class HttpMessageStreamRewriter : public HttpMessageRewriterInterface {
   void RewriteCurrentToken(const std::string& new_token);
 
  private:
-  HttpMessageStreamRewriterImpl* impl_;
+  HttpMessageStreamRewriterImpl* pimp_;
 };
 }  // namespace utils
 }  // namespace nekit

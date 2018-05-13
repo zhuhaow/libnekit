@@ -527,37 +527,37 @@ HttpMessageStreamRewriter::HttpMessageStreamRewriter(
     Type type, EventHandler method_handler, EventHandler url_handler,
     EventHandler version_handler, EventHandler status_handler,
     EventHandler header_pair_handler) {
-  impl_ = new HttpMessageStreamRewriterImpl(
+  pimp_ = new HttpMessageStreamRewriterImpl(
       this, type, method_handler, url_handler, version_handler, status_handler,
       header_pair_handler);
 }
 
-HttpMessageStreamRewriter::~HttpMessageStreamRewriter() { delete impl_; }
+HttpMessageStreamRewriter::~HttpMessageStreamRewriter() { delete pimp_; }
 
 bool HttpMessageStreamRewriter::RewriteBuffer(Buffer* buffer) {
-  return impl_->RewriteBuffer(buffer);
+  return pimp_->RewriteBuffer(buffer);
 }
 
 const HttpMessageStreamRewriter::Header&
 HttpMessageStreamRewriter::CurrentHeader() {
-  return impl_->CurrentHeader();
+  return pimp_->CurrentHeader();
 }
 
 void HttpMessageStreamRewriter::RewriteCurrentHeader(const Header& header) {
-  impl_->RewriteCurrentHeader(header);
+  pimp_->RewriteCurrentHeader(header);
 }
 
 void HttpMessageStreamRewriter::DeleteCurrentHeader() {
-  impl_->DeleteCurrentHeader();
+  pimp_->DeleteCurrentHeader();
 }
 
 const std::string& HttpMessageStreamRewriter::CurrentToken() {
-  return impl_->CurrentToken();
+  return pimp_->CurrentToken();
 }
 
 void HttpMessageStreamRewriter::RewriteCurrentToken(
     const std::string& new_token) {
-  impl_->RewriteCurrentToken(new_token);
+  pimp_->RewriteCurrentToken(new_token);
 }
 
 }  // namespace utils
