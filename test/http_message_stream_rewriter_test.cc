@@ -92,6 +92,22 @@ class HttpMessageTest : public ::testing::Test {
     return std::move(buffer);
   }
 
+  std::vector<std::unique_ptr<Buffer>> GetHeaderBuffers(size_t chunk_size,
+                                                        std::string header) {
+    auto buffers = std::vector<std::unique_ptr<Buffer>>();
+
+    size_t remain = header.size();
+    while (remain) {
+      auto buffer = std::make_unique<Buffer>(std::min(remain, chunk_size));
+      buffer->SetData(0, std::min(remain, chunk_size),
+                      header.c_str() + (header.size() - remain));
+      remain -= std::min(remain, chunk_size);
+      buffers.push_back(std::move(buffer));
+    }
+
+    return std::move(buffers);
+  }
+
   HttpMessageStreamRewriter* rewriter_{nullptr};
 };
 
@@ -131,35 +147,52 @@ class HttpResponseTest : public HttpMessageTest {
       "0\r\n\r\n";
 };
 
-#define TEST_PARSE_MESSAGE(type)                           \
-  TEST_F(type, ParseOneHeader) {                           \
-    for (size_t i = 1; i < header_.size(); i++) {          \
-      ResetRewriter();                                     \
-      auto buffer = GetHeaderBuffer(i, header_);           \
-      EXPECT_TRUE(rewriter_->RewriteBuffer(buffer.get())); \
-      EXPECT_EQ(buffer->size(), header_.size());           \
-    }                                                      \
-  }                                                        \
-  TEST_F(type, ParseHeadersInStandaloneBuffer) {           \
-    ResetRewriter();                                       \
-    for (size_t i = 1; i < header_.size(); i++) {          \
-      auto buffer = GetHeaderBuffer(i, header_);           \
-      EXPECT_TRUE(rewriter_->RewriteBuffer(buffer.get())); \
-      EXPECT_EQ(buffer->size(), header_.size());           \
-    }                                                      \
-  }                                                        \
-  TEST_F(type, ParseScatteredHeader) {                     \
-    std::ostringstream os;                                 \
-    for (int i = 0; i < 20; i++) {                         \
-      os << header_;                                       \
-    }                                                      \
-    std::string header = os.str();                         \
-    for (size_t i = 1; i < header.size(); i++) {           \
-      ResetRewriter();                                     \
-      auto buffer = GetHeaderBuffer(i, header);            \
-      EXPECT_TRUE(rewriter_->RewriteBuffer(buffer.get())); \
-      EXPECT_EQ(buffer->size(), header.size());            \
-    }                                                      \
+#define TEST_PARSE_MESSAGE(type)                                 \
+  TEST_F(type, ParseOneHeader) {                                 \
+    for (size_t i = 1; i < header_.size(); i++) {                \
+      ResetRewriter();                                           \
+      auto buffer = GetHeaderBuffer(i, header_);                 \
+      EXPECT_TRUE(rewriter_->RewriteBuffer(buffer.get()));       \
+      EXPECT_EQ(buffer->size(), header_.size());                 \
+    }                                                            \
+  }                                                              \
+  TEST_F(type, ParseHeadersInStandaloneBuffer) {                 \
+    ResetRewriter();                                             \
+    for (size_t i = 1; i < header_.size(); i++) {                \
+      auto buffer = GetHeaderBuffer(i, header_);                 \
+      EXPECT_TRUE(rewriter_->RewriteBuffer(buffer.get()));       \
+      EXPECT_EQ(buffer->size(), header_.size());                 \
+    }                                                            \
+  }                                                              \
+  TEST_F(type, ParseScatteredHeader) {                           \
+    std::ostringstream os;                                       \
+    for (int i = 0; i < 20; i++) {                               \
+      os << header_;                                             \
+    }                                                            \
+    std::string header = os.str();                               \
+    for (size_t i = 1; i < header.size(); i++) {                 \
+      ResetRewriter();                                           \
+      auto buffer = GetHeaderBuffer(i, header);                  \
+      EXPECT_TRUE(rewriter_->RewriteBuffer(buffer.get()));       \
+      EXPECT_EQ(buffer->size(), header.size());                  \
+    }                                                            \
+  }                                                              \
+  TEST_F(type, ParseScatteredHeaderInBufferSequence) {           \
+    std::ostringstream os;                                       \
+    for (int i = 0; i < 20; i++) {                               \
+      os << header_;                                             \
+    }                                                            \
+    std::string header = os.str();                               \
+    for (size_t i = 1; i < header.size(); i++) {                 \
+      ResetRewriter();                                           \
+      auto buffers = GetHeaderBuffers(i, header);                \
+      size_t len = 0;                                            \
+      for (size_t j = 0; j < buffers.size(); j++) {              \
+        EXPECT_TRUE(rewriter_->RewriteBuffer(buffers[j].get())); \
+        len += buffers[j]->size();                               \
+      }                                                          \
+      EXPECT_EQ(len, header.size());                             \
+    }                                                            \
   }
 
 TEST_PARSE_MESSAGE(HttpRequestTest)
