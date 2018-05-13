@@ -208,7 +208,7 @@ void Buffer::InsertBack(size_t size) {
 
 void Buffer::Shrink(size_t skip, size_t len) {
   BOOST_ASSERT(skip < size());
-  BOOST_ASSERT(len < size());
+  BOOST_ASSERT(len <= size());
   BOOST_ASSERT(skip + len <= size());
 
   Buf *current = head_.get(), *prev = nullptr;
@@ -283,7 +283,7 @@ uint8_t Buffer::GetByte(size_t skip) const {
 }
 
 void Buffer::GetData(size_t skip, size_t len, void* target) const {
-  BOOST_ASSERT(skip < size());
+  BOOST_ASSERT(skip <= size());
   BOOST_ASSERT(len <= size());
   BOOST_ASSERT(skip + len <= size());
 

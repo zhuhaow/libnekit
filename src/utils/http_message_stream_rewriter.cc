@@ -24,6 +24,8 @@
 
 #include <boost/assert.hpp>
 
+#include "nekit/config.h"
+
 namespace nekit {
 namespace utils {
 
@@ -69,11 +71,12 @@ class HttpMessageStreamRewriterImpl {
     if (pending_buffer_length_) {
       buffer->InsertFront(pending_buffer_length_);
       buffer->SetData(0, pending_buffer_length_, pending_previous_buffer_);
-      current_token_offset_ = 0;
       current_buffer_offset_ = pending_buffer_length_;
       pending_buffer_length_ = 0;
       free(pending_previous_buffer_);
       pending_previous_buffer_ = nullptr;
+    } else {
+      current_buffer_offset_ = 0;
     }
 
     current_buffer_ = buffer;
@@ -120,7 +123,7 @@ class HttpMessageStreamRewriterImpl {
     if (current_token_offset_ != buffer->size()) {
       pending_buffer_length_ = buffer->size() - current_token_offset_;
 
-      if (pending_buffer_length_ > pending_buffer_max_size_) {
+      if (pending_buffer_length_ > NEKIT_HTTP_STREAM_REWRITER_MAX_BUFFER_SIZE) {
         return false;
       }
 
@@ -128,6 +131,13 @@ class HttpMessageStreamRewriterImpl {
       buffer->GetData(current_token_offset_, pending_buffer_length_,
                       pending_previous_buffer_);
       buffer->ShrinkBack(pending_buffer_length_);
+
+      current_token_end_offset_ -= current_token_offset_;
+      current_header_field_offset_ -= current_token_offset_;
+      current_header_field_end_offset_ -= current_token_offset_;
+      current_header_value_offset_ -= current_token_offset_;
+      current_header_value_end_offset_ -= current_token_offset_;
+      current_token_offset_ = 0;
     }
 
     return true;
@@ -487,7 +497,6 @@ class HttpMessageStreamRewriterImpl {
   Buffer* current_buffer_;
 
   void* pending_previous_buffer_{nullptr};
-  size_t pending_buffer_max_size_;
   size_t pending_buffer_length_{0};
 
   size_t current_buffer_offset_{0};
