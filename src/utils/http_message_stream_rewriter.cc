@@ -44,25 +44,16 @@ class HttpMessageStreamRewriterImpl {
 
   HttpMessageStreamRewriterImpl(
       HttpMessageStreamRewriter* rewriter, HttpMessageStreamRewriter::Type type,
-      HttpMessageStreamRewriter::EventHandler method_handler,
-      HttpMessageStreamRewriter::EventHandler url_handler,
-      HttpMessageStreamRewriter::EventHandler version_handler,
-      HttpMessageStreamRewriter::EventHandler status_handler,
-      HttpMessageStreamRewriter::EventHandler header_pair_handler) {
+      std::shared_ptr<HttpMessageStreamRewriterDelegateInterface> delegate) {
     rewriter_ = rewriter;
     type_ = type;
+    delegate_ = delegate;
 
     auto t = type == HttpMessageStreamRewriter::Type::Request ? HTTP_REQUEST
                                                               : HTTP_RESPONSE;
 
     http_parser_init(&parser_, t);
     parser_.data = this;
-
-    method_handler_ = method_handler;
-    url_handler_ = url_handler;
-    version_handler_ = version_handler;
-    status_handler_ = status_handler;
-    header_pair_handler_ = header_pair_handler;
   }
 
   ~HttpMessageStreamRewriterImpl() { free(pending_previous_buffer_); }
@@ -89,8 +80,13 @@ class HttpMessageStreamRewriterImpl {
           [this](void* data, size_t len, void* context) {
             (void)context;
 
-            int parsed_ = http_parser_execute(&parser_, &parser_settings_,
-                                              static_cast<char*>(data), len);
+            int parsed = http_parser_execute(&parser_, &parser_settings_,
+                                             static_cast<char*>(data), len);
+
+            if (parser_.upgrade && state_ == State::Init) {
+              current_buffer_offset_ += (size_t)parsed;
+              delegate_->OnUpgradeComplete(rewriter_, current_buffer_offset_);
+            }
 
             if (!(HTTP_PARSER_ERRNO(&parser_) == HPE_OK ||
                   HTTP_PARSER_ERRNO(&parser_) == HPE_PAUSED)) {
@@ -98,7 +94,7 @@ class HttpMessageStreamRewriterImpl {
               return false;
             }
 
-            current_buffer_offset_ += (size_t)parsed_;
+            current_buffer_offset_ += (size_t)parsed;
 
             if (set_token_) {
               if (step_back_) {
@@ -225,7 +221,7 @@ class HttpMessageStreamRewriterImpl {
       case State::HeaderValue: {
         current_token_valid_ = false;
         current_header_valid_ = false;
-        header_pair_handler_(rewriter_);
+        delegate_->OnHeaderPair(rewriter_);
 
         http_parser_pause(&parser_, 1);
         state_ = State::Body;
@@ -240,7 +236,7 @@ class HttpMessageStreamRewriterImpl {
         current_token_valid_ = false;
         current_header_valid_ = false;
 
-        header_pair_handler_(rewriter_);
+        delegate_->OnHeaderPair(rewriter_);
 
         http_parser_pause(&parser_, 1);
         state_ = State::Body;
@@ -302,7 +298,7 @@ class HttpMessageStreamRewriterImpl {
         current_token_end_offset_ = location - 1;
 
         current_token_valid_ = false;
-        method_handler_(rewriter_);
+        delegate_->OnMethod(rewriter_);
         current_token_offset_ = next_token_offset_;
         current_token_end_offset_ = current_token_offset_ + len;
         http_parser_pause(&parser_, 1);
@@ -332,7 +328,7 @@ class HttpMessageStreamRewriterImpl {
         current_token_end_offset_ = location - 5;
 
         current_token_valid_ = false;
-        version_handler_(rewriter_);
+        delegate_->OnVersion(rewriter_);
         current_token_offset_ = next_token_offset_;
         current_token_end_offset_ = current_token_offset_ + len + 4;
         http_parser_pause(&parser_, 1);
@@ -364,12 +360,12 @@ class HttpMessageStreamRewriterImpl {
         next_token_offset_ = location;
 
         current_token_valid_ = false;
-        url_handler_(rewriter_);
+        delegate_->OnUrl(rewriter_);
 
         current_token_offset_ = current_token_end_offset_ + 1;
         current_token_end_offset_ = next_token_offset_ - 2;
         current_token_valid_ = false;
-        version_handler_(rewriter_);
+        delegate_->OnVersion(rewriter_);
 
         current_token_offset_ = next_token_offset_;
         current_token_end_offset_ = current_token_offset_ + len;
@@ -386,7 +382,7 @@ class HttpMessageStreamRewriterImpl {
         next_token_offset_ = location;
 
         current_token_valid_ = false;
-        status_handler_(rewriter_);
+        delegate_->OnStatus(rewriter_);
 
         current_token_offset_ = next_token_offset_;
         current_token_end_offset_ = current_token_offset_ + len;
@@ -411,7 +407,7 @@ class HttpMessageStreamRewriterImpl {
 
         current_token_valid_ = false;
         current_header_valid_ = false;
-        header_pair_handler_(rewriter_);
+        delegate_->OnHeaderPair(rewriter_);
 
         current_token_offset_ = next_token_offset_;
         current_token_end_offset_ = current_token_offset_ + len;
@@ -486,8 +482,7 @@ class HttpMessageStreamRewriterImpl {
   HttpMessageStreamRewriter* rewriter_;
 
   http_parser parser_;
-  HttpMessageStreamRewriter::EventHandler method_handler_, version_handler_,
-      url_handler_, status_handler_, header_pair_handler_, body_handler_;
+  std::shared_ptr<HttpMessageStreamRewriterDelegateInterface> delegate_;
 
   std::pair<std::string, std::string> current_header_;
   std::string current_token_;
@@ -525,20 +520,10 @@ const http_parser_settings HttpMessageStreamRewriterImpl::parser_settings_ = {
     &HttpMessageStreamRewriterImpl::OnChunkHeader,
     &HttpMessageStreamRewriterImpl::OnChunkComplete};
 
-const HttpMessageStreamRewriter::EventHandler
-    HttpMessageStreamRewriter::null_handler =
-        [](HttpMessageStreamRewriter* rewriter) {
-          (void)rewriter;
-          return true;
-        };
-
 HttpMessageStreamRewriter::HttpMessageStreamRewriter(
-    Type type, EventHandler method_handler, EventHandler url_handler,
-    EventHandler version_handler, EventHandler status_handler,
-    EventHandler header_pair_handler) {
-  pimp_ = new HttpMessageStreamRewriterImpl(
-      this, type, method_handler, url_handler, version_handler, status_handler,
-      header_pair_handler);
+    Type type,
+    std::shared_ptr<HttpMessageStreamRewriterDelegateInterface> delegate) {
+  pimp_ = new HttpMessageStreamRewriterImpl(this, type, delegate);
 }
 
 HttpMessageStreamRewriter::~HttpMessageStreamRewriter() { delete pimp_; }

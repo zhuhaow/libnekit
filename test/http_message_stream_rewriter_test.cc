@@ -26,52 +26,51 @@
 
 using namespace nekit::utils;
 
-auto method_handler = [](HttpMessageStreamRewriter* rewriter) {
-  EXPECT_EQ(rewriter->CurrentToken(), "GET");
-  return true;
-};
-
-auto url_handler = [](HttpMessageStreamRewriter* rewriter) {
-  EXPECT_EQ(rewriter->CurrentToken(), "/index.html");
-  return true;
-};
-
-auto version_handler = [](HttpMessageStreamRewriter* rewriter) {
-  EXPECT_EQ(rewriter->CurrentToken(), "HTTP/1.1");
-  return true;
-};
-
-auto status_handler = [](HttpMessageStreamRewriter* rewriter) {
-  EXPECT_EQ(rewriter->CurrentToken(), "200 OK");
-  return true;
-};
-
-auto null_handler = [](HttpMessageStreamRewriter* rewriter) {
-  ADD_FAILURE();
-  return false;
-};
-
-auto header_handler = [header_count =
-                           0](HttpMessageStreamRewriter* rewriter) mutable {
-  switch (header_count % 2) {
-    case 0: {
-      EXPECT_EQ(rewriter->CurrentToken(), "Host: google.com");
-      auto pair =
-          std::make_pair<std::string, std::string>("Host", "google.com");
-      EXPECT_EQ(rewriter->CurrentHeader(), pair);
-      header_count++;
-      break;
-    }
-    case 1: {
-      EXPECT_EQ(rewriter->CurrentToken(), "Content-Length: 0");
-      auto pair =
-          std::make_pair<std::string, std::string>("Content-Length", "0");
-      EXPECT_EQ(rewriter->CurrentHeader(), pair);
-      header_count++;
-      break;
-    }
+class VanillaHttpMessageParserDelegate
+    : public HttpMessageStreamRewriterDelegateInterface {
+  bool OnMethod(HttpMessageStreamRewriter* rewriter) override {
+    EXPECT_EQ(rewriter->CurrentToken(), "GET");
+    return true;
   }
-  return true;
+
+  bool OnUrl(HttpMessageStreamRewriter* rewriter) override {
+    EXPECT_EQ(rewriter->CurrentToken(), "/index.html");
+    return true;
+  };
+
+  bool OnVersion(HttpMessageStreamRewriter* rewriter) override {
+    EXPECT_EQ(rewriter->CurrentToken(), "HTTP/1.1");
+    return true;
+  };
+
+  bool OnStatus(HttpMessageStreamRewriter* rewriter) override {
+    EXPECT_EQ(rewriter->CurrentToken(), "200 OK");
+    return true;
+  };
+
+  bool OnHeaderPair(HttpMessageStreamRewriter* rewriter) override {
+    switch (header_count_ % 2) {
+      case 0: {
+        EXPECT_EQ(rewriter->CurrentToken(), "Host: google.com");
+        auto pair =
+            std::make_pair<std::string, std::string>("Host", "google.com");
+        EXPECT_EQ(rewriter->CurrentHeader(), pair);
+        header_count_++;
+        break;
+      }
+      case 1: {
+        EXPECT_EQ(rewriter->CurrentToken(), "Content-Length: 0");
+        auto pair =
+            std::make_pair<std::string, std::string>("Content-Length", "0");
+        EXPECT_EQ(rewriter->CurrentHeader(), pair);
+        header_count_++;
+        break;
+      }
+    }
+    return true;
+  };
+
+  size_t header_count_{0};
 };
 
 class HttpMessageTest : public ::testing::Test {
@@ -115,13 +114,9 @@ class HttpRequestTest : public HttpMessageTest {
  public:
   void ResetRewriter() {
     delete rewriter_;
-    rewriter_ =
-        new HttpMessageStreamRewriter{HttpMessageStreamRewriter::Type::Request,
-                                      method_handler,
-                                      url_handler,
-                                      version_handler,
-                                      null_handler,
-                                      header_handler};
+    rewriter_ = new HttpMessageStreamRewriter{
+        HttpMessageStreamRewriter::Type::Request,
+        std::make_shared<VanillaHttpMessageParserDelegate>()};
   }
 
   std::string header_ =
@@ -133,13 +128,9 @@ class HttpResponseTest : public HttpMessageTest {
  public:
   void ResetRewriter() {
     delete rewriter_;
-    rewriter_ =
-        new HttpMessageStreamRewriter{HttpMessageStreamRewriter::Type::Response,
-                                      null_handler,
-                                      url_handler,
-                                      version_handler,
-                                      status_handler,
-                                      header_handler};
+    rewriter_ = new HttpMessageStreamRewriter{
+        HttpMessageStreamRewriter::Type::Response,
+        std::make_shared<VanillaHttpMessageParserDelegate>()};
   }
 
   std::string header_ =

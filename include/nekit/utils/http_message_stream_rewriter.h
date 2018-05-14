@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include <functional>
 #include <string>
 #include <utility>
 
@@ -32,22 +31,54 @@
 namespace nekit {
 namespace utils {
 
+class HttpMessageStreamRewriter;
+
 class HttpMessageStreamRewriterImpl;
+
+class HttpMessageStreamRewriterDelegateInterface {
+ public:
+  virtual bool OnMethod(HttpMessageStreamRewriter* rewriter) {
+    (void)rewriter;
+    return true;
+  }
+
+  virtual bool OnUrl(HttpMessageStreamRewriter* rewriter) {
+    (void)rewriter;
+    return true;
+  }
+
+  virtual bool OnVersion(HttpMessageStreamRewriter* rewriter) {
+    (void)rewriter;
+    return true;
+  }
+
+  virtual bool OnStatus(HttpMessageStreamRewriter* rewriter) {
+    (void)rewriter;
+    return true;
+  }
+
+  virtual bool OnHeaderPair(HttpMessageStreamRewriter* rewriter) {
+    (void)rewriter;
+    return true;
+  }
+
+  virtual bool OnUpgradeComplete(HttpMessageStreamRewriter* rewriter,
+                                 size_t buffer_offset) {
+    (void)rewriter;
+    (void)buffer_offset;
+    return true;
+  }
+};
 
 class HttpMessageStreamRewriter : public HttpMessageRewriterInterface {
  public:
   using Header = std::pair<std::string, std::string>;
-  using EventHandler = std::function<bool(HttpMessageStreamRewriter* rewriter)>;
-
-  static const EventHandler null_handler;
 
   enum class Type { Request, Response };
 
-  HttpMessageStreamRewriter(Type type, EventHandler method_handler,
-                            EventHandler url_handler,
-                            EventHandler version_handler,
-                            EventHandler status_handler,
-                            EventHandler header_pair_handler);
+  HttpMessageStreamRewriter(
+      Type type,
+      std::shared_ptr<HttpMessageStreamRewriterDelegateInterface> delegate);
   ~HttpMessageStreamRewriter();
 
   bool RewriteBuffer(Buffer* buffer) override;
