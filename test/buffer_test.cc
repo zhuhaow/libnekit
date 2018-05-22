@@ -20,46 +20,90 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include <memory>
+
 #include <gtest/gtest.h>
 
 #include <nekit/utils/buffer.h>
 
-TEST(BufferTest, UnitTest) {
-  nekit::utils::Buffer buffer(10);
+using namespace nekit;
 
-  EXPECT_EQ(buffer.capacity(), 10u);
-  EXPECT_EQ(buffer.capacity(), 10u);
-  EXPECT_EQ(buffer.data(), buffer.buffer());
+void EvaluateBufferRange(utils::Buffer* buffer, size_t offset, size_t len,
+                         size_t start) {
+  for (size_t i = 0; i < len; i++) {
+    EXPECT_EQ(buffer->GetByte(offset + i), start + i);
+  }
+}
 
-  EXPECT_TRUE(buffer.ReleaseFront(0));
-  EXPECT_FALSE(buffer.ReleaseFront(1));
-  EXPECT_TRUE(buffer.ReleaseBack(0));
-  EXPECT_FALSE(buffer.ReleaseBack(1));
-  EXPECT_EQ(buffer.capacity(), 10u);
-  EXPECT_EQ(buffer.data(), buffer.buffer());
+void FillBuffer(utils::Buffer* buffer, size_t offset, size_t len,
+                size_t start) {
+  for (size_t i = 0; i < len; i++) {
+    buffer->SetByte(offset + i, start + i);
+  }
+}
 
-  EXPECT_FALSE(buffer.ReserveFront(11));
-  EXPECT_TRUE(buffer.ReserveFront(3));
-  EXPECT_EQ(buffer.size(), 7u);
-  EXPECT_EQ(static_cast<char *>(buffer.data()) + 3, buffer.buffer());
+TEST(BufferCreateTest, ZeroSize) {
+  utils::Buffer buffer{0};
+  EXPECT_EQ(buffer.size(), 0);
+}
 
-  EXPECT_FALSE(buffer.ReleaseFront(4));
-  EXPECT_TRUE(buffer.ReleaseFront(3));
-  EXPECT_EQ(buffer.data(), buffer.buffer());
+TEST(BufferCreateTest, WholeBuffer) {
+  utils::Buffer buffer{200};
+  EXPECT_EQ(buffer.size(), 200);
 
-  EXPECT_FALSE(buffer.ReserveBack(11));
-  EXPECT_TRUE(buffer.ReserveBack(3));
-  EXPECT_EQ(buffer.size(), 7u);
-  EXPECT_EQ(buffer.data(), buffer.buffer());
+  FillBuffer(&buffer, 0, 200, 0);
 
-  EXPECT_FALSE(buffer.ReleaseBack(4));
-  EXPECT_TRUE(buffer.ReleaseBack(3));
-  EXPECT_EQ(buffer.data(), buffer.buffer());
+  EvaluateBufferRange(&buffer, 0, 200, 0);
+}
 
-  EXPECT_TRUE(buffer.ReserveFront(5));
-  EXPECT_FALSE(buffer.ReserveBack(6));
-  EXPECT_TRUE(buffer.ReserveBack(5));
+TEST(BufferCreateTest, ChunkedBuffer) {
+  utils::Buffer buffer{0};
 
-  EXPECT_FALSE(buffer.Reset({10, 10}));
-  EXPECT_TRUE(buffer.Reset({3, 5}));
+  for (size_t i = 0; i < 100; i++) {
+    buffer.InsertBack(2);
+  }
+
+  FillBuffer(&buffer, 0, 200, 0);
+
+  EvaluateBufferRange(&buffer, 0, 200, 0);
+}
+
+class BufferFactory {
+ public:
+  static std::unique_ptr<utils::Buffer> WholeBuffer(size_t size) {
+    return std::make_unique<utils::Buffer>(size);
+  }
+
+  static std::unique_ptr<utils::Buffer> ChunkedBuffer(size_t chunk_size,
+                                                      size_t count) {
+    auto buffer = std::make_unique<utils::Buffer>(0);
+    while (count--) {
+      buffer->InsertBack(chunk_size);
+    }
+    return std::move(buffer);
+  }
+
+  static std::unique_ptr<utils::Buffer> ZeroBuffer() {
+    return std::make_unique<utils::Buffer>(0);
+  }
+};
+
+TEST(BufferInsertTest, CheckInsert) {
+  auto buffer = BufferFactory::WholeBuffer(30);
+
+  FillBuffer(buffer.get(), 0, 30, 0);
+  buffer->Insert(1, 1);
+  EXPECT_EQ(buffer->size(), 31);
+  EvaluateBufferRange(buffer.get(), 0, 1, 0);
+  EvaluateBufferRange(buffer.get(), 2, 29, 1);
+}
+
+TEST(BufferInsertTest, CheckInsertOnChunkedBuffer) {
+  auto buffer = BufferFactory::ChunkedBuffer(2, 15);
+
+  FillBuffer(buffer.get(), 0, 30, 0);
+  buffer->Insert(1, 1);
+  EXPECT_EQ(buffer->size(), 31);
+  EvaluateBufferRange(buffer.get(), 0, 1, 0);
+  EvaluateBufferRange(buffer.get(), 2, 29, 1);
 }

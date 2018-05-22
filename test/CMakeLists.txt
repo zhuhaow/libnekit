@@ -28,6 +28,10 @@ endfunction()
 
 include_directories(.)
 
+add_executable(buffer_test buffer_test.cc)
+target_link_libraries(buffer_test nekit ${LIBS})
+add_mem_test(buffer_test)
+
 add_executable(trie_test trie_test.cc)
 target_link_libraries(trie_test nekit ${LIBS})
 add_mem_test(trie_test)
