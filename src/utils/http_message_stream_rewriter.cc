@@ -72,7 +72,7 @@ class HttpMessageStreamRewriterImpl {
 
     current_buffer_ = buffer;
 
-    while (current_buffer_offset_ != buffer->size() && !errored_) {
+    while (current_buffer_offset_ != buffer->size() && !errored_ && !stopped_) {
       // Unpause it first.
       http_parser_pause(&parser_, 0);
 
@@ -83,9 +83,16 @@ class HttpMessageStreamRewriterImpl {
             int parsed = http_parser_execute(&parser_, &parser_settings_,
                                              static_cast<char*>(data), len);
 
-            if (parser_.upgrade && state_ == State::Init) {
-              current_buffer_offset_ += (size_t)parsed;
-              delegate_->OnUpgradeComplete(rewriter_, current_buffer_offset_);
+            current_buffer_offset_ += (size_t)parsed;
+
+            if (process_message_complete_) {
+              delegate_->OnMessageComplete(rewriter_, current_buffer_offset_,
+                                           parser_.upgrade);
+              if (parser_.upgrade) {
+                stopped_ = true;
+                return false;
+              }
+              process_message_complete_ = false;
             }
 
             if (!(HTTP_PARSER_ERRNO(&parser_) == HPE_OK ||
@@ -93,8 +100,6 @@ class HttpMessageStreamRewriterImpl {
               errored_ = true;
               return false;
             }
-
-            current_buffer_offset_ += (size_t)parsed;
 
             if (set_token_) {
               if (step_back_) {
@@ -105,6 +110,45 @@ class HttpMessageStreamRewriterImpl {
 
               set_token_ = false;
               step_back_ = false;
+            }
+
+            if (process_header_complete_) {
+              switch (state_) {
+                case State::Url: {
+                  current_token_valid_ = false;
+                  delegate_->OnUrl(rewriter_);
+
+                  current_token_offset_ = current_token_end_offset_ + 1;
+                  // Actually the current buffer is at `\n` not char
+                  // passing `\n`
+                  current_token_end_offset_ = current_buffer_offset_ - 3;
+                  current_token_valid_ = false;
+                  delegate_->OnVersion(rewriter_);
+
+                  current_token_offset_ = current_buffer_offset_ - 1;
+                  delegate_->OnHeaderComplete(rewriter_);
+
+                  current_token_offset_ = current_buffer_offset_;
+
+                  state_ = State::Body;
+                  break;
+                }
+                case State::Status: {
+                  current_token_valid_ = false;
+                  delegate_->OnStatus(rewriter_);
+
+                  current_token_offset_ = current_buffer_offset_ - 1;
+                  delegate_->OnHeaderComplete(rewriter_);
+
+                  current_token_offset_ = current_buffer_offset_;
+
+                  state_ = State::Body;
+                  break;
+                }
+                default:
+                  BOOST_ASSERT(false);
+              }
+              process_header_complete_ = false;
             }
 
             return false;
@@ -157,8 +201,27 @@ class HttpMessageStreamRewriterImpl {
   }
 
   void DeleteCurrentHeader() {
-    size_t len = current_token_end_offset_ - current_token_offset_ + 1;
+    size_t len = current_token_end_offset_ - current_token_offset_ + 2;
     current_buffer_->Shrink(current_token_offset_, len);
+    current_buffer_offset_ -= len;
+    next_token_offset_ -= len;
+  }
+
+  void AddHeader(const HttpMessageStreamRewriter::Header& header) {
+    AddHeader(header.first + ": " + header.second);
+  }
+
+  void AddHeader(const std::string& header) {
+    size_t len = header.size();
+    current_buffer_->Insert(current_token_offset_, len + 2);
+    current_buffer_->SetData(current_token_offset_, header.size(),
+                             header.c_str());
+    current_buffer_->SetByte(current_token_offset_ + header.size(), '\r');
+    current_buffer_->SetByte(current_token_offset_ + header.size() + 1, '\n');
+
+    current_buffer_offset_ += (len + 2);
+    current_token_offset_ += (len + 2);
+    next_token_offset_ += (len + 2);
   }
 
   const std::string& CurrentToken() {
@@ -186,7 +249,11 @@ class HttpMessageStreamRewriterImpl {
     next_token_offset_ += diff;
 
     current_buffer_->SetData(current_token_offset_, new_len, new_token.c_str());
+
+    current_buffer_offset_ += diff;
   }
+
+  void SetSkipBodyInResponse(bool skip) { skip_body_ = skip; }
 
  private:
 #define GET_REWRITER_IMPL                        \
@@ -221,7 +288,11 @@ class HttpMessageStreamRewriterImpl {
       case State::HeaderValue: {
         current_token_valid_ = false;
         current_header_valid_ = false;
+        next_token_offset_ = current_token_end_offset_ + 2 ;
         delegate_->OnHeaderPair(rewriter_);
+
+        current_token_offset_ = next_token_offset_;
+        delegate_->OnHeaderComplete(rewriter_);
 
         http_parser_pause(&parser_, 1);
         state_ = State::Body;
@@ -235,18 +306,27 @@ class HttpMessageStreamRewriterImpl {
 
         current_token_valid_ = false;
         current_header_valid_ = false;
+        next_token_offset_ = current_token_end_offset_;
 
         delegate_->OnHeaderPair(rewriter_);
+
+        current_token_offset_ = next_token_offset_;
+        delegate_->OnHeaderComplete(rewriter_);
 
         http_parser_pause(&parser_, 1);
         state_ = State::Body;
         break;
       }
+      case State::Url:
+      case State::Status:
+        process_header_complete_ = true;
+        http_parser_pause(&parser_, 1);
+        break;
       default:
         BOOST_ASSERT(false);
     }
 
-    return 0;
+    return skip_body_ ? 1 : 0;
   }
 
   static int OnMessageComplete(http_parser* parser) {
@@ -256,6 +336,9 @@ class HttpMessageStreamRewriterImpl {
 
     rewriter_impl->state_ = State::Init;
     rewriter_impl->set_token_ = true;
+    rewriter_impl->process_message_complete_ = true;
+
+    http_parser_pause(parser, 1);
 
     return 0;
   }
@@ -441,10 +524,16 @@ class HttpMessageStreamRewriterImpl {
         size_t location = current_buffer_->FindLocation(data);
         BOOST_ASSERT(location < current_buffer_->size());
 
-        current_header_value_offset_ = location;
-        current_header_value_end_offset_ = location + len;
+        if (len) {
+          current_header_value_offset_ = location;
+          current_header_value_end_offset_ = location + len;
 
-        current_token_end_offset_ = current_header_value_end_offset_;
+          current_token_end_offset_ = current_header_value_end_offset_;
+        } else {
+          current_header_value_offset_ = location - 2;
+          current_header_value_end_offset_ = location - 2;
+          current_token_end_offset_ = location - 2;
+        }
 
         state_ = State::HeaderValue;
         break;
@@ -501,11 +590,13 @@ class HttpMessageStreamRewriterImpl {
       current_header_value_offset_{0}, current_header_value_end_offset_{0};
   size_t next_token_offset_{0};
 
-  bool errored_{false};
+  bool errored_{false}, stopped_{false};
+  bool process_header_complete_{false}, process_message_complete_{false};
 
   State state_{State::Init};
   HttpMessageStreamRewriter::Type type_;
   bool set_token_{false}, step_back_{false};
+  bool skip_body_{false};
 };
 
 const http_parser_settings HttpMessageStreamRewriterImpl::parser_settings_ = {
@@ -545,6 +636,15 @@ void HttpMessageStreamRewriter::DeleteCurrentHeader() {
   pimp_->DeleteCurrentHeader();
 }
 
+void HttpMessageStreamRewriter::AddHeader(
+    const HttpMessageStreamRewriter::Header& header) {
+  pimp_->AddHeader(header);
+}
+
+void HttpMessageStreamRewriter::AddHeader(const std::string& header) {
+  pimp_->AddHeader(header);
+}
+
 const std::string& HttpMessageStreamRewriter::CurrentToken() {
   return pimp_->CurrentToken();
 }
@@ -552,6 +652,10 @@ const std::string& HttpMessageStreamRewriter::CurrentToken() {
 void HttpMessageStreamRewriter::RewriteCurrentToken(
     const std::string& new_token) {
   pimp_->RewriteCurrentToken(new_token);
+}
+
+void HttpMessageStreamRewriter::SetSkipBodyInResponse(bool skip) {
+  pimp_->SetSkipBodyInResponse(skip);
 }
 
 }  // namespace utils

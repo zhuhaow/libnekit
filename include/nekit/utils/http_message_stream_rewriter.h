@@ -62,10 +62,17 @@ class HttpMessageStreamRewriterDelegateInterface {
     return true;
   }
 
-  virtual bool OnUpgradeComplete(HttpMessageStreamRewriter* rewriter,
-                                 size_t buffer_offset) {
+  virtual bool OnHeaderComplete(HttpMessageStreamRewriter* rewriter) {
+    (void)rewriter;
+    return true;
+  }
+
+  virtual bool OnMessageComplete(HttpMessageStreamRewriter* rewriter,
+                                 size_t buffer_offset, bool upgrade) {
     (void)rewriter;
     (void)buffer_offset;
+    (void)upgrade;
+
     return true;
   }
 };
@@ -86,9 +93,12 @@ class HttpMessageStreamRewriter : public HttpMessageRewriterInterface {
   const Header& CurrentHeader();
   void RewriteCurrentHeader(const Header& header);
   void DeleteCurrentHeader();
+  void AddHeader(const HttpMessageStreamRewriter::Header& header);
+  void AddHeader(const std::string& header);
 
   const std::string& CurrentToken();
   void RewriteCurrentToken(const std::string& new_token);
+  void SetSkipBodyInResponse(bool skip);
 
  private:
   HttpMessageStreamRewriterImpl* pimp_;
