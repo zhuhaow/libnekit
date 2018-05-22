@@ -42,7 +42,7 @@ class Buffer final : private boost::noncopyable {
   ~Buffer();
 
   void Insert(Buffer&& buffer, size_t pos);
-  void Insert(size_t size, size_t pos);
+  void Insert(size_t skip, size_t len);
 
   void InsertFront(Buffer&& buffer);
   void InsertFront(size_t size);

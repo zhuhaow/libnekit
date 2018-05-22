@@ -62,21 +62,21 @@ struct Buf {
     next_buf_ = std::move(buf);
   }
 
-  std::unique_ptr<Buf> Break(size_t poj) {
-    BOOST_ASSERT(poj);
-    BOOST_ASSERT(poj <= size_);
+  std::unique_ptr<Buf> Break(size_t pos) {
+    BOOST_ASSERT(pos);
+    BOOST_ASSERT(pos <= size_);
 
-    if (poj == size_) {
+    if (pos == size_) {
       auto temp = std::move(next_buf_);
       next_buf_ = nullptr;
       return temp;
     }
 
-    auto result = std::make_unique<Buf>(size_ - poj);
-    std::memcpy(result->data_.get(), data_.get() + offset_ + poj, size_ - poj);
+    auto result = std::make_unique<Buf>(size_ - pos);
+    std::memcpy(result->data_.get(), data_.get() + offset_ + pos, size_ - pos);
     result->next_buf_ = std::move(next_buf_);
     next_buf_ = nullptr;
-    size_ -= poj;
+    size_ = pos;
 
     return result;
   }
@@ -96,65 +96,65 @@ Buffer::Buffer(size_t size) {
 
 Buffer::~Buffer() = default;
 
-void Buffer::Insert(nekit::utils::Buffer&& buffer, size_t poj) {
-  BOOST_ASSERT(poj <= size());
+void Buffer::Insert(nekit::utils::Buffer&& buffer, size_t pos) {
+  BOOST_ASSERT(pos <= size());
   // Insert a null buffer is not allowed.
   BOOST_ASSERT(buffer.size());
 
-  if (poj == size()) {
+  if (pos == size()) {
     return InsertBack(std::move(buffer));
   }
 
-  if (poj == 0) {
+  if (pos == 0) {
     return InsertFront(std::move(buffer));
   }
 
   Buf* current = head_.get();
-  while (poj > current->size_) {
-    poj -= current->size_;
+  while (pos > current->size_) {
+    pos -= current->size_;
     current = current->next_buf_.get();
   }
 
-  InsertBufAt(current, std::move(buffer), poj);
+  InsertBufAt(current, std::move(buffer), pos);
 }
 
-void Buffer::Insert(size_t buf_size, size_t poj) {
-  BOOST_ASSERT(poj <= this->size());
-  BOOST_ASSERT(buf_size);
+void Buffer::Insert(size_t skip, size_t len) {
+  BOOST_ASSERT(skip <= this->size());
+  BOOST_ASSERT(len);
 
-  if (poj == size()) {
-    return InsertBack(buf_size);
+  if (skip == size()) {
+    return InsertBack(len);
   }
 
-  if (poj == 0) {
-    return InsertFront(buf_size);
+  if (skip == 0) {
+    return InsertFront(len);
   }
 
   Buf* current = head_.get();
-  while (poj > current->size_) {
-    poj -= current->size_;
+  while (skip > current->size_) {
+    skip -= current->size_;
     current = current->next_buf_.get();
   }
 
-  if (current->size_ == buf_size) {
-    // Check if there is already enough space.
+  if (skip == current->size_) {
+    // We are at the end of one `Buf` and want to append to this `Buf`. Let's
+    // check if there is already enough space.
     size_t remain = current->capacity_ - current->offset_ - current->size_;
-    if (remain >= buf_size ||
-        (current->next_buf_ &&
-         remain + current->next_buf_->offset_ >= buf_size)) {
-      size_ += buf_size;
+    if (remain >= len ||
+        (current->next_buf_ && remain + current->next_buf_->offset_ >= len)) {
+      size_ += len;
 
-      current->size_ += std::min(buf_size, remain);
-      buf_size -= std::min(buf_size, remain);
-      if (buf_size) {
-        current->next_buf_->offset_ -= buf_size;
-        current->next_buf_->size_ += buf_size;
+      current->size_ += std::min(len, remain);
+      len -= std::min(len, remain);
+      if (len) {
+        current->next_buf_->offset_ -= len;
+        current->next_buf_->size_ += len;
       }
       return;
     }
   }
 
-  InsertBufAt(current, Buffer(buf_size), poj);
+  InsertBufAt(current, Buffer(len), skip);
 }
 
 void Buffer::InsertFront(nekit::utils::Buffer&& buffer) {
@@ -468,9 +468,9 @@ size_t Buffer::FindLocation(const void* pointer) {
 
 size_t Buffer::size() const { return size_; }
 
-// poj may be the size of buf
-void Buffer::InsertBufAt(Buf* buf, Buffer&& buffer, size_t poj) {
-  auto new_buf = buf->Break(poj);
+// pos may be the size of buf
+void Buffer::InsertBufAt(Buf* buf, Buffer&& buffer, size_t pos) {
+  auto new_buf = buf->Break(pos);
   auto new_buf_ptr = new_buf.get();
   buf->next_buf_ = std::move(buffer.head_);
   buffer.tail_->next_buf_ = std::move(new_buf);
@@ -481,9 +481,8 @@ void Buffer::InsertBufAt(Buf* buf, Buffer&& buffer, size_t poj) {
     } else {
       tail_ = buffer.tail_;
     }
-
-    size_ += buffer.size();
   }
+  size_ += buffer.size();
 }
 }  // namespace utils
 }  // namespace nekit
