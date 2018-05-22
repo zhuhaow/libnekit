@@ -14,7 +14,7 @@ eval $comm
 if [[ $(perl -e "print lc('$PLATFORM');") != "ios" ]]
 then
    cd build
-   ctest --output-on-failure
+   ctest --verbose
    cd ..
 fi
 
