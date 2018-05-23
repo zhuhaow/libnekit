@@ -37,6 +37,8 @@ class HttpMessageStreamRewriterImpl;
 
 class HttpMessageStreamRewriterDelegateInterface {
  public:
+  virtual ~HttpMessageStreamRewriterDelegateInterface() = default;
+
   virtual bool OnMethod(HttpMessageStreamRewriter* rewriter) {
     (void)rewriter;
     return true;
