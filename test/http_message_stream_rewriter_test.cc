@@ -85,8 +85,13 @@ class HttpResponseMessage {
 
     os << body_;
 
-    return os.str();
+    message_ = os.str();
+    valid_ = true;
+    return message_;
   }
+
+  bool valid_{false};
+  std::string message_;
 };
 
 class HttpMessageGenerator {
