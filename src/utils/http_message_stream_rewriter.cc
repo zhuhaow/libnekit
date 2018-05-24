@@ -26,6 +26,12 @@
 
 #include "nekit/config.h"
 
+#define ENSURE_CALLBACK(x, error) \
+  if (!(x)) {                     \
+    errored_ = true;              \
+    return error;                 \
+  }
+
 namespace nekit {
 namespace utils {
 
@@ -86,10 +92,24 @@ class HttpMessageStreamRewriterImpl {
             current_buffer_offset_ += (size_t)parsed;
 
             if (process_message_complete_) {
-              delegate_->OnMessageComplete(rewriter_, current_buffer_offset_,
-                                           parser_.upgrade);
+              if (!delegate_->OnMessageComplete(
+                      rewriter_, current_buffer_offset_, parser_.upgrade)) {
+                errored_ = true;
+                return false;
+              }
+
               if (parser_.upgrade) {
                 stopped_ = true;
+                if (set_token_) {
+                  if (step_back_) {
+                    current_token_offset_ = current_buffer_offset_ - 1;
+                  } else {
+                    current_token_offset_ = current_buffer_offset_;
+                  }
+
+                  set_token_ = false;
+                  step_back_ = false;
+                }
                 return false;
               }
               process_message_complete_ = false;
@@ -116,17 +136,26 @@ class HttpMessageStreamRewriterImpl {
               switch (state_) {
                 case State::Url: {
                   current_token_valid_ = false;
-                  delegate_->OnUrl(rewriter_);
+                  if (!delegate_->OnUrl(rewriter_)) {
+                    errored_ = true;
+                    return false;
+                  }
 
                   current_token_offset_ = current_token_end_offset_ + 1;
                   // Actually the current buffer is at `\n` not char
                   // passing `\n`
                   current_token_end_offset_ = current_buffer_offset_ - 3;
                   current_token_valid_ = false;
-                  delegate_->OnVersion(rewriter_);
+                  if (!delegate_->OnVersion(rewriter_)) {
+                    errored_ = true;
+                    return false;
+                  }
 
                   current_token_offset_ = current_buffer_offset_ - 1;
-                  delegate_->OnHeaderComplete(rewriter_);
+                  if (!delegate_->OnHeaderComplete(rewriter_)) {
+                    errored_ = true;
+                    return false;
+                  }
 
                   current_token_offset_ = current_buffer_offset_;
 
@@ -135,10 +164,17 @@ class HttpMessageStreamRewriterImpl {
                 }
                 case State::Status: {
                   current_token_valid_ = false;
-                  delegate_->OnStatus(rewriter_);
+
+                  if (!delegate_->OnStatus(rewriter_)) {
+                    errored_ = true;
+                    return false;
+                  }
 
                   current_token_offset_ = current_buffer_offset_ - 1;
-                  delegate_->OnHeaderComplete(rewriter_);
+                  if (!delegate_->OnHeaderComplete(rewriter_)) {
+                    errored_ = true;
+                    return false;
+                  }
 
                   current_token_offset_ = current_buffer_offset_;
 
@@ -288,11 +324,11 @@ class HttpMessageStreamRewriterImpl {
       case State::HeaderValue: {
         current_token_valid_ = false;
         current_header_valid_ = false;
-        next_token_offset_ = current_token_end_offset_ + 2 ;
-        delegate_->OnHeaderPair(rewriter_);
+        next_token_offset_ = current_token_end_offset_ + 2;
+        ENSURE_CALLBACK(delegate_->OnHeaderPair(rewriter_), -1);
 
         current_token_offset_ = next_token_offset_;
-        delegate_->OnHeaderComplete(rewriter_);
+        ENSURE_CALLBACK(delegate_->OnHeaderComplete(rewriter_), -1);
 
         http_parser_pause(&parser_, 1);
         state_ = State::Body;
@@ -308,10 +344,10 @@ class HttpMessageStreamRewriterImpl {
         current_header_valid_ = false;
         next_token_offset_ = current_token_end_offset_;
 
-        delegate_->OnHeaderPair(rewriter_);
+        ENSURE_CALLBACK(delegate_->OnHeaderPair(rewriter_), -1);
 
         current_token_offset_ = next_token_offset_;
-        delegate_->OnHeaderComplete(rewriter_);
+        ENSURE_CALLBACK(delegate_->OnHeaderComplete(rewriter_), -1);
 
         http_parser_pause(&parser_, 1);
         state_ = State::Body;
@@ -381,7 +417,7 @@ class HttpMessageStreamRewriterImpl {
         current_token_end_offset_ = location - 1;
 
         current_token_valid_ = false;
-        delegate_->OnMethod(rewriter_);
+        ENSURE_CALLBACK(delegate_->OnMethod(rewriter_), -1);
         current_token_offset_ = next_token_offset_;
         current_token_end_offset_ = current_token_offset_ + len;
         http_parser_pause(&parser_, 1);
@@ -411,7 +447,7 @@ class HttpMessageStreamRewriterImpl {
         current_token_end_offset_ = location - 5;
 
         current_token_valid_ = false;
-        delegate_->OnVersion(rewriter_);
+        ENSURE_CALLBACK(delegate_->OnVersion(rewriter_), -1);
         current_token_offset_ = next_token_offset_;
         current_token_end_offset_ = current_token_offset_ + len + 4;
         http_parser_pause(&parser_, 1);
@@ -443,12 +479,12 @@ class HttpMessageStreamRewriterImpl {
         next_token_offset_ = location;
 
         current_token_valid_ = false;
-        delegate_->OnUrl(rewriter_);
+        ENSURE_CALLBACK(delegate_->OnUrl(rewriter_), -1);
 
         current_token_offset_ = current_token_end_offset_ + 1;
         current_token_end_offset_ = next_token_offset_ - 2;
         current_token_valid_ = false;
-        delegate_->OnVersion(rewriter_);
+        ENSURE_CALLBACK(delegate_->OnVersion(rewriter_), -1);
 
         current_token_offset_ = next_token_offset_;
         current_token_end_offset_ = current_token_offset_ + len;
@@ -465,7 +501,7 @@ class HttpMessageStreamRewriterImpl {
         next_token_offset_ = location;
 
         current_token_valid_ = false;
-        delegate_->OnStatus(rewriter_);
+        ENSURE_CALLBACK(delegate_->OnStatus(rewriter_), -1);
 
         current_token_offset_ = next_token_offset_;
         current_token_end_offset_ = current_token_offset_ + len;
@@ -490,7 +526,7 @@ class HttpMessageStreamRewriterImpl {
 
         current_token_valid_ = false;
         current_header_valid_ = false;
-        delegate_->OnHeaderPair(rewriter_);
+        ENSURE_CALLBACK(delegate_->OnHeaderPair(rewriter_), -1);
 
         current_token_offset_ = next_token_offset_;
         current_token_end_offset_ = current_token_offset_ + len;
