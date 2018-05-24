@@ -98,8 +98,10 @@ Buffer::~Buffer() = default;
 
 void Buffer::Insert(nekit::utils::Buffer&& buffer, size_t pos) {
   BOOST_ASSERT(pos <= size());
-  // Insert a null buffer is not allowed.
-  BOOST_ASSERT(buffer.size());
+
+  if (!buffer.size()) {
+    return;
+  }
 
   if (pos == size()) {
     return InsertBack(std::move(buffer));
@@ -120,7 +122,10 @@ void Buffer::Insert(nekit::utils::Buffer&& buffer, size_t pos) {
 
 void Buffer::Insert(size_t skip, size_t len) {
   BOOST_ASSERT(skip <= this->size());
-  BOOST_ASSERT(len);
+
+  if (!len) {
+    return;
+  }
 
   if (skip == size()) {
     return InsertBack(len);
@@ -158,7 +163,9 @@ void Buffer::Insert(size_t skip, size_t len) {
 }
 
 void Buffer::InsertFront(nekit::utils::Buffer&& buffer) {
-  BOOST_ASSERT(buffer.size());
+  if (!buffer.size()) {
+    return;
+  }
 
   auto prev_head = std::move(head_);
   head_ = std::move(buffer.head_);
@@ -183,7 +190,9 @@ void Buffer::InsertFront(size_t size) {
 }
 
 void Buffer::InsertBack(Buffer&& buffer) {
-  BOOST_ASSERT(buffer.size());
+  if (!buffer.size()) {
+    return;
+  }
 
   if (head_) {
     tail_->next_buf_ = std::move(buffer.head_);
