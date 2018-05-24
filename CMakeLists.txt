@@ -88,6 +88,7 @@ target_sources(nekit PRIVATE
   src/utils/buffer.cc
   src/utils/endpoint.cc
   src/data_flow/socks5_server_data_flow.cc
+  src/data_flow/http_server_data_flow.cc
   modules/http_parser/http_parser.c
   )
 
