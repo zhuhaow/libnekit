@@ -29,7 +29,7 @@
 #define ENSURE_CALLBACK(x, error) \
   if (!(x)) {                     \
     errored_ = true;              \
-    return error;                 \
+    return (error);                 \
   }
 
 namespace nekit {
