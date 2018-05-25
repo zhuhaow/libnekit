@@ -410,7 +410,7 @@ void HttpServerDataFlow::NegotiateRead(EventHandler handler) {
 
           state_ = data_flow::State::Closed;
 
-          handler(ec);
+          handler(ErrorCode::InvalidRequest);
           return;
         }
 
