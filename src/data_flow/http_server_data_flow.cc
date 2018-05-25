@@ -349,30 +349,14 @@ utils::Cancelable HttpServerDataFlow::ReportError(std::error_code error_code,
   reading_ = false;
   writing_ = false;
 
-  if (!reportable_) {
-    boost::asio::post(*io(), [this, handler, cancelable{open_cancelable_}]() {
-      if (cancelable.canceled()) {
-        return;
-      }
+  boost::asio::post(*io(), [this, handler, cancelable{open_cancelable_}]() {
+    if (cancelable.canceled()) {
+      return;
+    }
 
-      state_ = data_flow::State::Closed;
-      handler(ErrorCode::NoError);
-    });
-
-    return open_cancelable_;
-  }
-
-  std::unique_ptr<utils::Buffer> buffer = std::make_unique<utils::Buffer>(10);
-  buffer->SetByte(0, 5);
-  buffer->SetByte(1, 1);  // TODO: Return proper error code
-  buffer->SetByte(2, 0);
-  buffer->SetByte(3, 1);
-
-  write_cancelable_ =
-      data_flow_->Write(std::move(buffer), [this, handler](std::error_code ec) {
-        state_ = data_flow::State::Closed;
-        handler(ec);
-      });
+    state_ = data_flow::State::Closed;
+    handler(ErrorCode::NoError);
+  });
 
   return open_cancelable_;
 }
