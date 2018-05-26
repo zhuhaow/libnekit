@@ -300,7 +300,7 @@ void HttpDataFlow::ReadResponse(EventHandler handler) {
         }
 
         if (ec) {
-          state_ = State::Closed;
+          state_ = data_flow::State::Closed;
           if (ec == nekit::transport::ErrorCode::EndOfFile) {
             handler(ErrorCode::InvalidResponse);
           } else {
@@ -310,7 +310,7 @@ void HttpDataFlow::ReadResponse(EventHandler handler) {
         }
 
         if (!rewriter_.RewriteBuffer(buffer.get())) {
-          state_ = State::Closed;
+          state_ = data_flow::State::Closed;
           handler(ErrorCode::InvalidResponse);
           return;
         }
@@ -322,10 +322,10 @@ void HttpDataFlow::ReadResponse(EventHandler handler) {
               pending_payload_ = std::move(buffer);
             }
 
-            state_ = State::Established;
+            state_ = data_flow::State::Established;
             handler(ErrorCode::NoError);
           } else {
-            state_ = State::Closed;
+            state_ = data_flow::State::Closed;
             handler(ErrorCode::ConnectError);
           }
           return;
