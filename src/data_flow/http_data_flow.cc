@@ -25,6 +25,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include "nekit/transport/error_code.h"
+#include "nekit/utils/base64.h"
 
 namespace nekit {
 namespace data_flow {
@@ -74,6 +75,10 @@ class HttpHeaderRewriterDelegate
   HttpDataFlow* flow_;
 };
 
+std::string HttpDataFlow::Credential::BasicAuthenticationEncode() {
+  return nekit::utils::Base64::Encode(username_ + ":" + password_);
+}
+
 HttpDataFlow::HttpDataFlow(std::shared_ptr<utils::Endpoint> server_endpoint,
                            std::shared_ptr<utils::Session> session,
                            std::unique_ptr<RemoteDataFlowInterface>&& data_flow,
@@ -84,7 +89,7 @@ HttpDataFlow::HttpDataFlow(std::shared_ptr<utils::Endpoint> server_endpoint,
       credential_{std::move(credential)},
       rewriter_{utils::HttpMessageStreamRewriter::Type::Response,
                 std::make_shared<HttpHeaderRewriterDelegate>(this)} {
-    rewriter_.SetSkipBodyInResponse(true);
+  rewriter_.SetSkipBodyInResponse(true);
 }
 
 HttpDataFlow::~HttpDataFlow() {
@@ -247,7 +252,7 @@ utils::Cancelable HttpDataFlow::Connect(EventHandler handler) {
            << target_endpoint_->port() << "\r\n";
         if (credential_) {
           os << "Proxy-Authorization: Basic "
-             << "\r\n";
+             << credential_->BasicAuthenticationEncode() << "\r\n";
         }
         os << "\r\n";
 

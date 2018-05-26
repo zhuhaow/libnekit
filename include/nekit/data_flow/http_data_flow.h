@@ -33,7 +33,7 @@ class HttpDataFlow : public RemoteDataFlowInterface {
  public:
   class Credential {
    public:
-    std::string Encode();
+    std::string BasicAuthenticationEncode();
 
    private:
     std::string username_;
