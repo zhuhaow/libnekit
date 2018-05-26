@@ -36,6 +36,10 @@ add_executable(trie_test trie_test.cc)
 target_link_libraries(trie_test nekit ${LIBS})
 add_mem_test(trie_test)
 
+add_executable(base64_test base64_test.cc)
+target_link_libraries(base64_test nekit ${LIBS})
+add_mem_test(base64_test)
+
 add_executable(maxmind_test maxmind_test.cc)
 target_link_libraries(maxmind_test nekit ${LIBS})
 add_mem_test(maxmind_test)

@@ -207,7 +207,7 @@ def cmake_compile(source_dir,
 
 def build_boost(boost_dir, install_prefix, target_platform):
     boost_build_module = "log,system,thread"
-    boost_module = "core,boost/asio.hpp,system,log,phoenix,endian,range,assert,pool,thread"
+    boost_module = "archive,core,boost/asio.hpp,system,log,phoenix,endian,range,assert,pool,thread"
 
     if Platform.current_platform() in [Platform.OSX, Platform.Linux]:
         with local.cwd(boost_dir):
