@@ -42,7 +42,7 @@ LIBRARIES = [('google/googletest', 'release-1.8.0',
              ('zhuhaow/libmaxminddb', 'master', 'libmaxminddb')]
 
 OPENSSL_IOS = ('x2on/OpenSSL-for-iPhone', 'master', 'openssl')
-OPENSSL_LIB = ('openssl/openssl', 'OpenSSL_1_1_0f', 'openssl')
+OPENSSL_LIB = ('openssl/openssl', 'OpenSSL_1_1_0h', 'openssl')
 
 DOWNLOAD_LIBRARIES = [(
     'https://dl.bintray.com/boostorg/release/1.66.0/source/boost_1_66_0.tar.gz',
