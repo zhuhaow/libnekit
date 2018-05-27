@@ -37,16 +37,20 @@ from plumbum.cmd import git, cmake
 from clint.textui import progress
 import requests
 
-LIBRARIES = [('google/googletest', 'release-1.8.0',
-              'googletest'), ('jedisct1/libsodium', '1.0.13', 'libsodium'),
-             ('zhuhaow/libmaxminddb', 'master', 'libmaxminddb')]
+LIBRARIES = [
+    ("google/googletest", "release-1.8.0", "googletest"),
+    ("jedisct1/libsodium", "1.0.13", "libsodium"),
+    ("zhuhaow/libmaxminddb", "master", "libmaxminddb"),
+]
 
-OPENSSL_IOS = ('x2on/OpenSSL-for-iPhone', 'master', 'openssl')
-OPENSSL_LIB = ('openssl/openssl', 'OpenSSL_1_1_0h', 'openssl')
+OPENSSL_IOS = ("x2on/OpenSSL-for-iPhone", "master", "openssl")
+OPENSSL_LIB = ("openssl/openssl", "OpenSSL_1_1_0h", "openssl")
 
 DOWNLOAD_LIBRARIES = [(
-    'https://dl.bintray.com/boostorg/release/1.66.0/source/boost_1_66_0.tar.gz',
-    'boost', 'boost_1_66_0')]
+    "https://dl.bintray.com/boostorg/release/1.66.0/source/boost_1_66_0.tar.gz",
+    "boost",
+    "boost_1_66_0",
+)]
 
 source_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 install_dir = os.path.abspath(os.path.join(source_dir, "deps"))
@@ -127,8 +131,8 @@ def check_platform(target_platform):
 
 def toolchain_path(target_platform):
     return os.path.abspath(
-        os.path.join(source_dir, "cmake/toolchain/{}.cmake".format(
-            target_platform)))
+        os.path.join(source_dir,
+                     "cmake/toolchain/{}.cmake".format(target_platform)))
 
 
 def install_path(target_platform):
@@ -136,9 +140,9 @@ def install_path(target_platform):
 
 
 def download_repo(path, url, name, tag):
-    git['-c', 'advice.detachedHead=false', 'clone', url, '--branch', tag,
-        '--depth', '1', '--recurse-submodules',
-        os.path.join(path, name)] & FG
+    git["-c", "advice.detachedHead=false", "clone", url, "--branch", tag,
+        "--depth", "1", "--recurse-submodules",
+        os.path.join(path, name), ] & FG
 
 
 def download_library(path, url, name, content_dir):
@@ -146,10 +150,11 @@ def download_library(path, url, name, content_dir):
 
     with tempfile.TemporaryFile() as tempf:
         r = requests.get(url, stream=True)
-        totol_length = int(r.headers.get('content-length'))
+        totol_length = int(r.headers.get("content-length"))
         for chunk in progress.bar(
                 r.iter_content(chunk_size=1024 * 1024),
-                expected_size=(totol_length / 1024 / 1024) + 1):
+                expected_size=(totol_length / 1024 / 1024) + 1,
+        ):
             if chunk:
                 tempf.write(chunk)
                 tempf.flush()
@@ -157,11 +162,13 @@ def download_library(path, url, name, content_dir):
         with temp_dir() as tempd:
             logging.info("Extracting to %s", tempd)
             tempf.seek(0)
-            with tarfile.open(fileobj=tempf, mode='r:gz') as tar:
+            with tarfile.open(fileobj=tempf, mode="r:gz") as tar:
                 tar.extractall(tempd)
-                logging.info("Copying file from %s to %s",
-                             os.path.join(tempd, content_dir),
-                             os.path.join(path, name))
+                logging.info(
+                    "Copying file from %s to %s",
+                    os.path.join(tempd, content_dir),
+                    os.path.join(path, name),
+                )
                 shutil.copytree(
                     os.path.join(tempd, content_dir), os.path.join(path, name))
 
@@ -176,16 +183,18 @@ def cmake_compile(source_dir,
                   extra_config=None):
     with temp_dir() as tempd:
         config = [
-            "-H{}".format(source_dir), "-B{}".format(tempd),
+            "-H{}".format(source_dir),
+            "-B{}".format(tempd),
             "-DCMAKE_BUILD_TYPE=Release",
-            "-DCMAKE_INSTALL_PREFIX={}".format(install_prefix)
+            "-DCMAKE_INSTALL_PREFIX={}".format(install_prefix),
         ]
 
         if target_platform in [Platform.iOS, Platform.OSX]:
             config.extend([
-                "-GXcode", "-DCMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH=NO",
+                "-GXcode",
+                "-DCMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH=NO",
                 "-DCMAKE_IOS_INSTALL_COMBINED=YES",
-                "-DIOS_DEPLOYMENT_SDK_VERSION=9.0"
+                "-DIOS_DEPLOYMENT_SDK_VERSION=9.0",
             ])
 
         config.append("-DCMAKE_TOOLCHAIN_FILE={}".format(
@@ -198,6 +207,7 @@ def cmake_compile(source_dir,
 
         if target_platform in [Platform.iOS, Platform.OSX]:
             from plumbum.cmd import xcodebuild
+
             with local.cwd(tempd):
                 xcodebuild["-target", "install", "-configuration",
                            "Release"] & FG
@@ -207,7 +217,9 @@ def cmake_compile(source_dir,
 
 def build_boost(boost_dir, install_prefix, target_platform):
     boost_build_module = "log,system,thread"
-    boost_module = "archive,core,boost/asio.hpp,system,log,phoenix,endian,range,assert,pool,thread"
+    boost_module = (
+        "archive,core,boost/asio.hpp,system,log,phoenix,endian,range,assert,pool,thread"
+    )
 
     if Platform.current_platform() in [Platform.OSX, Platform.Linux]:
         with local.cwd(boost_dir):
@@ -216,7 +228,7 @@ def build_boost(boost_dir, install_prefix, target_platform):
             local[os.path.join(boost_dir, "b2")]["-j4", "tools/bcp"] & FG
             shutil.copy(os.path.join(boost_dir, "dist/bin/bcp"), boost_dir)
             # copy headers
-            args = boost_module.split(',')
+            args = boost_module.split(",")
             args.append(os.path.join(install_prefix, "include"))
             ensure_path_exist(os.path.join(install_prefix, "include"))
             local[os.path.join(boost_dir, "bcp")][args] & FG
@@ -226,25 +238,31 @@ def build_boost(boost_dir, install_prefix, target_platform):
         with local.env(
                 BOOST_SRC=boost_dir,
                 BOOST_LIBS=boost_build_module.replace(",", " "),
-                OUTPUT_DIR=install_prefix):
+                OUTPUT_DIR=install_prefix,
+        ):
             with local.cwd(os.path.join(source_dir, "scripts")):
                 local[local.cwd / "build_boost_ios.sh"] & FG
 
     elif target_platform in [Platform.OSX, Platform.Linux]:
         with local.cwd(boost_dir):
             with temp_dir() as tempd:
-                local[os.path.join(boost_dir, "bootstrap.sh")][
-                    "--with-libraries={}".format(boost_build_module),
-                ] & FG
+                local[os.path.join(
+                    boost_dir, "bootstrap.sh")]["--with-libraries={}".format(
+                        boost_build_module)] & FG
 
-                args = ["--stagedir={}".format(
-                    os.path.join(tempd, "boost_tmp")), "link=static",
-                        "variant=release"]
+                args = [
+                    "--stagedir={}".format(os.path.join(tempd, "boost_tmp")),
+                    "link=static",
+                    "variant=release",
+                ]
                 if target_platform == Platform.OSX:
-                    args.extend(["cxxflags=-isysroot {} -mmacosx-version-min=10.10 -fvisibility=hidden -fvisibility-inlines-hidden -fembed-bitcode".format(mac_sdk_path()),
-                                 "linkflags=-isysroot {} -mmacosx-version-min=10.10 -fvisibility=hidden -fvisibility-inlines-hidden -fembed-bitcode".format(mac_sdk_path())])
-                args.extend(["-j4", 
-                             "stage"])
+                    args.extend([
+                        "cxxflags=-isysroot {} -mmacosx-version-min=10.10 -fvisibility=hidden -fvisibility-inlines-hidden -fembed-bitcode".
+                        format(mac_sdk_path()),
+                        "linkflags=-isysroot {} -mmacosx-version-min=10.10 -fvisibility=hidden -fvisibility-inlines-hidden -fembed-bitcode".
+                        format(mac_sdk_path()),
+                    ])
+                args.extend(["-j4", "stage"])
 
                 local[os.path.join(boost_dir, "b2")][args] & FG
 
@@ -267,10 +285,11 @@ def build_boost(boost_dir, install_prefix, target_platform):
 def build_openssl(openssl_dir, install_prefix, target_platform):
     if target_platform == Platform.iOS:
         with local.cwd(openssl_dir):
-            local[local.cwd /
-                  "build-libssl.sh"]["--version=1.1.0f", "--verbose-on-error",
-                                     "--ec-nistp-64-gcc-128",
-                                     "--targets=ios-sim-cross-x86_64 ios-sim-cross-i386 ios64-cross-arm64 ios-cross-armv7"] & FG
+            local[local.cwd / "build-libssl.sh"][
+                "--version=1.1.0f", "--verbose-on-error",
+                "--ec-nistp-64-gcc-128",
+                "--targets=ios-sim-cross-x86_64 ios-sim-cross-i386 ios64-cross-arm64 ios-cross-armv7",
+            ] & FG
             copytree("lib", os.path.join(install_prefix, "lib"))
             copytree("include", os.path.join(install_prefix, "include"))
 
@@ -279,8 +298,12 @@ def build_openssl(openssl_dir, install_prefix, target_platform):
             local[local.cwd /
                   "Configure"]["darwin64-x86_64-cc", "no-shared",
                                "enable-ec_nistp_64_gcc_128", "no-comp",
-                  "--prefix={}".format(install_prefix)] & FG
-            local["sed"]["-ie", 's!^CFLAGS=!CFLAGS=-isysroot {} -mmacosx-version-min=10.10 !'.format(mac_sdk_path()), "Makefile"] &FG
+                               "--prefix={}".format(install_prefix), ] & FG
+            local["sed"][
+                "-ie",
+                "s!^CFLAGS=!CFLAGS=-isysroot {} -mmacosx-version-min=10.10 !".
+                format(mac_sdk_path()), "Makefile",
+            ] & FG
             local["make"]["install_sw"] & FG
 
     elif target_platform in [Platform.Linux]:
@@ -288,7 +311,7 @@ def build_openssl(openssl_dir, install_prefix, target_platform):
             local[local.cwd /
                   "Configure"]["linux-x86_64", "no-shared",
                                "enable-ec_nistp_64_gcc_128", "no-comp",
-                               "--prefix={}".format(install_prefix)] & FG
+                               "--prefix={}".format(install_prefix), ] & FG
             local["make"]["install_sw"] & FG
 
 
@@ -299,11 +322,11 @@ def build_libsodium(libsodium_dir, install_prefix, target_platform):
 
             if target_platform == Platform.iOS:
                 local["find"]["dist-build", "-type", "f", "-exec", "sed", "-i",
-                              "''", "s/^export PREFIX.*$//g", "{}", "+"] & FG
+                              "''", "s/^export PREFIX.*$//g", "{}", "+", ] & FG
                 local["dist-build/ios.sh"] & FG
             elif target_platform == Platform.OSX:
                 local["find"]["dist-build", "-type", "f", "-exec", "sed", "-i",
-                              "''", "s/^export PREFIX.*$//g", "{}", "+"] & FG
+                              "''", "s/^export PREFIX.*$//g", "{}", "+", ] & FG
                 local["cat"]["dist-build/osx.sh"] & FG
                 local["dist-build/osx.sh"] & FG
             elif target_platform == Platform.Linux:
@@ -317,12 +340,13 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        'platform_name',
+        "platform_name",
         type=str,
-        nargs='?',
+        nargs="?",
         default=platform.system(),
         help="The target build platform. Mac, iOS, \
-        Android, Linux and Windows are supported.")
+        Android, Linux and Windows are supported.",
+    )
     args = parser.parse_args()
 
     target_platform = Platform.from_string(args.platform_name)
@@ -337,8 +361,12 @@ def main():
             LIBRARIES.append(OPENSSL_LIB)
 
         for library in LIBRARIES:
-            download_repo(tempd, "https://github.com/" + library[0] + ".git",
-                          library[2], library[1])
+            download_repo(
+                tempd,
+                "https://github.com/" + library[0] + ".git",
+                library[2],
+                library[1],
+            )
 
         # Remove built binaries and headers.
         shutil.rmtree(install_path(target_platform), True)
@@ -346,29 +374,37 @@ def main():
 
         cmake_compile(
             os.path.join(tempd, "libmaxminddb"),
-            install_path(target_platform), target_platform)
+            install_path(target_platform),
+            target_platform,
+        )
 
         build_libsodium(
             os.path.join(tempd, "libsodium"),
-            install_path(target_platform), target_platform)
+            install_path(target_platform),
+            target_platform,
+        )
 
         build_openssl(
             os.path.join(tempd, "openssl"),
-            install_path(target_platform), target_platform)
+            install_path(target_platform),
+            target_platform,
+        )
 
         for library in DOWNLOAD_LIBRARIES:
             download_library(tempd, library[0], library[1], library[2])
 
         # Compile boost
         build_boost(
-            os.path.join(tempd, "boost"),
-            install_path(target_platform), target_platform)
+            os.path.join(tempd, "boost"), install_path(target_platform),
+            target_platform)
 
         if target_platform not in [Platform.iOS, Platform.Android]:
             # Compile GoogleTest
             cmake_compile(
                 os.path.join(tempd, "googletest"),
-                install_path(target_platform), target_platform)
+                install_path(target_platform),
+                target_platform,
+            )
 
 
 if __name__ == "__main__":
