@@ -80,7 +80,7 @@ class BufferFactory {
     while (count--) {
       buffer->InsertBack(chunk_size);
     }
-    return std::move(buffer);
+    return buffer;
   }
 
   static std::unique_ptr<utils::Buffer> ZeroBuffer() {

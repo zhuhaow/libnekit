@@ -102,7 +102,7 @@ class HttpMessageGenerator {
     }
 
     buffer->SetData(0, header.size(), header.c_str());
-    return std::move(buffer);
+    return buffer;
   }
 
   static std::vector<std::unique_ptr<Buffer>> GetHeaderBuffers(
@@ -118,7 +118,7 @@ class HttpMessageGenerator {
       buffers.push_back(std::move(buffer));
     }
 
-    return std::move(buffers);
+    return buffers;
   }
 };
 
