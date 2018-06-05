@@ -42,6 +42,8 @@ class Buffer final : private boost::noncopyable {
   Buffer(Buffer&& buffer);
   ~Buffer();
 
+  bool operator!() const;
+
   void Insert(Buffer&& buffer, size_t pos);
   void Insert(size_t skip, size_t len);
 

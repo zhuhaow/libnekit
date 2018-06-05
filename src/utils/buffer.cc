@@ -108,6 +108,8 @@ Buffer::Buffer(Buffer&& buffer) {
 
 Buffer::~Buffer() = default;
 
+bool Buffer::operator!() const { return !size_; }
+
 void Buffer::Insert(nekit::utils::Buffer&& buffer, size_t pos) {
   BOOST_ASSERT(pos <= size());
 
