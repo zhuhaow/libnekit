@@ -50,8 +50,8 @@ Socks5ServerDataFlow::~Socks5ServerDataFlow() {
   write_cancelable_.Cancel();
 }
 
-utils::Cancelable Socks5ServerDataFlow::Read(
-    std::unique_ptr<utils::Buffer>&& buffer, DataEventHandler handler) {
+utils::Cancelable Socks5ServerDataFlow::Read(utils::Buffer&& buffer,
+                                             DataEventHandler handler) {
   BOOST_ASSERT(!reading_);
   BOOST_ASSERT(!reporting_);
   BOOST_ASSERT(!read_closed_);
@@ -62,8 +62,7 @@ utils::Cancelable Socks5ServerDataFlow::Read(
 
   read_cancelable_ = data_flow_->Read(
       std::move(buffer),
-      [this, handler](std::unique_ptr<utils::Buffer>&& buffer,
-                      std::error_code ec) {
+      [this, handler](utils::Buffer&& buffer, std::error_code ec) {
         reading_ = false;
 
         if (ec) {
@@ -84,7 +83,7 @@ utils::Cancelable Socks5ServerDataFlow::Read(
             // report and connect cancelable should not be in use.
             write_cancelable_.Cancel();
           }
-          handler(nullptr, ec);
+          handler(std::move(buffer), ec);
           return;
         }
 
@@ -94,8 +93,8 @@ utils::Cancelable Socks5ServerDataFlow::Read(
   return read_cancelable_;
 }
 
-utils::Cancelable Socks5ServerDataFlow::Write(
-    std::unique_ptr<utils::Buffer>&& buffer, EventHandler handler) {
+utils::Cancelable Socks5ServerDataFlow::Write(utils::Buffer&& buffer,
+                                              EventHandler handler) {
   BOOST_ASSERT(!writing_);
   BOOST_ASSERT(!reporting_);
   BOOST_ASSERT(!write_closed_);
@@ -235,14 +234,14 @@ utils::Cancelable Socks5ServerDataFlow::Continue(EventHandler handler) {
       break;
   }
 
-  auto buffer = std::make_unique<utils::Buffer>(len);
-  buffer->SetByte(0, 5);
-  buffer->SetByte(1, 0);
-  buffer->SetByte(2, 0);
-  buffer->SetByte(3, type);
+  auto buffer = utils::Buffer(len);
+  buffer.SetByte(0, 5);
+  buffer.SetByte(1, 0);
+  buffer.SetByte(2, 0);
+  buffer.SetByte(3, type);
 
   for (size_t i = 4; i < len - 4; i++) {
-    buffer->SetByte(i, 0);
+    buffer.SetByte(i, 0);
   }
 
   reportable_ = false;
@@ -299,11 +298,11 @@ utils::Cancelable Socks5ServerDataFlow::ReportError(std::error_code error_code,
     return open_cancelable_;
   }
 
-  std::unique_ptr<utils::Buffer> buffer = std::make_unique<utils::Buffer>(10);
-  buffer->SetByte(0, 5);
-  buffer->SetByte(1, 1);  // TODO: Return proper error code
-  buffer->SetByte(2, 0);
-  buffer->SetByte(3, 1);
+  auto buffer = utils::Buffer(10);
+  buffer.SetByte(0, 5);
+  buffer.SetByte(1, 1);  // TODO: Return proper error code
+  buffer.SetByte(2, 0);
+  buffer.SetByte(3, 1);
 
   write_cancelable_ =
       data_flow_->Write(std::move(buffer), [this, handler](std::error_code ec) {
@@ -324,11 +323,11 @@ void Socks5ServerDataFlow::EnsurePendingAuthBuffer() {
   }
 }
 
-void Socks5ServerDataFlow::AppendToAuthBuffer(const utils::Buffer* buffer) {
+void Socks5ServerDataFlow::AppendToAuthBuffer(const utils::Buffer& buffer) {
   BOOST_ASSERT(pending_auth_);
-  BOOST_ASSERT(pending_auth_length_ + buffer->size() <= AUTH_READ_BUFFER_SIZE);
+  BOOST_ASSERT(pending_auth_length_ + buffer.size() <= AUTH_READ_BUFFER_SIZE);
 
-  buffer->WalkInternalChunk(
+  buffer.WalkInternalChunk(
       [this](const void* data, size_t len, void* context) {
         (void)context;
         std::memcpy(pending_auth_.get() + pending_auth_length_, data, len);
@@ -340,9 +339,8 @@ void Socks5ServerDataFlow::AppendToAuthBuffer(const utils::Buffer* buffer) {
 
 void Socks5ServerDataFlow::NegotiateRead(EventHandler handler) {
   read_cancelable_ = data_flow_->Read(
-      std::make_unique<utils::Buffer>(AUTH_READ_BUFFER_SIZE),
-      [this, handler](std::unique_ptr<utils::Buffer> buffer,
-                      std::error_code ec) mutable {
+      utils::Buffer(AUTH_READ_BUFFER_SIZE),
+      [this, handler](utils::Buffer&& buffer, std::error_code ec) mutable {
         if (ec) {
           NEERROR << "Error happened when reading hello from SOCKS5 client, "
                      "error code is:"
@@ -356,14 +354,14 @@ void Socks5ServerDataFlow::NegotiateRead(EventHandler handler) {
 
         EnsurePendingAuthBuffer();
 
-        if (pending_auth_length_ + buffer->size() > AUTH_READ_BUFFER_SIZE) {
+        if (pending_auth_length_ + buffer.size() > AUTH_READ_BUFFER_SIZE) {
           NEERROR << "Hello request from client is too long";
 
           state_ = data_flow::State::Closed;
           handler(ErrorCode::IllegalRequest);
           return;
         }
-        AppendToAuthBuffer(buffer.get());
+        AppendToAuthBuffer(buffer);
 
         switch (negotiation_state_) {
           case NegotiateState::ReadingVersion: {
@@ -417,8 +415,8 @@ void Socks5ServerDataFlow::NegotiateRead(EventHandler handler) {
               return;
             }
 
-            buffer->ShrinkBack(buffer->size() - 2);
-            buffer->SetByte(1, 0);
+            buffer.ShrinkBack(buffer.size() - 2);
+            buffer.SetByte(1, 0);
 
             pending_auth_length_ = 0;
 

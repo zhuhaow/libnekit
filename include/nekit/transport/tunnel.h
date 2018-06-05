@@ -65,7 +65,7 @@ class Tunnel final : private boost::noncopyable {
 
   void ResetTimer();
 
-  std::unique_ptr<utils::Buffer> CreateBuffer();
+  utils::Buffer CreateBuffer();
 
   std::shared_ptr<utils::Session> session_;
 

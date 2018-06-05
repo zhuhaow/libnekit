@@ -49,12 +49,11 @@ class HttpDataFlow : public RemoteDataFlowInterface {
 
   ~HttpDataFlow();
 
-  utils::Cancelable Read(std::unique_ptr<utils::Buffer>&& buffer,
+  utils::Cancelable Read(utils::Buffer&& buffer,
                          DataEventHandler handler) override
       __attribute__((warn_unused_result));
 
-  utils::Cancelable Write(std::unique_ptr<utils::Buffer>&& buffer,
-                          EventHandler handler) override
+  utils::Cancelable Write(utils::Buffer&& buffer, EventHandler handler) override
       __attribute__((warn_unused_result));
 
   utils::Cancelable CloseWrite(EventHandler handler) override
@@ -116,7 +115,7 @@ class HttpDataFlow : public RemoteDataFlowInterface {
 
   bool finish_response_{false}, success_response_{false};
   size_t header_offset_{0};
-  std::unique_ptr<utils::Buffer> pending_payload_;
+  utils::Buffer pending_payload_;
 };
 
 std::error_code make_error_code(HttpDataFlow::ErrorCode ec);

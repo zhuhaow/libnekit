@@ -39,11 +39,9 @@ class HttpServerDataFlow : public LocalDataFlowInterface {
                      std::shared_ptr<utils::Session> session);
   ~HttpServerDataFlow();
 
-  utils::Cancelable Read(std::unique_ptr<utils::Buffer>&&,
-                         DataEventHandler) override
+  utils::Cancelable Read(utils::Buffer&&, DataEventHandler) override
       __attribute__((warn_unused_result));
-  utils::Cancelable Write(std::unique_ptr<utils::Buffer>&&,
-                          EventHandler) override
+  utils::Cancelable Write(utils::Buffer&&, EventHandler) override
       __attribute__((warn_unused_result));
 
   utils::Cancelable CloseWrite(EventHandler) override
@@ -92,7 +90,6 @@ class HttpServerDataFlow : public LocalDataFlowInterface {
   bool OnMessageComplete(size_t buffer_offset, bool upgrade);
 
  private:
-  void EnsurePendingBuffer();
   void NegotiateRead(EventHandler handler);
 
   std::unique_ptr<LocalDataFlowInterface> data_flow_;
@@ -112,7 +109,7 @@ class HttpServerDataFlow : public LocalDataFlowInterface {
 
   utils::Cancelable open_cancelable_, read_cancelable_, write_cancelable_;
 
-  std::unique_ptr<utils::Buffer> first_header_;
+  utils::Buffer first_header_;
 
   utils::HttpMessageStreamRewriter rewriter_;
   http_parser_url url_parser_;

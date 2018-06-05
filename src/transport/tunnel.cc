@@ -127,8 +127,7 @@ void Tunnel::ForwardLocal() {
                !remote_data_flow_->IsWriteClosed());
 
   local_read_cancelable_ = local_data_flow_->Read(
-      CreateBuffer(),
-      [this](std::unique_ptr<utils::Buffer>&& buffer, std::error_code ec) {
+      CreateBuffer(), [this](utils::Buffer&& buffer, std::error_code ec) {
         ResetTimer();
 
         if (ec) {
@@ -188,8 +187,7 @@ void Tunnel::ForwardRemote() {
                !local_data_flow_->IsWriteClosed());
 
   remote_read_cancelable_ = remote_data_flow_->Read(
-      CreateBuffer(),
-      [this](std::unique_ptr<utils::Buffer>&& buffer, std::error_code ec) {
+      CreateBuffer(), [this](utils::Buffer&& buffer, std::error_code ec) {
         ResetTimer();
         if (ec) {
           if (ec == nekit::transport::ErrorCode::EndOfFile) {
@@ -250,8 +248,8 @@ void Tunnel::ReleaseTunnel() { tunnel_manager_->NotifyClosed(this); }
 
 void Tunnel::ResetTimer() { timeout_timer_.Wait(TIMEOUT_INTERVAL); }
 
-std::unique_ptr<utils::Buffer> Tunnel::CreateBuffer() {
-  return std::make_unique<utils::Buffer>(8192);
+utils::Buffer Tunnel::CreateBuffer() {
+  return utils::Buffer(NEKIT_TUNNEL_BUFFER_SIZE);
 }
 
 Tunnel& TunnelManager::Build(

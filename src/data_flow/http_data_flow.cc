@@ -99,7 +99,7 @@ HttpDataFlow::~HttpDataFlow() {
   write_cancelable_.Cancel();
 }
 
-utils::Cancelable HttpDataFlow::Read(std::unique_ptr<utils::Buffer>&& buffer,
+utils::Cancelable HttpDataFlow::Read(utils::Buffer&& buffer,
                                      DataEventHandler handler) {
   BOOST_ASSERT(state_ != data_flow::State::Closed &&
                state_ != data_flow::State::Establishing);
@@ -109,8 +109,8 @@ utils::Cancelable HttpDataFlow::Read(std::unique_ptr<utils::Buffer>&& buffer,
   reading_ = true;
 
   read_cancelable_ = data_flow_->Read(
-      std::move(buffer), [this, handler](std::unique_ptr<utils::Buffer> buffer,
-                                         std::error_code ec) {
+      std::move(buffer),
+      [this, handler](utils::Buffer&& buffer, std::error_code ec) {
         reading_ = false;
 
         if (ec) {
@@ -137,7 +137,7 @@ utils::Cancelable HttpDataFlow::Read(std::unique_ptr<utils::Buffer>&& buffer,
   return read_cancelable_;
 }
 
-utils::Cancelable HttpDataFlow::Write(std::unique_ptr<utils::Buffer>&& buffer,
+utils::Cancelable HttpDataFlow::Write(utils::Buffer&& buffer,
                                       EventHandler handler) {
   BOOST_ASSERT(state_ != data_flow::State::Closed &&
                state_ != data_flow::State::Establishing);
@@ -258,8 +258,8 @@ utils::Cancelable HttpDataFlow::Connect(EventHandler handler) {
 
         std::string request = os.str();
 
-        auto buffer = std::make_unique<utils::Buffer>(request.size());
-        buffer->SetData(0, request.size(), request.c_str());
+        auto buffer = utils::Buffer(request.size());
+        buffer.SetData(0, request.size(), request.c_str());
 
         connect_action_cancelable_ = data_flow_->Write(
             std::move(buffer),
@@ -290,11 +290,10 @@ std::shared_ptr<utils::Endpoint> HttpDataFlow::ConnectingTo() {
 }
 
 void HttpDataFlow::ReadResponse(EventHandler handler) {
-  auto buffer = std::make_unique<utils::Buffer>(96);
+  auto buffer = utils::Buffer(96);
   connect_action_cancelable_ = data_flow_->Read(
-      std::move(buffer),
-      [this, handler, cancelable{connect_cancelable_}](
-          std::unique_ptr<utils::Buffer>&& buffer, std::error_code ec) {
+      std::move(buffer), [this, handler, cancelable{connect_cancelable_}](
+                             utils::Buffer&& buffer, std::error_code ec) {
         if (cancelable.canceled()) {
           return;
         }
@@ -309,7 +308,7 @@ void HttpDataFlow::ReadResponse(EventHandler handler) {
           return;
         }
 
-        if (!rewriter_.RewriteBuffer(buffer.get())) {
+        if (!rewriter_.RewriteBuffer(&buffer)) {
           state_ = data_flow::State::Closed;
           handler(ErrorCode::InvalidResponse);
           return;
@@ -317,8 +316,8 @@ void HttpDataFlow::ReadResponse(EventHandler handler) {
 
         if (finish_response_) {
           if (success_response_) {
-            buffer->ShrinkFront(header_offset_);
-            if (buffer->size()) {
+            buffer.ShrinkFront(header_offset_);
+            if (!!buffer) {
               pending_payload_ = std::move(buffer);
             }
 

@@ -95,8 +95,8 @@ HttpServerDataFlow::~HttpServerDataFlow() {
   write_cancelable_.Cancel();
 }
 
-utils::Cancelable HttpServerDataFlow::Read(
-    std::unique_ptr<utils::Buffer>&& buffer, DataEventHandler handler) {
+utils::Cancelable HttpServerDataFlow::Read(utils::Buffer&& buffer,
+                                           DataEventHandler handler) {
   BOOST_ASSERT(!reading_);
   BOOST_ASSERT(!reporting_);
   BOOST_ASSERT(!read_closed_);
@@ -105,9 +105,7 @@ utils::Cancelable HttpServerDataFlow::Read(
 
   reading_ = true;
 
-  if (first_header_) {
-    buffer.reset();
-
+  if (!!first_header_) {
     read_cancelable_ = utils::Cancelable();
     boost::asio::post(*io(), [this, handler, cancelable{read_cancelable_}]() {
       if (cancelable.canceled()) {
@@ -116,7 +114,6 @@ utils::Cancelable HttpServerDataFlow::Read(
 
       reading_ = false;
       handler(std::move(first_header_), ErrorCode::NoError);
-      first_header_.reset();
     });
 
     return read_cancelable_;
@@ -124,8 +121,7 @@ utils::Cancelable HttpServerDataFlow::Read(
 
   read_cancelable_ = data_flow_->Read(
       std::move(buffer),
-      [this, handler](std::unique_ptr<utils::Buffer>&& buffer,
-                      std::error_code ec) {
+      [this, handler](utils::Buffer&& buffer, std::error_code ec) {
         reading_ = false;
 
         if (ec) {
@@ -147,13 +143,13 @@ utils::Cancelable HttpServerDataFlow::Read(
             write_cancelable_.Cancel();
           }
 
-          handler(nullptr, ec);
+          handler(std::move(buffer), ec);
           return;
         }
 
         if (!is_connect_) {
-          if (!rewriter_.RewriteBuffer(buffer.get())) {
-            handler(nullptr, ErrorCode::InvalidRequest);
+          if (!rewriter_.RewriteBuffer(&buffer)) {
+            handler(std::move(buffer), ErrorCode::InvalidRequest);
             return;
           }
         }
@@ -164,8 +160,8 @@ utils::Cancelable HttpServerDataFlow::Read(
   return read_cancelable_;
 }
 
-utils::Cancelable HttpServerDataFlow::Write(
-    std::unique_ptr<utils::Buffer>&& buffer, EventHandler handler) {
+utils::Cancelable HttpServerDataFlow::Write(utils::Buffer&& buffer,
+                                            EventHandler handler) {
   BOOST_ASSERT(!writing_);
   BOOST_ASSERT(!reporting_);
   BOOST_ASSERT(!write_closed_);
@@ -293,10 +289,9 @@ utils::Cancelable HttpServerDataFlow::Continue(EventHandler handler) {
     static std::string connect_response_header =
         "HTTP/1.1 200 Connection Established\r\n\r\n";
 
-    auto buffer =
-        std::make_unique<utils::Buffer>(connect_response_header.size());
-    buffer->SetData(0, connect_response_header.size(),
-                    connect_response_header.c_str());
+    auto buffer = utils::Buffer(connect_response_header.size());
+    buffer.SetData(0, connect_response_header.size(),
+                   connect_response_header.c_str());
 
     open_cancelable_ = data_flow_->Write(
         std::move(buffer), [this, handler](std::error_code ec) {
@@ -365,17 +360,10 @@ LocalDataFlowInterface* HttpServerDataFlow::NextLocalHop() const {
   return data_flow_.get();
 }
 
-void HttpServerDataFlow::EnsurePendingBuffer() {
-  if (!first_header_) {
-    first_header_ = std::make_unique<utils::Buffer>(0);
-  }
-}
-
 void HttpServerDataFlow::NegotiateRead(EventHandler handler) {
   read_cancelable_ = data_flow_->Read(
-      std::make_unique<utils::Buffer>(AUTH_READ_BUFFER_SIZE),
-      [this, handler](std::unique_ptr<utils::Buffer> buffer,
-                      std::error_code ec) mutable {
+      utils::Buffer(AUTH_READ_BUFFER_SIZE),
+      [this, handler](utils::Buffer&& buffer, std::error_code ec) mutable {
         if (ec) {
           NEERROR
               << "Error happened when reading first request from HTTP client, "
@@ -388,7 +376,7 @@ void HttpServerDataFlow::NegotiateRead(EventHandler handler) {
           return;
         }
 
-        if (!rewriter_.RewriteBuffer(buffer.get())) {
+        if (!rewriter_.RewriteBuffer(&buffer)) {
           NEERROR << "Error happened when reading first request from HTTP "
                      "client, request is invalid.";
 
@@ -404,7 +392,7 @@ void HttpServerDataFlow::NegotiateRead(EventHandler handler) {
               NegotiateRead(handler);
               return;
             } else {
-              if (buffer->size() != first_header_offset_) {
+              if (buffer.size() != first_header_offset_) {
                 handler(ErrorCode::DataBeforeConnectRequestFinish);
                 return;
               }
@@ -417,8 +405,7 @@ void HttpServerDataFlow::NegotiateRead(EventHandler handler) {
           }
         }
 
-        EnsurePendingBuffer();
-        first_header_->InsertBack(std::move(*buffer));
+        first_header_.InsertBack(std::move(buffer));
         if (reading_first_header_) {
           NegotiateRead(handler);
           return;

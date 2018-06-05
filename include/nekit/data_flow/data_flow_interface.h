@@ -36,11 +36,11 @@
 #define NE_DATA_FLOW_CAN_CHECK_CLOSE_STATE(__state) \
   (__state == nekit::data_flow::State::Closing)
 
-#define NE_DATA_FLOW_CAN_CHECK_DATA_STATE(__state)                 \
+#define NE_DATA_FLOW_CAN_CHECK_DATA_STATE(__state)    \
   (__state == nekit::data_flow::State::Established || \
    __state == nekit::data_flow::State::Closing)
 
-#define NE_DATA_FLOW_WRITE_CLOSABLE(__data_flow)                         \
+#define NE_DATA_FLOW_WRITE_CLOSABLE(__data_flow)            \
   (__data_flow->State() == data_flow::State::Established || \
    (__data_flow->State() == data_flow::State::Closing &&    \
     !__data_flow->IsWriteClosed()))
@@ -66,14 +66,12 @@ class DataFlowInterface : public utils::AsyncIoInterface,
   virtual ~DataFlowInterface() = default;
 
   using DataEventHandler =
-      std::function<void(std::unique_ptr<utils::Buffer>&&, std::error_code)>;
+      std::function<void(utils::Buffer&&, std::error_code)>;
   using EventHandler = std::function<void(std::error_code)>;
 
-  virtual utils::Cancelable Read(std::unique_ptr<utils::Buffer>&&,
-                                 DataEventHandler)
+  virtual utils::Cancelable Read(utils::Buffer&&, DataEventHandler)
       __attribute__((warn_unused_result)) = 0;
-  virtual utils::Cancelable Write(std::unique_ptr<utils::Buffer>&&,
-                                  EventHandler)
+  virtual utils::Cancelable Write(utils::Buffer&&, EventHandler)
       __attribute__((warn_unused_result)) = 0;
 
   // Must not be writing.
@@ -93,7 +91,8 @@ class DataFlowInterface : public utils::AsyncIoInterface,
   virtual bool IsWriteClosing() const = 0;
 
   // Whether the data flow is trying to read data, only valid in state
-  // `Established` and `Closing`. Use `NE_DATA_FLOW_CAN_CHECK_DATA_STATE` to check.
+  // `Established` and `Closing`. Use `NE_DATA_FLOW_CAN_CHECK_DATA_STATE` to
+  // check.
   virtual bool IsReading() const = 0;
   // Whether the data flow is writing data, only valid in state `Established`
   // and `Closing`. Use `NE_DATA_FLOW_CAN_CHECK_DATA_STATE` to check.

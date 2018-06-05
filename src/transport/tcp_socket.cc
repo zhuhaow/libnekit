@@ -62,11 +62,11 @@ TcpSocket::~TcpSocket() {
   connect_cancelable_.Cancel();
 }
 
-utils::Cancelable TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
+utils::Cancelable TcpSocket::Read(utils::Buffer &&buffer,
                                   DataEventHandler handler) {
   BOOST_ASSERT(!read_closed_);
   BOOST_ASSERT(!reading_);
-  BOOST_ASSERT(buffer->size());
+  BOOST_ASSERT(!!buffer);
   BOOST_ASSERT(read_buffer_ && !read_buffer_->size());
   BOOST_ASSERT(state_ != data_flow::State::Closed);
 
@@ -74,7 +74,7 @@ utils::Cancelable TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
 
   read_cancelable_ = utils::Cancelable();
 
-  buffer->WalkInternalChunk(
+  buffer.WalkInternalChunk(
       [this](void *d, size_t s, void *c) {
         (void)c;
         read_buffer_->push_back(boost::asio::mutable_buffer(d, s));
@@ -124,8 +124,8 @@ utils::Cancelable TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
         NETRACE << "Successfully read " << bytes_transferred
                 << " bytes from socket.";
 
-        if (bytes_transferred != buffer->size()) {
-          buffer->ShrinkBack(buffer->size() - bytes_transferred);
+        if (bytes_transferred != buffer.size()) {
+          buffer.ShrinkBack(buffer.size() - bytes_transferred);
         }
 
         read_buffer_ = std::move(buffer_wrapper);
@@ -137,11 +137,11 @@ utils::Cancelable TcpSocket::Read(std::unique_ptr<utils::Buffer> &&buffer,
   return read_cancelable_;
 }
 
-utils::Cancelable TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
+utils::Cancelable TcpSocket::Write(utils::Buffer &&buffer,
                                    EventHandler handler) {
   BOOST_ASSERT(!write_closed_);
   BOOST_ASSERT(!writing_);
-  BOOST_ASSERT(buffer->size());
+  BOOST_ASSERT(!!buffer);
   BOOST_ASSERT(write_buffer_ && !write_buffer_->size());
   BOOST_ASSERT(state_ != data_flow::State::Closed);
 
@@ -149,7 +149,7 @@ utils::Cancelable TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
 
   write_cancelable_ = utils::Cancelable();
 
-  buffer->WalkInternalChunk(
+  buffer.WalkInternalChunk(
       [this](void *d, size_t s, void *c) {
         (void)c;
         write_buffer_->emplace_back(d, s);
@@ -161,9 +161,9 @@ utils::Cancelable TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
 
   boost::asio::async_write(
       socket_, *write_buffer_,
-      [this, buffer{std::move(buffer)}, handler,
-       cancelable{write_cancelable_}](const boost::system::error_code &ec,
-                                      std::size_t bytes_transferred) mutable {
+      [this, buffer{std::move(buffer)}, handler, cancelable{write_cancelable_}](
+          const boost::system::error_code &ec,
+          std::size_t bytes_transferred) mutable {
         if (cancelable.canceled()) {
           return;
         }
@@ -187,7 +187,7 @@ utils::Cancelable TcpSocket::Write(std::unique_ptr<utils::Buffer> &&buffer,
         NETRACE << "Successfully write " << bytes_transferred
                 << " bytes to socket.";
 
-        BOOST_ASSERT(bytes_transferred == buffer->size());
+        BOOST_ASSERT(bytes_transferred == buffer.size());
 
         write_buffer_->clear();
 

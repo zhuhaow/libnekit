@@ -43,11 +43,9 @@ class TcpSocket final : public data_flow::LocalDataFlowInterface,
   explicit TcpSocket(std::shared_ptr<utils::Session> session);
   ~TcpSocket();
 
-  utils::Cancelable Read(std::unique_ptr<utils::Buffer>&&,
-                         DataEventHandler) override
+  utils::Cancelable Read(utils::Buffer&&, DataEventHandler) override
       __attribute__((warn_unused_result));
-  utils::Cancelable Write(std::unique_ptr<utils::Buffer>&&,
-                          EventHandler) override
+  utils::Cancelable Write(utils::Buffer&&, EventHandler) override
       __attribute__((warn_unused_result));
 
   utils::Cancelable CloseWrite(EventHandler) override

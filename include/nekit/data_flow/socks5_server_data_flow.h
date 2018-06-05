@@ -43,11 +43,9 @@ class Socks5ServerDataFlow final : public LocalDataFlowInterface,
                        std::shared_ptr<utils::Session> session);
   ~Socks5ServerDataFlow();
 
-  utils::Cancelable Read(std::unique_ptr<utils::Buffer>&&,
-                         DataEventHandler) override
+  utils::Cancelable Read(utils::Buffer&&, DataEventHandler) override
       __attribute__((warn_unused_result));
-  utils::Cancelable Write(std::unique_ptr<utils::Buffer>&&,
-                          EventHandler) override
+  utils::Cancelable Write(utils::Buffer&&, EventHandler) override
       __attribute__((warn_unused_result));
 
   // This should cancel the current write request.
@@ -84,7 +82,7 @@ class Socks5ServerDataFlow final : public LocalDataFlowInterface,
 
  private:
   void EnsurePendingAuthBuffer();
-  void AppendToAuthBuffer(const utils::Buffer* buffer);
+  void AppendToAuthBuffer(const utils::Buffer& buffer);
   void NegotiateRead(EventHandler handler);
 
   std::unique_ptr<LocalDataFlowInterface> data_flow_;
