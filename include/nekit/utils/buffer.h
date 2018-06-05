@@ -39,6 +39,7 @@ struct Buf;
 class Buffer final : private boost::noncopyable {
  public:
   Buffer(size_t size);
+  Buffer(Buffer&& buffer);
   ~Buffer();
 
   void Insert(Buffer&& buffer, size_t pos);

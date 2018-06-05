@@ -94,6 +94,18 @@ Buffer::Buffer(size_t size) {
   size_ = size;
 }
 
+Buffer::Buffer(Buffer&& buffer) {
+  if (&buffer == this) {
+    return;
+  }
+
+  head_ = std::move(buffer.head_);
+  tail_ = buffer.tail_;
+  size_ = buffer.size_;
+  buffer.tail_ = nullptr;
+  buffer.size_ = 0;
+}
+
 Buffer::~Buffer() = default;
 
 void Buffer::Insert(nekit::utils::Buffer&& buffer, size_t pos) {
