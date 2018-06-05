@@ -94,6 +94,8 @@ Buffer::Buffer(size_t size) {
   size_ = size;
 }
 
+Buffer::Buffer() : Buffer(0) {}
+
 Buffer::Buffer(Buffer&& buffer) {
   if (&buffer == this) {
     return;

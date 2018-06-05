@@ -38,6 +38,7 @@ struct Buf;
 // The buffer can be empty, which has size 0.
 class Buffer final : private boost::noncopyable {
  public:
+  Buffer();
   Buffer(size_t size);
   Buffer(Buffer&& buffer);
   ~Buffer();
