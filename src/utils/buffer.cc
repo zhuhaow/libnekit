@@ -96,9 +96,11 @@ Buffer::Buffer(size_t size) {
 
 Buffer::Buffer() : Buffer(0) {}
 
-Buffer::Buffer(Buffer&& buffer) {
+Buffer::Buffer(Buffer&& buffer) { *this = std::move(buffer); }
+
+Buffer& Buffer::operator=(Buffer&& buffer) {
   if (&buffer == this) {
-    return;
+    return *this;
   }
 
   head_ = std::move(buffer.head_);
@@ -106,6 +108,7 @@ Buffer::Buffer(Buffer&& buffer) {
   size_ = buffer.size_;
   buffer.tail_ = nullptr;
   buffer.size_ = 0;
+  return *this;
 }
 
 Buffer::~Buffer() = default;
