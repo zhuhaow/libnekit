@@ -22,17 +22,71 @@
 
 #pragma once
 
+#include <map>
 #include <system_error>
+#include <memory>
+
+#include <boost/any.hpp>
 
 namespace nekit {
 namespace utils {
+
 enum class NEKitErrorCode { NoError, Canceled, MemoryAllocationFailed };
 std::error_code make_error_code(NEKitErrorCode);
+
 }  // namespace utils
 }  // namespace nekit
 
 namespace std {
 template <>
 struct is_error_code_enum<nekit::utils::NEKitErrorCode> : true_type {};
+}  // namespace std
 
+namespace nekit {
+namespace utils {
+
+class Error {
+ public:
+  Error() : Error(NEKitErrorCode::NoError) {}
+  Error(std::error_code ec) : ec_{ec} {}
+  template <typename ErrorCodeEnum,
+            typename =
+                std::enable_if_t<std::is_error_code_enum<ErrorCodeEnum>::value>>
+  Error(ErrorCodeEnum ec) : ec_{make_error_code(ec)} {}
+
+  explicit operator bool() const { return bool(ec_); }
+
+  const std::error_code& ErrorCode() const { return ec_; }
+
+  template <typename T>
+  void AddInfo(int key, T value) {
+    if (!info_) {
+      info_ = std::make_shared<std::map<int, boost::any>>();
+    }
+
+    info_->emplace(key, value);
+  }
+
+  bool HasInfo(int key) const {
+    return info_ && info_->find(key) != info_->cend();
+  }
+  template <typename T>
+  const T& GetInfo(int key) const {
+    return boost::any_cast<T>(info_->at(key));
+  }
+
+ private:
+  std::error_code ec_;
+  std::shared_ptr<std::map<int, boost::any>> info_;
+};
+
+inline std::error_code make_error_code(Error error) {
+  return error.ErrorCode();
+}
+}  // namespace utils
+}  // namespace nekit
+
+namespace std {
+template <>
+struct is_error_code_enum<nekit::utils::Error> : true_type {};
 }  // namespace std

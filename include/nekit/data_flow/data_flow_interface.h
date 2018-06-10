@@ -24,13 +24,13 @@
 
 #include <functional>
 #include <memory>
-#include <system_error>
 
 #include <boost/noncopyable.hpp>
 
 #include "../utils/async_io_interface.h"
 #include "../utils/buffer.h"
 #include "../utils/cancelable.h"
+#include "../utils/error.h"
 #include "../utils/session.h"
 
 #define NE_DATA_FLOW_CAN_CHECK_CLOSE_STATE(__state) \
@@ -65,9 +65,8 @@ class DataFlowInterface : public utils::AsyncIoInterface,
  public:
   virtual ~DataFlowInterface() = default;
 
-  using DataEventHandler =
-      std::function<void(utils::Buffer&&, std::error_code)>;
-  using EventHandler = std::function<void(std::error_code)>;
+  using DataEventHandler = std::function<void(utils::Buffer&&, utils::Error)>;
+  using EventHandler = std::function<void(utils::Error)>;
 
   virtual utils::Cancelable Read(utils::Buffer&&, DataEventHandler)
       __attribute__((warn_unused_result)) = 0;
