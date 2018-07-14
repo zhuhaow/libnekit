@@ -36,12 +36,9 @@ class LocalDataFlowInterface : public DataFlowInterface {
   virtual utils::Cancelable Continue(EventHandler)
       __attribute__((warn_unused_result)) = 0;
 
-  // Close read and write now and change state to `Closing` until finishing the
-  // report.
-  virtual utils::Cancelable ReportError(std::error_code, EventHandler)
-      __attribute__((warn_unused_result)) = 0;
-
-  virtual LocalDataFlowInterface* NextLocalHop() const = 0;
+  virtual LocalDataFlowInterface* NextLocalHop() const {
+    return static_cast<LocalDataFlowInterface*>(NextHop());
+  }
 };
 }  // namespace data_flow
 }  // namespace nekit

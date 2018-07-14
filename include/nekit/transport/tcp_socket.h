@@ -51,18 +51,9 @@ class TcpSocket final : public data_flow::LocalDataFlowInterface,
   utils::Cancelable CloseWrite(EventHandler) override
       __attribute__((warn_unused_result));
 
-  bool IsReadClosed() const override;
-  bool IsWriteClosed() const override;
-  bool IsWriteClosing() const override;
-
-  bool IsReading() const override;
-  bool IsWriting() const override;
-
-  data_flow::State State() const override;
+  const data_flow::FlowStateMachine& StateMachine() const override;
 
   data_flow::DataFlowInterface* NextHop() const override;
-
-  std::shared_ptr<utils::Endpoint> ConnectingTo() override;
 
   data_flow::DataType FlowDataType() const override;
 
@@ -76,15 +67,10 @@ class TcpSocket final : public data_flow::LocalDataFlowInterface,
   utils::Cancelable Continue(EventHandler) override
       __attribute__((warn_unused_result));
 
-  utils::Cancelable ReportError(std::error_code, EventHandler) override
-      __attribute__((warn_unused_result));
-
-  LocalDataFlowInterface* NextLocalHop() const override;
-
   utils::Cancelable Connect(EventHandler) override
       __attribute__((warn_unused_result));
 
-  RemoteDataFlowInterface* NextRemoteHop() const override;
+  std::shared_ptr<utils::Endpoint> ConnectingTo() override;
 
   friend class TcpListener;
 
@@ -100,11 +86,10 @@ class TcpSocket final : public data_flow::LocalDataFlowInterface,
   std::shared_ptr<utils::Endpoint> connect_to_;
   std::unique_ptr<std::vector<boost::asio::const_buffer>> write_buffer_;
   std::unique_ptr<std::vector<boost::asio::mutable_buffer>> read_buffer_;
-  bool read_closed_{false}, write_closed_{false}, reading_{false},
-      writing_{false};
   utils::Cancelable read_cancelable_, write_cancelable_, report_cancelable_,
       connect_cancelable_;
-  data_flow::State state_{data_flow::State::Closed};
+
+  data_flow::FlowStateMachine state_machine_;
 };
 }  // namespace transport
 }  // namespace nekit

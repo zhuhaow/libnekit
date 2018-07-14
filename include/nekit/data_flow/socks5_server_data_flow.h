@@ -52,18 +52,11 @@ class Socks5ServerDataFlow final : public LocalDataFlowInterface,
   utils::Cancelable CloseWrite(EventHandler) override
       __attribute__((warn_unused_result));
 
-  bool IsReadClosed() const override;
-  bool IsWriteClosed() const override;
-  bool IsWriteClosing() const override;
+  const FlowStateMachine& StateMachine() const override;
 
-  bool IsReading() const override;
-  bool IsWriting() const override;
+  DataFlowInterface* NextHop() const override;
 
-  data_flow::State State() const override;
-
-  data_flow::DataFlowInterface* NextHop() const override;
-
-  data_flow::DataType FlowDataType() const override;
+  DataType FlowDataType() const override;
 
   std::shared_ptr<utils::Session> Session() const override;
 
@@ -74,11 +67,6 @@ class Socks5ServerDataFlow final : public LocalDataFlowInterface,
 
   utils::Cancelable Continue(EventHandler) override
       __attribute__((warn_unused_result));
-
-  utils::Cancelable ReportError(std::error_code, EventHandler) override
-      __attribute__((warn_unused_result));
-
-  LocalDataFlowInterface* NextLocalHop() const override;
 
  private:
   void EnsurePendingAuthBuffer();
@@ -91,16 +79,10 @@ class Socks5ServerDataFlow final : public LocalDataFlowInterface,
   std::unique_ptr<uint8_t[]> pending_auth_;
   size_t pending_auth_length_{0};
 
-  bool reporting_{false},  // Reporting error
-      reportable_{false},  // Can report error
-      reading_{false},     // Processing reading request
-      writing_{false},     // Processing writing request
-      opening_{false},     // Negotiating
-      read_closed_{false}, write_closed_{false};
+  FlowStateMachine state_machine_{FlowType::Local};
 
   enum class NegotiateState { ReadingVersion, ReadingRequest };
   NegotiateState negotiation_state_{NegotiateState::ReadingVersion};
-  data_flow::State state_{data_flow::State::Closed};
 
   utils::Cancelable open_cancelable_, read_cancelable_, write_cancelable_;
 };

@@ -32,31 +32,12 @@
 #include "../utils/cancelable.h"
 #include "../utils/error.h"
 #include "../utils/session.h"
-
-#define NE_DATA_FLOW_CAN_CHECK_CLOSE_STATE(__state) \
-  (__state == nekit::data_flow::State::Closing)
-
-#define NE_DATA_FLOW_CAN_CHECK_DATA_STATE(__state)    \
-  (__state == nekit::data_flow::State::Established || \
-   __state == nekit::data_flow::State::Closing)
-
-#define NE_DATA_FLOW_WRITE_CLOSABLE(__data_flow)            \
-  (__data_flow->State() == data_flow::State::Established || \
-   (__data_flow->State() == data_flow::State::Closing &&    \
-    !__data_flow->IsWriteClosed()))
+#include "flow_state_machine.h"
 
 namespace nekit {
 namespace data_flow {
 
 enum class DataType { Stream, Packet };
-
-enum class State {
-  Closed,
-  Establishing,
-  Established,
-  Closing  // Note even read and write are both closed, it doesn't mean the
-           // data flow is ready to be released. Check for the `Closed` flag.
-};
 
 class DataFlowInterface : public utils::AsyncIoInterface,
                           // This is probably not necessary, but we enforce it
@@ -73,31 +54,10 @@ class DataFlowInterface : public utils::AsyncIoInterface,
   virtual utils::Cancelable Write(utils::Buffer&&, EventHandler)
       __attribute__((warn_unused_result)) = 0;
 
-  // Must not be writing.
   virtual utils::Cancelable CloseWrite(EventHandler)
       __attribute__((warn_unused_result)) = 0;
 
-  // Whether the data flow will read more data, only valid when in state
-  // `Closing`. Use `NE_DATA_FLOW_CAN_CHECK_CLOSE_STATE` to check.
-  virtual bool IsReadClosed() const = 0;
-
-  // Whether the data flow can send more data, only valid when in state
-  // `Closing`. Use `NE_DATA_FLOW_CAN_CHECK_CLOSE_STATE` to check.
-  virtual bool IsWriteClosed() const = 0;
-
-  // Whether the socket is closing, only valid in state `Closing`. Use
-  // `NE_DATA_FLOW_CAN_CHECK_CLOSE_STATE` to check.
-  virtual bool IsWriteClosing() const = 0;
-
-  // Whether the data flow is trying to read data, only valid in state
-  // `Established` and `Closing`. Use `NE_DATA_FLOW_CAN_CHECK_DATA_STATE` to
-  // check.
-  virtual bool IsReading() const = 0;
-  // Whether the data flow is writing data, only valid in state `Established`
-  // and `Closing`. Use `NE_DATA_FLOW_CAN_CHECK_DATA_STATE` to check.
-  virtual bool IsWriting() const = 0;
-
-  virtual data_flow::State State() const = 0;
+  virtual const FlowStateMachine& StateMachine() const = 0;
 
   virtual DataFlowInterface* NextHop() const = 0;
 

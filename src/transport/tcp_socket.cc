@@ -42,7 +42,8 @@ TcpSocket::TcpSocket(boost::asio::ip::tcp::socket &&socket,
       write_buffer_{
           std::make_unique<std::vector<boost::asio::const_buffer>>(0)},
       read_buffer_{
-          std::make_unique<std::vector<boost::asio::mutable_buffer>>(0)} {
+          std::make_unique<std::vector<boost::asio::mutable_buffer>>(0)},
+      state_machine_{data_flow::FlowType::Local} {
   BOOST_ASSERT(&socket_.get_io_context() == session->io());
 }
 
@@ -53,7 +54,8 @@ TcpSocket::TcpSocket(std::shared_ptr<utils::Session> session)
       write_buffer_{
           std::make_unique<std::vector<boost::asio::const_buffer>>(0)},
       read_buffer_{
-          std::make_unique<std::vector<boost::asio::mutable_buffer>>(0)} {}
+          std::make_unique<std::vector<boost::asio::mutable_buffer>>(0)},
+      state_machine_{data_flow::FlowType::Remote} {}
 
 TcpSocket::~TcpSocket() {
   read_cancelable_.Cancel();
@@ -64,12 +66,6 @@ TcpSocket::~TcpSocket() {
 
 utils::Cancelable TcpSocket::Read(utils::Buffer &&buffer,
                                   DataEventHandler handler) {
-  BOOST_ASSERT(!read_closed_);
-  BOOST_ASSERT(!reading_);
-  BOOST_ASSERT(!!buffer);
-  BOOST_ASSERT(read_buffer_ && !read_buffer_->size());
-  BOOST_ASSERT(state_ != data_flow::State::Closed);
-
   NETRACE << "Start reading data.";
 
   read_cancelable_ = utils::Cancelable();
@@ -82,8 +78,7 @@ utils::Cancelable TcpSocket::Read(utils::Buffer &&buffer,
       },
       0, nullptr);
 
-  reading_ = true;
-
+  state_machine_.ReadBegin();
   socket_.async_read_some(
       *read_buffer_,
       [this, buffer{std::move(buffer)}, buffer_wrapper{std::move(read_buffer_)},
@@ -94,25 +89,17 @@ utils::Cancelable TcpSocket::Read(utils::Buffer &&buffer,
           return;
         }
 
-        reading_ = false;
+        state_machine_.ReadEnd();
 
         if (ec) {
           auto error = ConvertBoostError(ec);
 
           if (error == ErrorCode::EndOfFile) {
-            read_closed_ = true;
-            if (write_closed_ && !writing_) {
-              // Write is already closed.
-              state_ = data_flow::State::Closed;
-            } else {
-              state_ = data_flow::State::Closing;
-            }
+            state_machine_.ReadClosed();
             NEDEBUG << "Socket got EOF.";
           } else {
             NEERROR << "Reading from socket failed due to " << error << ".";
-            state_ = data_flow::State::Closed;
-            read_closed_ = true;
-            write_closed_ = true;
+            state_machine_.Errored();
             // report and connect cancelable should not be in use.
             write_cancelable_.Cancel();
           }
@@ -139,12 +126,6 @@ utils::Cancelable TcpSocket::Read(utils::Buffer &&buffer,
 
 utils::Cancelable TcpSocket::Write(utils::Buffer &&buffer,
                                    EventHandler handler) {
-  BOOST_ASSERT(!write_closed_);
-  BOOST_ASSERT(!writing_);
-  BOOST_ASSERT(!!buffer);
-  BOOST_ASSERT(write_buffer_ && !write_buffer_->size());
-  BOOST_ASSERT(state_ != data_flow::State::Closed);
-
   NETRACE << "Start writing data.";
 
   write_cancelable_ = utils::Cancelable();
@@ -157,7 +138,7 @@ utils::Cancelable TcpSocket::Write(utils::Buffer &&buffer,
       },
       0, nullptr);
 
-  writing_ = true;
+  state_machine_.WriteBegin();
 
   boost::asio::async_write(
       socket_, *write_buffer_,
@@ -168,15 +149,13 @@ utils::Cancelable TcpSocket::Write(utils::Buffer &&buffer,
           return;
         }
 
-        writing_ = false;
+        state_machine_.WriteEnd();
 
         if (ec) {
           auto error = ConvertBoostError(ec);
           NEERROR << "Write to socket failed due to " << error << ".";
 
-          read_closed_ = true;
-          write_closed_ = true;
-          state_ = data_flow::State::Closed;
+          state_machine_.Errored();
           // report and connect cancelable should not be in use.
           read_cancelable_.Cancel();
 
@@ -198,32 +177,23 @@ utils::Cancelable TcpSocket::Write(utils::Buffer &&buffer,
 }
 
 utils::Cancelable TcpSocket::CloseWrite(EventHandler handler) {
-  BOOST_ASSERT(!writing_);
-  BOOST_ASSERT(state_ != data_flow::State::Closed);
-
   NEDEBUG << "Closing socket writing.";
 
   std::error_code error;
 
-  if (write_closed_) {
-    NEDEBUG << "Socket writing is already closed, nothing happened.";
-    error = ErrorCode::NoError;
-  } else {
-    boost::system::error_code ec;
-    socket_.shutdown(socket_.shutdown_send, ec);
-    if (ec && ec != boost::asio::error::not_connected) {
-      NEERROR << "Failed to close socket writing due to " << ec << ".";
-    }
-
-    write_closed_ = true;
-    NEDEBUG << "Socket writing closed.";
-
-    error = ConvertBoostError(ec);
+  boost::system::error_code ec;
+  socket_.shutdown(socket_.shutdown_send, ec);
+  if (ec && ec != boost::asio::error::not_connected) {
+    NEERROR << "Failed to close socket writing due to " << ec << ".";
   }
 
+  NEDEBUG << "Socket writing closed.";
+
+  error = ConvertBoostError(ec);
+
   write_cancelable_ = utils::Cancelable();
-  writing_ = true;  // Probably not necessary, just guard some strange usage.
-  state_ = data_flow::State::Closing;
+
+  state_machine_.WriteCloseBegin();
 
   boost::asio::post(*io(),
                     [this, handler, cancelable{write_cancelable_}, error]() {
@@ -231,10 +201,7 @@ utils::Cancelable TcpSocket::CloseWrite(EventHandler handler) {
                         return;
                       }
 
-                      writing_ = false;
-                      if (read_closed_) {
-                        state_ = data_flow::State::Closed;
-                      }
+                      state_machine_.WriteCloseEnd();
 
                       handler(error);
                     });
@@ -242,32 +209,9 @@ utils::Cancelable TcpSocket::CloseWrite(EventHandler handler) {
   return write_cancelable_;
 }
 
-bool TcpSocket::IsReadClosed() const {
-  BOOST_ASSERT(NE_DATA_FLOW_CAN_CHECK_CLOSE_STATE(state_));
-  return read_closed_;
+const data_flow::FlowStateMachine &TcpSocket::StateMachine() const {
+  return state_machine_;
 }
-
-bool TcpSocket::IsWriteClosed() const {
-  BOOST_ASSERT(NE_DATA_FLOW_CAN_CHECK_CLOSE_STATE(state_));
-  return write_closed_;
-}
-
-bool TcpSocket::IsWriteClosing() const {
-  BOOST_ASSERT(NE_DATA_FLOW_CAN_CHECK_CLOSE_STATE(state_));
-  return write_closed_ && writing_;
-}
-
-bool TcpSocket::IsReading() const {
-  BOOST_ASSERT(NE_DATA_FLOW_CAN_CHECK_DATA_STATE(state_));
-  return reading_;
-}
-
-bool TcpSocket::IsWriting() const {
-  BOOST_ASSERT(NE_DATA_FLOW_CAN_CHECK_DATA_STATE(state_));
-  return writing_ && !write_closed_;
-}
-
-data_flow::State TcpSocket::State() const { return state_; }
 
 data_flow::DataFlowInterface *TcpSocket::NextHop() const { return nullptr; }
 
@@ -284,13 +228,12 @@ std::shared_ptr<utils::Session> TcpSocket::Session() const { return session_; }
 boost::asio::io_context *TcpSocket::io() { return &socket_.get_io_context(); }
 
 utils::Cancelable TcpSocket::Open(EventHandler handler) {
-  BOOST_ASSERT(state_ == data_flow::State::Closed);
+  state_machine_.ConnectBegin();
 
   report_cancelable_ =
       utils::Cancelable();  // Report error request will invalid this callback,
                             // so we just use report cancelable to guard the
                             // lifetime here.
-  state_ = data_flow::State::Establishing;
 
   NETRACE << "Open TCP socket that is already connected, do nothing.";
 
@@ -308,8 +251,6 @@ utils::Cancelable TcpSocket::Open(EventHandler handler) {
 }
 
 utils::Cancelable TcpSocket::Continue(EventHandler handler) {
-  BOOST_ASSERT(state_ == data_flow::State::Establishing);
-
   report_cancelable_ = utils::Cancelable();
 
   NETRACE << "Continue to establish connection.";
@@ -319,7 +260,7 @@ utils::Cancelable TcpSocket::Continue(EventHandler handler) {
       return;
     }
 
-    state_ = data_flow::State::Established;
+    state_machine_.Connected();
 
     NETRACE << "Connection is established.";
 
@@ -328,53 +269,14 @@ utils::Cancelable TcpSocket::Continue(EventHandler handler) {
   return report_cancelable_;
 }
 
-utils::Cancelable TcpSocket::ReportError(std::error_code ec,
-                                         EventHandler handler) {
-  BOOST_ASSERT(state_ != data_flow::State::Closed);
-
-  (void)ec;
-
-  NETRACE << "Reporting error " << ec << ".";
-
-  read_cancelable_.Cancel();
-  write_cancelable_.Cancel();
-  connect_cancelable_.Cancel();
-  report_cancelable_.Cancel();
-
-  reading_ = false;
-  writing_ = false;
-  read_closed_ = true;
-  write_closed_ = true;
-
-  report_cancelable_ = utils::Cancelable();
-
-  boost::asio::post(*io(), [handler, cancelable{report_cancelable_}]() {
-    if (cancelable.canceled()) {
-      return;
-    }
-
-    NETRACE << "Reported error.";
-
-    handler(ErrorCode::NoError);
-  });
-
-  return report_cancelable_;
-}
-
-data_flow::LocalDataFlowInterface *TcpSocket::NextLocalHop() const {
-  return nullptr;
-}
-
 utils::Cancelable TcpSocket::Connect(EventHandler handler) {
-  BOOST_ASSERT(state_ == data_flow::State::Closed);
-
   connect_to_ = session_->current_endpoint();
 
   BOOST_ASSERT(connect_to_);
 
   connector_ = std::make_unique<TcpConnector>(connect_to_, io());
 
-  state_ = data_flow::State::Establishing;
+  state_machine_.ConnectBegin();
 
   connect_cancelable_ = connector_->Connect(
       [this, handler, cancelable{connect_cancelable_}](
@@ -384,22 +286,18 @@ utils::Cancelable TcpSocket::Connect(EventHandler handler) {
         }
 
         if (ec) {
-          state_ = data_flow::State::Closed;
+          state_machine_.Errored();
           handler(ec);
           return;
         }
 
-        state_ = data_flow::State::Established;
+        state_machine_.Connected();
         socket_ = std::move(socket);
         handler(ec);
         return;
       });
 
   return connect_cancelable_;
-}
-
-data_flow::RemoteDataFlowInterface *TcpSocket::NextRemoteHop() const {
-  return nullptr;
 }
 
 std::error_code TcpSocket::ConvertBoostError(

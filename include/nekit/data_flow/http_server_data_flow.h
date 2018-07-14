@@ -47,18 +47,11 @@ class HttpServerDataFlow : public LocalDataFlowInterface {
   utils::Cancelable CloseWrite(EventHandler) override
       __attribute__((warn_unused_result));
 
-  bool IsReadClosed() const override;
-  bool IsWriteClosed() const override;
-  bool IsWriteClosing() const override;
+  const FlowStateMachine& StateMachine() const override;
 
-  bool IsReading() const override;
-  bool IsWriting() const override;
+  DataFlowInterface* NextHop() const override;
 
-  data_flow::State State() const override;
-
-  data_flow::DataFlowInterface* NextHop() const override;
-
-  data_flow::DataType FlowDataType() const override;
+  DataType FlowDataType() const override;
 
   std::shared_ptr<utils::Session> Session() const override;
 
@@ -69,11 +62,6 @@ class HttpServerDataFlow : public LocalDataFlowInterface {
 
   utils::Cancelable Continue(EventHandler) override
       __attribute__((warn_unused_result));
-
-  utils::Cancelable ReportError(std::error_code, EventHandler) override
-      __attribute__((warn_unused_result));
-
-  LocalDataFlowInterface* NextLocalHop() const override;
 
   bool OnMethod();
 
@@ -95,17 +83,10 @@ class HttpServerDataFlow : public LocalDataFlowInterface {
   std::unique_ptr<LocalDataFlowInterface> data_flow_;
   std::shared_ptr<utils::Session> session_;
 
-  bool reporting_{false},  // Reporting error
-      reportable_{false},  // Can report error
-      reading_{false},     // Processing reading request
-      writing_{false},     // Processing writing request
-      opening_{false},     // Negotiating
-      read_closed_{false}, write_closed_{false};
-
   bool is_connect_{false}, has_read_method_{false}, reading_first_header_{true};
   size_t first_header_offset_{0};
 
-  data_flow::State state_{data_flow::State::Closed};
+  FlowStateMachine state_machine_{FlowType::Local};
 
   utils::Cancelable open_cancelable_, read_cancelable_, write_cancelable_;
 

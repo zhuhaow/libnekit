@@ -59,17 +59,7 @@ class HttpDataFlow : public RemoteDataFlowInterface {
   utils::Cancelable CloseWrite(EventHandler handler) override
       __attribute__((warn_unused_result));
 
-  bool IsReadClosed() const override;
-
-  bool IsWriteClosed() const override;
-
-  bool IsWriteClosing() const override;
-
-  bool IsReading() const override;
-
-  bool IsWriting() const override;
-
-  data_flow::State State() const override;
+  const FlowStateMachine& StateMachine() const override;
 
   DataFlowInterface* NextHop() const override;
 
@@ -101,9 +91,8 @@ class HttpDataFlow : public RemoteDataFlowInterface {
 
   std::shared_ptr<utils::Endpoint> server_endpoint_;
   std::shared_ptr<utils::Endpoint> target_endpoint_;
-  data_flow::State state_{data_flow::State::Closed};
-  bool reading_{false}, writing_{false}, read_closed_{false},
-      write_closed_{false};
+
+  FlowStateMachine state_machine_{FlowType::Remote};
 
   std::shared_ptr<utils::Session> session_;
   std::unique_ptr<RemoteDataFlowInterface> data_flow_;

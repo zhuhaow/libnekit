@@ -119,12 +119,8 @@ void Tunnel::BeginForward() {
 void Tunnel::ForwardLocal() {
   CheckTunnelStatus();
 
-  BOOST_ASSERT(!local_data_flow_->IsReading());
-  BOOST_ASSERT(!remote_data_flow_->IsWriting());
-  BOOST_ASSERT(local_data_flow_->State() != data_flow::State::Closing ||
-               !local_data_flow_->IsReadClosed());
-  BOOST_ASSERT(remote_data_flow_->State() != data_flow::State::Closing ||
-               !remote_data_flow_->IsWriteClosed());
+  BOOST_ASSERT(local_data_flow_->StateMachine().IsReadable());
+  BOOST_ASSERT(remote_data_flow_->StateMachine().IsWritable());
 
   local_read_cancelable_ = local_data_flow_->Read(
       CreateBuffer(), [this](utils::Buffer&& buffer, std::error_code ec) {
@@ -133,7 +129,7 @@ void Tunnel::ForwardLocal() {
         if (ec) {
           if (ec == nekit::transport::ErrorCode::EndOfFile) {
             // Close remote write if it is not closed yet.
-            if (NE_DATA_FLOW_WRITE_CLOSABLE(remote_data_flow_)) {
+            if (remote_data_flow_->StateMachine().IsWriteClosable()) {
               remote_write_cancelable_ =
                   remote_data_flow_->CloseWrite([this](std::error_code ec) {
                     (void)ec;
@@ -148,17 +144,6 @@ void Tunnel::ForwardLocal() {
             return;
           }
 
-          ReleaseTunnel();
-          return;
-        }
-
-        if ((remote_data_flow_->State() == data_flow::State::Closing &&
-             remote_data_flow_->IsWriteClosed()) ||
-            remote_data_flow_->State() == data_flow::State::Closed) {
-          // This can't happen! Since we don't close the write yet, it
-          // must be closed due to error. Then `ReportError` should be called
-          // and the read callback should have been canceled.
-          BOOST_ASSERT(false);
           ReleaseTunnel();
           return;
         }
@@ -179,19 +164,15 @@ void Tunnel::ForwardLocal() {
 void Tunnel::ForwardRemote() {
   CheckTunnelStatus();
 
-  BOOST_ASSERT(!remote_data_flow_->IsReading());
-  BOOST_ASSERT(!local_data_flow_->IsWriting());
-  BOOST_ASSERT(remote_data_flow_->State() != data_flow::State::Closing ||
-               !remote_data_flow_->IsReadClosed());
-  BOOST_ASSERT(local_data_flow_->State() != data_flow::State::Closing ||
-               !local_data_flow_->IsWriteClosed());
+  BOOST_ASSERT(local_data_flow_->StateMachine().IsWritable());
+  BOOST_ASSERT(remote_data_flow_->StateMachine().IsReadable());
 
   remote_read_cancelable_ = remote_data_flow_->Read(
       CreateBuffer(), [this](utils::Buffer&& buffer, std::error_code ec) {
         ResetTimer();
         if (ec) {
           if (ec == nekit::transport::ErrorCode::EndOfFile) {
-            if (NE_DATA_FLOW_WRITE_CLOSABLE(local_data_flow_)) {
+            if (local_data_flow_->StateMachine().IsWriteClosable()) {
               local_write_cancelable_ =
                   local_data_flow_->CloseWrite([this](std::error_code ec) {
                     (void)ec;
@@ -205,12 +186,6 @@ void Tunnel::ForwardRemote() {
           }
 
           LocalReportError(ec);
-          return;
-        }
-
-        if (local_data_flow_->IsWriteClosed()) {
-          BOOST_ASSERT(false);
-          ReleaseTunnel();
           return;
         }
 
@@ -228,18 +203,15 @@ void Tunnel::ForwardRemote() {
 }
 
 void Tunnel::LocalReportError(std::error_code ec) {
-  local_write_cancelable_ =
-      local_data_flow_->ReportError(ec, [this](std::error_code ec) {
-        (void)ec;
-        ReleaseTunnel();
-        return;
-      });
+  (void)ec;
+  ReleaseTunnel();
 }
 
 void Tunnel::CheckTunnelStatus() {
-  if (local_data_flow_->State() == data_flow::State::Closed &&
-      (!remote_data_flow_ ||
-       (remote_data_flow_->State() == data_flow::State::Closed))) {
+  if (local_data_flow_->StateMachine().State() ==
+          data_flow::FlowState::Closed &&
+      (!remote_data_flow_ || (remote_data_flow_->StateMachine().State() ==
+                              data_flow::FlowState::Closed))) {
     ReleaseTunnel();
   }
 }

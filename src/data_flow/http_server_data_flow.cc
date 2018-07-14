@@ -97,22 +97,16 @@ HttpServerDataFlow::~HttpServerDataFlow() {
 
 utils::Cancelable HttpServerDataFlow::Read(utils::Buffer&& buffer,
                                            DataEventHandler handler) {
-  BOOST_ASSERT(!reading_);
-  BOOST_ASSERT(!reporting_);
-  BOOST_ASSERT(!read_closed_);
-  BOOST_ASSERT(!NextHop()->IsReading());
-  BOOST_ASSERT(state_ != data_flow::State::Closed);
+  state_machine_.ReadBegin();
 
-  reading_ = true;
-
-  if (!!first_header_) {
+  if (first_header_) {
     read_cancelable_ = utils::Cancelable();
     boost::asio::post(*io(), [this, handler, cancelable{read_cancelable_}]() {
       if (cancelable.canceled()) {
         return;
       }
 
-      reading_ = false;
+      state_machine_.ReadEnd();
       handler(std::move(first_header_), ErrorCode::NoError);
     });
 
@@ -122,23 +116,15 @@ utils::Cancelable HttpServerDataFlow::Read(utils::Buffer&& buffer,
   read_cancelable_ = data_flow_->Read(
       std::move(buffer),
       [this, handler](utils::Buffer&& buffer, std::error_code ec) {
-        reading_ = false;
+        state_machine_.ReadEnd();
 
         if (ec) {
           if (ec == transport::ErrorCode::EndOfFile) {
-            read_closed_ = true;
-            if (write_closed_ && !writing_) {
-              // Write is already closed.
-              state_ = data_flow::State::Closed;
-            } else {
-              state_ = data_flow::State::Closing;
-            }
+            state_machine_.ReadClosed();
             NEDEBUG << "Data flow got EOF.";
           } else {
             NEERROR << "Reading from data flow failed due to " << ec << ".";
-            state_ = data_flow::State::Closed;
-            read_closed_ = true;
-            write_closed_ = true;
+            state_machine_.Errored();
             // report and connect cancelable should not be in use.
             write_cancelable_.Cancel();
           }
@@ -149,6 +135,7 @@ utils::Cancelable HttpServerDataFlow::Read(utils::Buffer&& buffer,
 
         if (!is_connect_) {
           if (!rewriter_.RewriteBuffer(&buffer)) {
+            state_machine_.Errored();
             handler(std::move(buffer), ErrorCode::InvalidRequest);
             return;
           }
@@ -162,26 +149,16 @@ utils::Cancelable HttpServerDataFlow::Read(utils::Buffer&& buffer,
 
 utils::Cancelable HttpServerDataFlow::Write(utils::Buffer&& buffer,
                                             EventHandler handler) {
-  BOOST_ASSERT(!writing_);
-  BOOST_ASSERT(!reporting_);
-  BOOST_ASSERT(!write_closed_);
-  BOOST_ASSERT(!NextHop()->IsWriting());
-  BOOST_ASSERT(state_ != data_flow::State::Closed);
-
-  writing_ = true;
+  state_machine_.WriteBegin();
 
   write_cancelable_ =
       data_flow_->Write(std::move(buffer), [this, handler](std::error_code ec) {
-        writing_ = false;
+        state_machine_.WriteEnd();
 
         if (ec) {
           NEERROR << "Write to data flow failed due to " << ec << ".";
 
-          read_closed_ = true;
-          write_closed_ = true;
-          state_ = data_flow::State::Closed;
-          // report and connect cancelable should not be in use.
-          read_cancelable_.Cancel();
+          state_machine_.Errored();
         }
         handler(ec);
       });
@@ -190,22 +167,14 @@ utils::Cancelable HttpServerDataFlow::Write(utils::Buffer&& buffer,
 }
 
 utils::Cancelable HttpServerDataFlow::CloseWrite(EventHandler handler) {
-  BOOST_ASSERT(!writing_);
-  BOOST_ASSERT(!reporting_);
-  BOOST_ASSERT(!write_closed_);
-  BOOST_ASSERT(!NextHop()->IsWriting());
-
-  writing_ = true;
-  write_closed_ = true;
-
-  state_ = data_flow::State::Closing;
+  state_machine_.WriteCloseBegin();
 
   write_cancelable_ =
       data_flow_->CloseWrite([this, handler](std::error_code ec) {
-        writing_ = false;
+        state_machine_.WriteCloseEnd();
 
-        if (read_closed_) {
-          state_ = data_flow::State::Closed;
+        if (ec) {
+          state_machine_.Errored();
         }
 
         handler(ec);
@@ -214,32 +183,9 @@ utils::Cancelable HttpServerDataFlow::CloseWrite(EventHandler handler) {
   return write_cancelable_;
 }
 
-bool HttpServerDataFlow::IsReadClosed() const {
-  NE_DATA_FLOW_CAN_CHECK_CLOSE_STATE(state_);
-  return read_closed_;
+const data_flow::FlowStateMachine& HttpServerDataFlow::StateMachine() const {
+  return state_machine_;
 }
-
-bool HttpServerDataFlow::IsWriteClosed() const {
-  NE_DATA_FLOW_CAN_CHECK_CLOSE_STATE(state_);
-  return write_closed_;
-}
-
-bool HttpServerDataFlow::IsWriteClosing() const {
-  NE_DATA_FLOW_CAN_CHECK_CLOSE_STATE(state_);
-  return write_closed_ && writing_;
-}
-
-bool HttpServerDataFlow::IsReading() const {
-  NE_DATA_FLOW_CAN_CHECK_DATA_STATE(state_);
-  return data_flow_->IsReading();
-}
-
-bool HttpServerDataFlow::IsWriting() const {
-  NE_DATA_FLOW_CAN_CHECK_DATA_STATE(state_);
-  return data_flow_->IsWriting();
-}
-
-data_flow::State HttpServerDataFlow::State() const { return state_; }
 
 data_flow::DataFlowInterface* HttpServerDataFlow::NextHop() const {
   return data_flow_.get();
@@ -256,10 +202,7 @@ std::shared_ptr<utils::Session> HttpServerDataFlow::Session() const {
 boost::asio::io_context* HttpServerDataFlow::io() { return data_flow_->io(); }
 
 utils::Cancelable HttpServerDataFlow::Open(EventHandler handler) {
-  BOOST_ASSERT(!opening_);
-
-  opening_ = true;
-  state_ = data_flow::State::Establishing;
+  state_machine_.ConnectBegin();
 
   NEDEBUG << "Getting next hop ready.";
 
@@ -269,7 +212,7 @@ utils::Cancelable HttpServerDataFlow::Open(EventHandler handler) {
                  "hop, error code is "
               << ec;
 
-      state_ = data_flow::State::Closed;
+      state_machine_.Errored();
 
       handler(ec);
       return;
@@ -283,8 +226,6 @@ utils::Cancelable HttpServerDataFlow::Open(EventHandler handler) {
 }
 
 utils::Cancelable HttpServerDataFlow::Continue(EventHandler handler) {
-  reportable_ = false;
-
   if (is_connect_) {
     static std::string connect_response_header =
         "HTTP/1.1 200 Connection Established\r\n\r\n";
@@ -296,7 +237,7 @@ utils::Cancelable HttpServerDataFlow::Continue(EventHandler handler) {
     open_cancelable_ = data_flow_->Write(
         std::move(buffer), [this, handler](std::error_code ec) {
           if (ec) {
-            state_ = data_flow::State::Closed;
+            state_machine_.Errored();
             handler(ec);
             return;
           }
@@ -306,9 +247,9 @@ utils::Cancelable HttpServerDataFlow::Continue(EventHandler handler) {
                cancelable{open_cancelable_}](std::error_code ec) {
                 if (cancelable.canceled()) return;
                 if (ec) {
-                  state_ = data_flow::State::Closed;
+                  state_machine_.Errored();
                 } else {
-                  state_ = data_flow::State::Established;
+                  state_machine_.Connected();
                 }
                 handler(ec);
               });
@@ -318,46 +259,15 @@ utils::Cancelable HttpServerDataFlow::Continue(EventHandler handler) {
         [this, handler, cancelable{open_cancelable_}](std::error_code ec) {
           if (cancelable.canceled()) return;
           if (ec) {
-            state_ = data_flow::State::Closed;
+            state_machine_.Errored();
           } else {
-            state_ = data_flow::State::Established;
+            state_machine_.Connected();
           }
           handler(ec);
         });
   }
 
   return open_cancelable_;
-}
-
-utils::Cancelable HttpServerDataFlow::ReportError(std::error_code error_code,
-                                                  EventHandler handler) {
-  (void)error_code;
-
-  open_cancelable_.Cancel();
-  read_cancelable_.Cancel();
-  write_cancelable_.Cancel();
-
-  open_cancelable_ = utils::Cancelable();
-  state_ = data_flow::State::Closing;
-  read_closed_ = true;
-  write_closed_ = true;
-  reading_ = false;
-  writing_ = false;
-
-  boost::asio::post(*io(), [this, handler, cancelable{open_cancelable_}]() {
-    if (cancelable.canceled()) {
-      return;
-    }
-
-    state_ = data_flow::State::Closed;
-    handler(ErrorCode::NoError);
-  });
-
-  return open_cancelable_;
-}
-
-LocalDataFlowInterface* HttpServerDataFlow::NextLocalHop() const {
-  return data_flow_.get();
 }
 
 void HttpServerDataFlow::NegotiateRead(EventHandler handler) {
@@ -370,7 +280,7 @@ void HttpServerDataFlow::NegotiateRead(EventHandler handler) {
                  "error code is:"
               << ec;
 
-          state_ = data_flow::State::Closed;
+          state_machine_.Errored();
 
           handler(ec);
           return;
@@ -380,7 +290,7 @@ void HttpServerDataFlow::NegotiateRead(EventHandler handler) {
           NEERROR << "Error happened when reading first request from HTTP "
                      "client, request is invalid.";
 
-          state_ = data_flow::State::Closed;
+          state_machine_.Errored();
 
           handler(ErrorCode::InvalidRequest);
           return;
@@ -393,11 +303,10 @@ void HttpServerDataFlow::NegotiateRead(EventHandler handler) {
               return;
             } else {
               if (buffer.size() != first_header_offset_) {
+                state_machine_.Errored();
                 handler(ErrorCode::DataBeforeConnectRequestFinish);
                 return;
               }
-
-              reportable_ = true;
 
               handler(ErrorCode::NoError);
               return;

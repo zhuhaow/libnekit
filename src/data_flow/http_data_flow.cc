@@ -101,31 +101,18 @@ HttpDataFlow::~HttpDataFlow() {
 
 utils::Cancelable HttpDataFlow::Read(utils::Buffer&& buffer,
                                      DataEventHandler handler) {
-  BOOST_ASSERT(state_ != data_flow::State::Closed &&
-               state_ != data_flow::State::Establishing);
-  BOOST_ASSERT(!reading_);
-  BOOST_ASSERT(!read_closed_);
-
-  reading_ = true;
+  state_machine_.ReadBegin();
 
   read_cancelable_ = data_flow_->Read(
       std::move(buffer),
       [this, handler](utils::Buffer&& buffer, std::error_code ec) {
-        reading_ = false;
+        state_machine_.ReadEnd();
 
         if (ec) {
           if (ec == nekit::transport::ErrorCode::EndOfFile) {
-            read_closed_ = true;
-            if (write_closed_ && !writing_) {
-              state_ = data_flow::State::Closed;
-            } else {
-              state_ = data_flow::State::Closing;
-            }
+            state_machine_.ReadClosed();
           } else {
-            read_closed_ = true;
-            write_closed_ = true;
-            write_cancelable_.Cancel();
-            state_ = data_flow::State::Closed;
+            state_machine_.Errored();
           }
           handler(std::move(buffer), ec);
           return;
@@ -139,21 +126,14 @@ utils::Cancelable HttpDataFlow::Read(utils::Buffer&& buffer,
 
 utils::Cancelable HttpDataFlow::Write(utils::Buffer&& buffer,
                                       EventHandler handler) {
-  BOOST_ASSERT(state_ != data_flow::State::Closed &&
-               state_ != data_flow::State::Establishing);
-  BOOST_ASSERT(!writing_);
-  BOOST_ASSERT(!write_closed_);
+  state_machine_.WriteBegin();
 
-  writing_ = true;
   write_cancelable_ =
       data_flow_->Write(std::move(buffer), [this, handler](std::error_code ec) {
-        writing_ = false;
+        state_machine_.WriteEnd();
 
         if (ec) {
-          read_closed_ = true;
-          write_closed_ = true;
-          state_ = data_flow::State::Closed;
-          read_cancelable_.Cancel();
+          state_machine_.Errored();
         }
         handler(ec);
       });
@@ -161,22 +141,14 @@ utils::Cancelable HttpDataFlow::Write(utils::Buffer&& buffer,
 }
 
 utils::Cancelable HttpDataFlow::CloseWrite(EventHandler handler) {
-  BOOST_ASSERT(state_ != data_flow::State::Closed &&
-               state_ != data_flow::State::Establishing);
-  BOOST_ASSERT(!writing_);
-  BOOST_ASSERT(!write_closed_);
-
-  writing_ = true;
-  write_closed_ = true;
-
-  state_ = data_flow::State::Closing;
+  state_machine_.WriteCloseBegin();
 
   write_cancelable_ =
       data_flow_->CloseWrite([this, handler](std::error_code ec) {
-        writing_ = false;
+        state_machine_.WriteCloseEnd();
 
-        if (read_closed_) {
-          state_ = data_flow::State::Closed;
+        if (ec) {
+          state_machine_.Errored();
         }
 
         handler(ec);
@@ -185,32 +157,9 @@ utils::Cancelable HttpDataFlow::CloseWrite(EventHandler handler) {
   return write_cancelable_;
 }
 
-bool HttpDataFlow::IsReadClosed() const {
-  BOOST_ASSERT(NE_DATA_FLOW_CAN_CHECK_CLOSE_STATE(state_));
-  return read_closed_;
+const FlowStateMachine& HttpDataFlow::StateMachine() const {
+  return state_machine_;
 }
-
-bool HttpDataFlow::IsWriteClosed() const {
-  BOOST_ASSERT(NE_DATA_FLOW_CAN_CHECK_CLOSE_STATE(state_));
-  return write_closed_;
-}
-
-bool HttpDataFlow::IsWriteClosing() const {
-  BOOST_ASSERT(NE_DATA_FLOW_CAN_CHECK_CLOSE_STATE(state_));
-  return write_closed_ && writing_;
-}
-
-bool HttpDataFlow::IsReading() const {
-  BOOST_ASSERT(NE_DATA_FLOW_CAN_CHECK_DATA_STATE(state_));
-  return reading_;
-}
-
-bool HttpDataFlow::IsWriting() const {
-  BOOST_ASSERT(NE_DATA_FLOW_CAN_CHECK_DATA_STATE(state_));
-  return writing_;
-}
-
-data_flow::State HttpDataFlow::State() const { return state_; }
 
 DataFlowInterface* HttpDataFlow::NextHop() const { return data_flow_.get(); }
 
@@ -223,14 +172,12 @@ std::shared_ptr<utils::Session> HttpDataFlow::Session() const {
 boost::asio::io_context* HttpDataFlow::io() { return session_->io(); }
 
 utils::Cancelable HttpDataFlow::Connect(EventHandler handler) {
-  BOOST_ASSERT(state_ == data_flow::State::Closed);
-
   target_endpoint_ = session_->current_endpoint();
   session_->set_current_endpoint(server_endpoint_);
 
   BOOST_ASSERT(target_endpoint_);
 
-  state_ = data_flow::State::Establishing;
+  state_machine_.ConnectBegin();
 
   connect_cancelable_ = utils::Cancelable();
   connect_action_cancelable_ = data_flow_->Connect(
@@ -240,7 +187,7 @@ utils::Cancelable HttpDataFlow::Connect(EventHandler handler) {
         }
 
         if (ec) {
-          state_ = data_flow::State::Closed;
+          state_machine_.Errored();
           handler(ec);
           return;
         };
@@ -269,7 +216,7 @@ utils::Cancelable HttpDataFlow::Connect(EventHandler handler) {
               }
 
               if (ec) {
-                state_ = data_flow::State::Closed;
+                state_machine_.Errored();
                 handler(ec);
                 return;
               }
@@ -299,7 +246,7 @@ void HttpDataFlow::ReadResponse(EventHandler handler) {
         }
 
         if (ec) {
-          state_ = data_flow::State::Closed;
+          state_machine_.Errored();
           if (ec == nekit::transport::ErrorCode::EndOfFile) {
             handler(ErrorCode::InvalidResponse);
           } else {
@@ -309,7 +256,7 @@ void HttpDataFlow::ReadResponse(EventHandler handler) {
         }
 
         if (!rewriter_.RewriteBuffer(&buffer)) {
-          state_ = data_flow::State::Closed;
+          state_machine_.Errored();
           handler(ErrorCode::InvalidResponse);
           return;
         }
@@ -317,14 +264,14 @@ void HttpDataFlow::ReadResponse(EventHandler handler) {
         if (finish_response_) {
           if (success_response_) {
             buffer.ShrinkFront(header_offset_);
-            if (!!buffer) {
+            if (buffer) {
               pending_payload_ = std::move(buffer);
             }
 
-            state_ = data_flow::State::Established;
+            state_machine_.Connected();
             handler(ErrorCode::NoError);
           } else {
-            state_ = data_flow::State::Closed;
+            state_machine_.Errored();
             handler(ErrorCode::ConnectError);
           }
           return;

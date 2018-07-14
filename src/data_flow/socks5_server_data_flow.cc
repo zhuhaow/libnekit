@@ -52,34 +52,20 @@ Socks5ServerDataFlow::~Socks5ServerDataFlow() {
 
 utils::Cancelable Socks5ServerDataFlow::Read(utils::Buffer&& buffer,
                                              DataEventHandler handler) {
-  BOOST_ASSERT(!reading_);
-  BOOST_ASSERT(!reporting_);
-  BOOST_ASSERT(!read_closed_);
-  BOOST_ASSERT(!NextHop()->IsReading());
-  BOOST_ASSERT(state_ != data_flow::State::Closed);
-
-  reading_ = true;
+  state_machine_.ReadBegin();
 
   read_cancelable_ = data_flow_->Read(
       std::move(buffer),
       [this, handler](utils::Buffer&& buffer, std::error_code ec) {
-        reading_ = false;
+        state_machine_.ReadEnd();
 
         if (ec) {
           if (ec == transport::ErrorCode::EndOfFile) {
-            read_closed_ = true;
-            if (write_closed_ && !writing_) {
-              // Write is already closed.
-              state_ = data_flow::State::Closed;
-            } else {
-              state_ = data_flow::State::Closing;
-            }
+            state_machine_.ReadClosed();
             NEDEBUG << "Data flow got EOF.";
           } else {
             NEERROR << "Reading from data flow failed due to " << ec << ".";
-            state_ = data_flow::State::Closed;
-            read_closed_ = true;
-            write_closed_ = true;
+            state_machine_.Errored();
             // report and connect cancelable should not be in use.
             write_cancelable_.Cancel();
           }
@@ -95,24 +81,16 @@ utils::Cancelable Socks5ServerDataFlow::Read(utils::Buffer&& buffer,
 
 utils::Cancelable Socks5ServerDataFlow::Write(utils::Buffer&& buffer,
                                               EventHandler handler) {
-  BOOST_ASSERT(!writing_);
-  BOOST_ASSERT(!reporting_);
-  BOOST_ASSERT(!write_closed_);
-  BOOST_ASSERT(!NextHop()->IsWriting());
-  BOOST_ASSERT(state_ != data_flow::State::Closed);
-
-  writing_ = true;
+  state_machine_.WriteBegin();
 
   write_cancelable_ =
       data_flow_->Write(std::move(buffer), [this, handler](std::error_code ec) {
-        writing_ = false;
+        state_machine_.WriteEnd();
 
         if (ec) {
           NEERROR << "Write to data flow failed due to " << ec << ".";
 
-          read_closed_ = true;
-          write_closed_ = true;
-          state_ = data_flow::State::Closed;
+          state_machine_.Errored();
           // report and connect cancelable should not be in use.
           read_cancelable_.Cancel();
         }
@@ -123,22 +101,14 @@ utils::Cancelable Socks5ServerDataFlow::Write(utils::Buffer&& buffer,
 }
 
 utils::Cancelable Socks5ServerDataFlow::CloseWrite(EventHandler handler) {
-  BOOST_ASSERT(!writing_);
-  BOOST_ASSERT(!reporting_);
-  BOOST_ASSERT(!write_closed_);
-  BOOST_ASSERT(!NextHop()->IsWriting());
-
-  writing_ = true;
-  write_closed_ = true;
-
-  state_ = data_flow::State::Closing;
+  state_machine_.WriteCloseBegin();
 
   write_cancelable_ =
       data_flow_->CloseWrite([this, handler](std::error_code ec) {
-        writing_ = false;
+        state_machine_.WriteCloseEnd();
 
-        if (read_closed_) {
-          state_ = data_flow::State::Closed;
+        if (ec) {
+          state_machine_.Errored();
         }
 
         handler(ec);
@@ -147,40 +117,15 @@ utils::Cancelable Socks5ServerDataFlow::CloseWrite(EventHandler handler) {
   return write_cancelable_;
 }
 
-bool Socks5ServerDataFlow::IsReadClosed() const {
-  NE_DATA_FLOW_CAN_CHECK_CLOSE_STATE(state_);
-  return read_closed_;
+const FlowStateMachine& Socks5ServerDataFlow::StateMachine() const {
+  return state_machine_;
 }
 
-bool Socks5ServerDataFlow::IsWriteClosed() const {
-  NE_DATA_FLOW_CAN_CHECK_CLOSE_STATE(state_);
-  return write_closed_;
-}
-
-bool Socks5ServerDataFlow::IsWriteClosing() const {
-  NE_DATA_FLOW_CAN_CHECK_CLOSE_STATE(state_);
-  return write_closed_ && writing_;
-}
-
-bool Socks5ServerDataFlow::IsReading() const {
-  NE_DATA_FLOW_CAN_CHECK_DATA_STATE(state_);
-  return data_flow_->IsReading();
-}
-
-bool Socks5ServerDataFlow::IsWriting() const {
-  NE_DATA_FLOW_CAN_CHECK_DATA_STATE(state_);
-  return data_flow_->IsWriting();
-}
-
-data_flow::State Socks5ServerDataFlow::State() const { return state_; }
-
-data_flow::DataFlowInterface* Socks5ServerDataFlow::NextHop() const {
+DataFlowInterface* Socks5ServerDataFlow::NextHop() const {
   return data_flow_.get();
 }
 
-data_flow::DataType Socks5ServerDataFlow::FlowDataType() const {
-  return DataType::Stream;
-}
+DataType Socks5ServerDataFlow::FlowDataType() const { return DataType::Stream; }
 
 std::shared_ptr<utils::Session> Socks5ServerDataFlow::Session() const {
   return session_;
@@ -189,10 +134,7 @@ std::shared_ptr<utils::Session> Socks5ServerDataFlow::Session() const {
 boost::asio::io_context* Socks5ServerDataFlow::io() { return data_flow_->io(); }
 
 utils::Cancelable Socks5ServerDataFlow::Open(EventHandler handler) {
-  BOOST_ASSERT(!opening_);
-
-  opening_ = true;
-  state_ = data_flow::State::Establishing;
+  state_machine_.ConnectBegin();
 
   NEDEBUG << "Getting next hop ready.";
 
@@ -202,7 +144,7 @@ utils::Cancelable Socks5ServerDataFlow::Open(EventHandler handler) {
                  "hop, error code is "
               << ec;
 
-      state_ = data_flow::State::Closed;
+      state_machine_.Errored();
 
       handler(ec);
       return;
@@ -244,12 +186,10 @@ utils::Cancelable Socks5ServerDataFlow::Continue(EventHandler handler) {
     buffer.SetByte(i, 0);
   }
 
-  reportable_ = false;
-
   open_cancelable_ =
       data_flow_->Write(std::move(buffer), [this, handler](std::error_code ec) {
         if (ec) {
-          state_ = data_flow::State::Closed;
+          state_machine_.Errored();
           handler(ec);
           return;
         }
@@ -258,63 +198,15 @@ utils::Cancelable Socks5ServerDataFlow::Continue(EventHandler handler) {
             [this, handler, cancelable{open_cancelable_}](std::error_code ec) {
               if (cancelable.canceled()) return;
               if (ec) {
-                state_ = data_flow::State::Closed;
+                state_machine_.Errored();
               } else {
-                state_ = data_flow::State::Established;
+                state_machine_.Connected();
               }
               handler(ec);
             });
       });
 
   return open_cancelable_;
-}
-
-utils::Cancelable Socks5ServerDataFlow::ReportError(std::error_code error_code,
-                                                    EventHandler handler) {
-  (void)error_code;
-
-  open_cancelable_.Cancel();
-  read_cancelable_.Cancel();
-  write_cancelable_.Cancel();
-
-  open_cancelable_ = utils::Cancelable();
-  state_ = data_flow::State::Closing;
-  read_closed_ = true;
-  write_closed_ = true;
-  reading_ = false;
-  writing_ = false;
-
-  if (!reportable_) {
-    boost::asio::post(*io(), [this, handler, cancelable{open_cancelable_},
-                              lifetime{life_time_cancelable()}]() {
-      if (cancelable.canceled() || lifetime.canceled()) {
-        return;
-      }
-
-      state_ = data_flow::State::Closed;
-      handler(ErrorCode::NoError);
-    });
-
-    return open_cancelable_;
-  }
-
-  auto buffer = utils::Buffer(10);
-  buffer.SetByte(0, 5);
-  buffer.SetByte(1, 1);  // TODO: Return proper error code
-  buffer.SetByte(2, 0);
-  buffer.SetByte(3, 1);
-
-  write_cancelable_ =
-      data_flow_->Write(std::move(buffer), [this, handler](std::error_code ec) {
-        state_ = data_flow::State::Closed;
-        handler(ec);
-      });
-
-  return open_cancelable_;
-}
-
-LocalDataFlowInterface* Socks5ServerDataFlow::NextLocalHop() const {
-  return data_flow_.get();
 }
 
 void Socks5ServerDataFlow::EnsurePendingAuthBuffer() {
@@ -346,7 +238,7 @@ void Socks5ServerDataFlow::NegotiateRead(EventHandler handler) {
                      "error code is:"
                   << ec;
 
-          state_ = data_flow::State::Closed;
+          state_machine_.Errored();
 
           handler(ec);
           return;
@@ -357,7 +249,8 @@ void Socks5ServerDataFlow::NegotiateRead(EventHandler handler) {
         if (pending_auth_length_ + buffer.size() > AUTH_READ_BUFFER_SIZE) {
           NEERROR << "Hello request from client is too long";
 
-          state_ = data_flow::State::Closed;
+          state_machine_.Errored();
+
           handler(ErrorCode::IllegalRequest);
           return;
         }
@@ -377,7 +270,8 @@ void Socks5ServerDataFlow::NegotiateRead(EventHandler handler) {
               NEERROR << "Client send wrong socks version " << pending_auth_[0]
                       << ", only 5 is suppoted.";
 
-              state_ = data_flow::State::Closed;
+              state_machine_.Errored();
+
               handler(ErrorCode::UnsupportedVersion);
               return;
             }
@@ -394,7 +288,8 @@ void Socks5ServerDataFlow::NegotiateRead(EventHandler handler) {
             if (pending_auth_length_ > len + 2) {
               NEERROR << "Hello request from client is too long";
 
-              state_ = data_flow::State::Closed;
+              state_machine_.Errored();
+
               handler(ErrorCode::IllegalRequest);
               return;
             }
@@ -409,8 +304,8 @@ void Socks5ServerDataFlow::NegotiateRead(EventHandler handler) {
             }
 
             if (!noauth_present) {
-              // TODO: Send back standard response.
-              state_ = data_flow::State::Closed;
+              state_machine_.Errored();
+
               handler(ErrorCode::UnsupportedAuthenticationMethod);
               return;
             }
@@ -423,7 +318,8 @@ void Socks5ServerDataFlow::NegotiateRead(EventHandler handler) {
             write_cancelable_ = data_flow_->Write(
                 std::move(buffer), [this, handler](std::error_code ec) mutable {
                   if (ec) {
-                    state_ = data_flow::State::Closed;
+                    state_machine_.Errored();
+
                     handler(ec);
                     return;
                   }
@@ -442,19 +338,22 @@ void Socks5ServerDataFlow::NegotiateRead(EventHandler handler) {
             }
 
             if (pending_auth_[0] != 5) {
-              state_ = data_flow::State::Closed;
+              state_machine_.Errored();
+
               handler(ErrorCode::UnsupportedVersion);
               return;
             }
 
             if (pending_auth_[1] != 1) {
-              state_ = data_flow::State::Closed;
+              state_machine_.Errored();
+
               handler(ErrorCode::UnsupportedCommand);
               return;
             }
 
             if (pending_auth_[2] != 0) {
-              state_ = data_flow::State::Closed;
+              state_machine_.Errored();
+
               handler(ErrorCode::IllegalRequest);
               return;
             }
@@ -463,7 +362,8 @@ void Socks5ServerDataFlow::NegotiateRead(EventHandler handler) {
             switch (pending_auth_[3]) {
               case 1: {
                 if (pending_auth_length_ != 10) {
-                  state_ = data_flow::State::Closed;
+                  state_machine_.Errored();
+
                   handler(ErrorCode::IllegalRequest);
                   return;
                 }
@@ -487,7 +387,8 @@ void Socks5ServerDataFlow::NegotiateRead(EventHandler handler) {
                 }
 
                 if (pending_auth_length_ > offset + 1 + len + 2) {
-                  state_ = data_flow::State::Closed;
+                  state_machine_.Errored();
+
                   handler(ErrorCode::IllegalRequest);
                   return;
                 }
@@ -508,7 +409,8 @@ void Socks5ServerDataFlow::NegotiateRead(EventHandler handler) {
                 }
 
                 if (pending_auth_length_ > 22) {
-                  state_ = data_flow::State::Closed;
+                  state_machine_.Errored();
+
                   handler(ErrorCode::IllegalRequest);
                   return;
                 }
@@ -526,7 +428,8 @@ void Socks5ServerDataFlow::NegotiateRead(EventHandler handler) {
               default: {
                 NEERROR << "Unsupported domain type "
                         << (int32_t)pending_auth_[3] << ".";
-                state_ = data_flow::State::Closed;
+                state_machine_.Errored();
+
                 handler(ErrorCode::IllegalRequest);
                 return;
               }
@@ -536,7 +439,7 @@ void Socks5ServerDataFlow::NegotiateRead(EventHandler handler) {
                 *reinterpret_cast<uint16_t*>(pending_auth_.get() + offset);
             session_->endpoint()->set_port(ntohs(port));
 
-            reportable_ = true;
+            state_machine_.Connected();
 
             handler(ErrorCode::NoError);
           } break;
