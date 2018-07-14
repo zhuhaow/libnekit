@@ -23,15 +23,20 @@
 #pragma once
 
 #include <map>
-#include <system_error>
 #include <memory>
+#include <system_error>
 
 #include <boost/any.hpp>
 
 namespace nekit {
 namespace utils {
 
-enum class NEKitErrorCode { NoError, Canceled, MemoryAllocationFailed };
+enum class NEKitErrorCode {
+  NoError,
+  GeneralError,
+  Canceled,
+  MemoryAllocationFailed
+};
 std::error_code make_error_code(NEKitErrorCode);
 
 }  // namespace utils

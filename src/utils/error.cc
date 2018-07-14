@@ -35,6 +35,8 @@ class NEKitErrorCategory : public std::error_category {
     switch (static_cast<nekit::utils::NEKitErrorCode>(error_code)) {
       case nekit::utils::NEKitErrorCode::NoError:
         return "no error";
+      case nekit::utils::NEKitErrorCode::GeneralError:
+        return "general error";
       case nekit::utils::NEKitErrorCode::Canceled:
         return "canceled";
       case nekit::utils::NEKitErrorCode::MemoryAllocationFailed:
