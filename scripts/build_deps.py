@@ -318,7 +318,7 @@ def build_libsodium(libsodium_dir, install_prefix, target_platform):
                 local["cat"]["dist-build/ios.sh"] & FG
                 local["dist-build/ios.sh"] & FG
             elif target_platform == Platform.OSX:
-                local["sed"]["sed", "-i", "''", "s/^export PREFIX.*$//g", "dist-build/osx.sh"] & FG
+                local["sed"]["-i", "''", "s/^export PREFIX.*$//g", "dist-build/osx.sh"] & FG
                 local["cat"]["dist-build/osx.sh"] & FG
                 local["dist-build/osx.sh"] & FG
             elif target_platform == Platform.Linux:
