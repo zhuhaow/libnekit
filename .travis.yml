@@ -78,7 +78,7 @@ matrix:
 
 before_install:
   - eval "${MATRIX_EVAL}"
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update && brew install pipenv; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update && brew install pipenv moreutils; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pip install --user pipenv urllib3[secure]; fi
 
 install:
