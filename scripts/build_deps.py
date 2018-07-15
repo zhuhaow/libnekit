@@ -311,14 +311,14 @@ def build_libsodium(libsodium_dir, install_prefix, target_platform):
             local["autoreconf"]["-i"] & FG
 
             if target_platform == Platform.iOS:
-                local["find"]["dist-build", "-type", "f", "-exec", "sed", "-i",
-                              "''", "s/^export PREFIX.*$//g", "{}", "+", ] & FG
+                local["sed"]["-i", "''", "s/^export PREFIX.*$//g", "dist-build/ios.sh"] & FG
+                local["sed"]["-i", "''", "s/^rm -fr --.*$//g", "dist-build/ios.sh"] & FG
+                local["sed"]["-i", "''", "s/\$IOS32_PREFIX\/include/\$IOS64_PREFIX\/include/g", "dist-build/ios.sh"] & FG
                 (local["awk"]["BEGIN{f=1};/Build for the simulator/{f=0};/Build for iOS/{f=1}; /32-bit iOS/{f=0};/64-bit iOS/{f=1};/IOS32/{next};/SIMULATOR/{next};f"]["dist-build/ios.sh"] | local["sponge"]["dist-build/ios.sh"])()
                 local["cat"]["dist-build/ios.sh"] & FG
                 local["dist-build/ios.sh"] & FG
             elif target_platform == Platform.OSX:
-                local["find"]["dist-build", "-type", "f", "-exec", "sed", "-i",
-                              "''", "s/^export PREFIX.*$//g", "{}", "+", ] & FG
+                local["sed"]["sed", "-i", "''", "s/^export PREFIX.*$//g", "dist-build/osx.sh"] & FG
                 local["cat"]["dist-build/osx.sh"] & FG
                 local["dist-build/osx.sh"] & FG
             elif target_platform == Platform.Linux:
