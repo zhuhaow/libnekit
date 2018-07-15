@@ -165,11 +165,11 @@ def download_library(path, url, name, content_dir):
             with tarfile.open(fileobj=tempf, mode="r:gz") as tar:
                 tar.extractall(tempd)
                 logging.info(
-                    "Copying file from %s to %s",
+                    "Moving file from %s to %s",
                     os.path.join(tempd, content_dir),
                     os.path.join(path, name),
                 )
-                shutil.copytree(
+                shutil.move(
                     os.path.join(tempd, content_dir), os.path.join(path, name))
 
 
@@ -191,10 +191,7 @@ def cmake_compile(source_dir,
 
         if target_platform in [Platform.iOS, Platform.OSX]:
             config.extend([
-                "-GXcode",
-                "-DCMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH=NO",
-                "-DCMAKE_IOS_INSTALL_COMBINED=YES",
-                "-DIOS_DEPLOYMENT_SDK_VERSION=9.0",
+                "-DIOS_DEPLOYMENT_TARGET=9.0",
             ])
 
         config.append("-DCMAKE_TOOLCHAIN_FILE={}".format(
@@ -205,14 +202,7 @@ def cmake_compile(source_dir,
 
         cmake[config] & FG
 
-        if target_platform in [Platform.iOS, Platform.OSX]:
-            from plumbum.cmd import xcodebuild
-
-            with local.cwd(tempd):
-                xcodebuild["-target", "install", "-configuration",
-                           "Release"] & FG
-        else:
-            cmake["--build", tempd, "--", "-j4", "install"] & FG
+        cmake["--build", tempd, "--", "-j4", "install"] & FG
 
 
 def build_boost(boost_dir, install_prefix, target_platform):
