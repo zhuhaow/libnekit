@@ -39,7 +39,7 @@ import requests
 
 LIBRARIES = [
     ("google/googletest", "release-1.8.0", "googletest"),
-    ("jedisct1/libsodium", "1.0.13", "libsodium"),
+    ("jedisct1/libsodium", "1.0.16", "libsodium"),
     ("zhuhaow/libmaxminddb", "master", "libmaxminddb"),
 ]
 
@@ -47,9 +47,9 @@ OPENSSL_IOS = ("x2on/OpenSSL-for-iPhone", "master", "openssl")
 OPENSSL_LIB = ("openssl/openssl", "OpenSSL_1_1_0h", "openssl")
 
 DOWNLOAD_LIBRARIES = [(
-    "https://dl.bintray.com/boostorg/release/1.66.0/source/boost_1_66_0.tar.gz",
+    "https://dl.bintray.com/boostorg/release/1.67.0/source/boost_1_67_0.tar.gz",
     "boost",
-    "boost_1_66_0",
+    "boost_1_67_0",
 )]
 
 source_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
