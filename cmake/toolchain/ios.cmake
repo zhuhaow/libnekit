@@ -111,9 +111,14 @@ set(IOS_PLATFORM ${IOS_PLATFORM} CACHE STRING
   "Type of iOS platform for which to build.")
 # Determine the platform name and architectures for use in xcodebuild commands
 # from the specified IOS_PLATFORM name.
+set(IOS_BUILD_FOR_32 OFF CACHE BOOL "Build for 32 bit")
 if (IOS_PLATFORM STREQUAL "OS")
   set(XCODE_IOS_PLATFORM iphoneos)
-  set(IOS_ARCH armv7 armv7s arm64)
+  if (IOS_BUILD_FOR_32)
+    set(IOS_ARCH armv7 armv7s arm64)
+  else()
+    set(IOS_ARCH arm64)
+  endif()
 elseif (IOS_PLATFORM STREQUAL "SIMULATOR")
   set(XCODE_IOS_PLATFORM iphonesimulator)
   set(IOS_ARCH i386)

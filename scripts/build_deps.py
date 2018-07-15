@@ -288,7 +288,7 @@ def build_openssl(openssl_dir, install_prefix, target_platform):
             local[local.cwd / "build-libssl.sh"][
                 "--version=1.1.0f", "--verbose-on-error",
                 "--ec-nistp-64-gcc-128",
-                "--targets=ios-sim-cross-x86_64 ios-sim-cross-i386 ios64-cross-arm64 ios-cross-armv7",
+                "--targets=ios64-cross-arm64",
             ] & FG
             copytree("lib", os.path.join(install_prefix, "lib"))
             copytree("include", os.path.join(install_prefix, "include"))
@@ -323,6 +323,8 @@ def build_libsodium(libsodium_dir, install_prefix, target_platform):
             if target_platform == Platform.iOS:
                 local["find"]["dist-build", "-type", "f", "-exec", "sed", "-i",
                               "''", "s/^export PREFIX.*$//g", "{}", "+", ] & FG
+                (local["awk"]["BEGIN{f=1};/Build for the simulator/{f=0};/Build for iOS/{f=1}; /32-bit iOS/{f=0};/64-bit iOS/{f=1};/IOS32/{next};/SIMULATOR/{next};f"]["dist-build/ios.sh"] | local["sponge"]["dist-build/ios.sh"])()
+                local["cat"]["dist-build/ios.sh"] & FG
                 local["dist-build/ios.sh"] & FG
             elif target_platform == Platform.OSX:
                 local["find"]["dist-build", "-type", "f", "-exec", "sed", "-i",
