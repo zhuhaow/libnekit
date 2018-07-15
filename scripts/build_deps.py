@@ -189,7 +189,7 @@ def cmake_compile(source_dir,
             "-DCMAKE_INSTALL_PREFIX={}".format(install_prefix),
         ]
 
-        if target_platform in [Platform.iOS, Platform.OSX]:
+        if target_platform in [Platform.iOS]:
             config.extend([
                 "-DIOS_DEPLOYMENT_TARGET=9.0",
             ])
