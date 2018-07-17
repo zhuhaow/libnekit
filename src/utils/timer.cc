@@ -26,25 +26,34 @@ namespace nekit {
 namespace utils {
 
 Timer::Timer(boost::asio::io_context* io, std::function<void()> handler)
-    : io_{io}, handler_{handler}, timer_{*io, boost::posix_time::seconds(0)} {}
+    : io_{io}, handler_{handler}, timer_{*io} {}
 
-void Timer::Wait(uint32_t seconds) {
-  timer_.expires_from_now(boost::posix_time::seconds(seconds));
-  timer_.async_wait([this, cancelable{life_time_cancelable()}](
-                        const boost::system::error_code& ec) {
-    if (cancelable.canceled()) {
-      return;
-    }
+Timer::~Timer() { Cancel(); }
 
-    if (ec) {
-      return;
-    }
+void Timer::Wait(uint32_t milliseconds) {
+  timer_.expires_after(std::chrono::milliseconds(milliseconds));
 
-    handler_();
-  });
+  cancelable_.Cancel();
+  cancelable_.Reset();
+
+  timer_.async_wait(
+      [this, cancelable{cancelable_}](const boost::system::error_code& ec) {
+        if (cancelable.canceled()) {
+          return;
+        }
+
+        if (ec) {
+          return;
+        }
+
+        handler_();
+      });
 }
 
-void Timer::Cancel() { timer_.cancel(); }
+void Timer::Cancel() {
+  timer_.cancel();
+  cancelable_.Cancel();
+}
 
 boost::asio::io_context* Timer::io() { return io_; }
 }  // namespace utils

@@ -24,7 +24,7 @@
 
 #include <functional>
 
-#include <boost/asio/deadline_timer.hpp>
+#include <boost/asio/high_resolution_timer.hpp>
 #include <boost/noncopyable.hpp>
 
 #include "async_io_interface.h"
@@ -32,18 +32,22 @@
 
 namespace nekit {
 namespace utils {
-class Timer : public AsyncIoInterface, private LifeTime {
+class Timer : public AsyncIoInterface, private boost::noncopyable {
  public:
   Timer(boost::asio::io_context* io, std::function<void()> handler);
 
-  void Wait(uint32_t seconds);
+  ~Timer();
+
+  void Wait(uint32_t milliseconds);
   void Cancel();
   boost::asio::io_context* io();
 
  private:
   boost::asio::io_context* io_;
   std::function<void()> handler_;
-  boost::asio::deadline_timer timer_;
+  boost::asio::high_resolution_timer timer_;
+
+  Cancelable cancelable_;
 };
 }  // namespace utils
 }  // namespace nekit

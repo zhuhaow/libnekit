@@ -29,7 +29,7 @@
 #undef NECHANNEL
 #define NECHANNEL "Tunnel"
 
-#define TIMEOUT_INTERVAL 300
+#define TIMEOUT_INTERVAL 300 * 1000
 
 namespace nekit {
 namespace transport {
