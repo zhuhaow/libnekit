@@ -27,6 +27,8 @@ namespace rule {
 
 RuleManager::RuleManager(boost::asio::io_context* io) : io_{io} {}
 
+RuleManager::~RuleManager() { lifetime_.Cancel(); }
+
 void RuleManager::AppendRule(std::shared_ptr<RuleInterface> rule) {
   rules_.push_back(rule);
 }
@@ -34,14 +36,14 @@ void RuleManager::AppendRule(std::shared_ptr<RuleInterface> rule) {
 utils::Cancelable RuleManager::Match(std::shared_ptr<utils::Session> session,
                                      EventHandler handler) {
   auto cancelable = utils::Cancelable();
-  boost::asio::post(*io(), [this, session, cancelable,
-                            lifetime{life_time_cancelable()}, handler]() {
-    if (cancelable.canceled() || lifetime.canceled()) {
-      return;
-    }
+  boost::asio::post(
+      *io(), [this, session, cancelable, lifetime{lifetime_}, handler]() {
+        if (cancelable.canceled() || lifetime.canceled()) {
+          return;
+        }
 
-    MatchIterator(rules_.cbegin(), session, cancelable, handler);
-  });
+        MatchIterator(rules_.cbegin(), session, cancelable, handler);
+      });
 
   return cancelable;
 }
@@ -66,18 +68,18 @@ void RuleManager::MatchIterator(
         // The lifetime of callback block is already bound to the caller of
         // `Match` and `this`. There is no need to guard the lifetime of the
         // callback in another `Cancelable`.
-        (void)session->endpoint()->Resolve(
-            [this, handler, cancelable, lifetime{life_time_cancelable()},
-             session, iter](std::error_code ec) mutable {
-              // Resolve failure should be handled by rules.
-              (void)ec;
+        (void)session->endpoint()->Resolve([this, handler, cancelable,
+                                            lifetime{lifetime_}, session,
+                                            iter](std::error_code ec) mutable {
+          // Resolve failure should be handled by rules.
+          (void)ec;
 
-              if (cancelable.canceled() || lifetime.canceled()) {
-                return;
-              }
+          if (cancelable.canceled() || lifetime.canceled()) {
+            return;
+          }
 
-              MatchIterator(iter, session, cancelable, handler);
-            });
+          MatchIterator(iter, session, cancelable, handler);
+        });
         return;
       }
     }

@@ -33,7 +33,7 @@
 namespace nekit {
 namespace transport {
 
-class TcpConnector : public utils::AsyncIoInterface, private utils::LifeTime {
+class TcpConnector : public utils::AsyncIoInterface {
  public:
   using EventHandler =
       std::function<void(boost::asio::ip::tcp::socket&&, std::error_code)>;
@@ -47,6 +47,8 @@ class TcpConnector : public utils::AsyncIoInterface, private utils::LifeTime {
 
   TcpConnector(std::shared_ptr<utils::Endpoint> endpoint,
                boost::asio::io_context* io);
+
+  ~TcpConnector();
 
   utils::Cancelable Connect(EventHandler handler)
       __attribute__((warn_unused_result));
@@ -71,6 +73,8 @@ class TcpConnector : public utils::AsyncIoInterface, private utils::LifeTime {
   std::size_t current_ind_{0};
 
   bool connecting_{false};
+
+  utils::Cancelable cancelable_;
 };
 
 }  // namespace transport

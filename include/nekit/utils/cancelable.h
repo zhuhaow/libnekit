@@ -50,16 +50,5 @@ class Cancelable {
  private:
   std::shared_ptr<bool> canceled_;
 };
-
-class LifeTime : private boost::noncopyable {
- public:
-  LifeTime() : life_time_cancelable_{} {}
-  ~LifeTime() { life_time_cancelable_.Cancel(); }
-
-  Cancelable life_time_cancelable() { return life_time_cancelable_; }
-
- private:
-  Cancelable life_time_cancelable_;
-};
 }  // namespace utils
 }  // namespace nekit

@@ -47,62 +47,59 @@ Cancelable SystemResolver::Resolve(std::string domain,
 
   Cancelable cancelable{};
 
-  boost::asio::post(
-      *resolve_io_.get(), [this, domain, handler, cancelable,
-                           lifetime{life_time_cancelable()}]() mutable {
-        // Note it should be guaranteed that one io_context should never be
-        // released before all the instances implementing `AsyncIoInterface`
-        // which will return that io_context are released. This resolver will
-        // never be released before `main_io_` is released. In the destructor
-        // this thread is guaranteed to exit before resolver is finished, so
-        // there is no need to worry any thread issues here. Resolver and
-        // `main_io_` will exist when this thread is running.
+  boost::asio::post(*resolve_io_.get(), [this, domain, handler, cancelable,
+                                         lifetime{lifetime_}]() mutable {
+    // Note it should be guaranteed that one io_context should never be
+    // released before all the instances implementing `AsyncIoInterface`
+    // which will return that io_context are released. This resolver will
+    // never be released before `main_io_` is released. In the destructor
+    // this thread is guaranteed to exit before resolver is finished, so
+    // there is no need to worry any thread issues here. Resolver and
+    // `main_io_` will exist when this thread is running.
 
-        if (cancelable.canceled() || lifetime.canceled()) {
-          return;
-        }
+    if (cancelable.canceled() || lifetime.canceled()) {
+      return;
+    }
 
-        auto resolver = boost::asio::ip::tcp::resolver(*resolve_io_.get());
+    auto resolver = boost::asio::ip::tcp::resolver(*resolve_io_.get());
 
-        NEDEBUG << "Trying to resolve " << domain << ".";
+    NEDEBUG << "Trying to resolve " << domain << ".";
 
-        boost::system::error_code ec;
-        auto result = resolver.resolve(domain, "", ec);
+    boost::system::error_code ec;
+    auto result = resolver.resolve(domain, "", ec);
 
-        if (ec) {
-          auto error = ConvertBoostError(ec);
-          NEERROR << "Failed to resolve " << domain << " due to " << error
-                  << ".";
+    if (ec) {
+      auto error = ConvertBoostError(ec);
+      NEERROR << "Failed to resolve " << domain << " due to " << error << ".";
 
-          boost::asio::post(*main_io_, [handler, error, cancelable,
-                                        life_time{life_time_cancelable()}]() {
-            if (cancelable.canceled() || life_time.canceled()) {
-              return;
-            }
+      boost::asio::post(*main_io_,
+                        [handler, error, cancelable, life_time{lifetime_}]() {
+                          if (cancelable.canceled() || life_time.canceled()) {
+                            return;
+                          }
 
-            handler(nullptr, error);
-          });
-          return;
-        }
+                          handler(nullptr, error);
+                        });
+      return;
+    }
 
-        auto addresses =
-            std::make_shared<std::vector<boost::asio::ip::address>>();
+    auto addresses = std::make_shared<std::vector<boost::asio::ip::address>>();
 
-        for (auto iter = result.begin(); iter != result.end(); iter++) {
-          addresses->emplace_back(iter->endpoint().address());
-        }
+    for (auto iter = result.begin(); iter != result.end(); iter++) {
+      addresses->emplace_back(iter->endpoint().address());
+    }
 
-        NEINFO << "Successfully resolved domain " << domain << ".";
+    NEINFO << "Successfully resolved domain " << domain << ".";
 
-        boost::asio::post(*main_io_, [handler, addresses, cancelable,
-                                      life_time{life_time_cancelable()}]() {
-          if (cancelable.canceled() || life_time.canceled()) {
-            return;
-          }
+    boost::asio::post(*main_io_,
+                      [handler, addresses, cancelable, life_time{lifetime_}]() {
+                        if (cancelable.canceled() || life_time.canceled()) {
+                          return;
+                        }
 
-          handler(addresses, NEKitErrorCode::NoError);
-        });
-      });
+                        handler(addresses, NEKitErrorCode::NoError);
+                      });
+  });
 
   return cancelable;
 }
@@ -128,7 +125,10 @@ void SystemResolver::Reset() {
   }
 }
 
-SystemResolver::~SystemResolver() { thread_group_.join_all(); }
+SystemResolver::~SystemResolver() {
+  thread_group_.join_all();
+  lifetime_.Cancel();
+}
 
 std::error_code SystemResolver::ConvertBoostError(
     const boost::system::error_code& ec) {

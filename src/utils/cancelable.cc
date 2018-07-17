@@ -50,9 +50,11 @@ Cancelable& Cancelable::operator=(Cancelable&& cancelable) {
   return *this;
 }
 
-void Cancelable::Cancel() { *canceled_ = true; }
+void Cancelable::Cancel() {
+  if (canceled_) *canceled_ = true;
+}
 
-void Cancelable::Reset() { *canceled_ = false; }
+void Cancelable::Reset() { canceled_ = std::make_shared<bool>(false); }
 
 bool Cancelable::canceled() const { return *canceled_; }
 

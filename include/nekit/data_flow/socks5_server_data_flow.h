@@ -27,8 +27,7 @@
 
 namespace nekit {
 namespace data_flow {
-class Socks5ServerDataFlow final : public LocalDataFlowInterface,
-                                   private utils::LifeTime {
+class Socks5ServerDataFlow final : public LocalDataFlowInterface {
  public:
   enum class ErrorCode {
     NoError = 0,

@@ -36,8 +36,7 @@
 
 namespace nekit {
 namespace rule {
-class RuleManager final : public utils::AsyncIoInterface,
-                          private utils::LifeTime {
+class RuleManager final : public utils::AsyncIoInterface {
  public:
   using EventHandler =
       std::function<void(std::shared_ptr<RuleInterface>, std::error_code)>;
@@ -45,6 +44,8 @@ class RuleManager final : public utils::AsyncIoInterface,
   enum class ErrorCode { NoError, NoMatch };
 
   explicit RuleManager(boost::asio::io_context* io);
+
+  ~RuleManager();
 
   void AppendRule(std::shared_ptr<RuleInterface> rule);
 
@@ -62,6 +63,7 @@ class RuleManager final : public utils::AsyncIoInterface,
 
   std::vector<std::shared_ptr<RuleInterface>> rules_;
   boost::asio::io_context* io_;
+  utils::Cancelable lifetime_;
 };
 
 std::error_code make_error_code(RuleManager::ErrorCode ec);

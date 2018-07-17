@@ -47,6 +47,8 @@ TcpConnector::TcpConnector(std::shared_ptr<utils::Endpoint> endpoint,
                            boost::asio::io_context* io)
     : socket_{*io}, endpoint_{endpoint}, port_{endpoint->port()} {}
 
+TcpConnector::~TcpConnector() { cancelable_.Cancel(); }
+
 utils::Cancelable TcpConnector::Connect(EventHandler handler) {
   assert(!connecting_);
 
@@ -66,42 +68,40 @@ utils::Cancelable TcpConnector::Connect(EventHandler handler) {
       NEDEBUG << "Addresses are available, connect directly.";
       DoConnect(handler);
       // Note connector is disposable.
-      return life_time_cancelable();
+      return cancelable_;
     } else {
       if (!endpoint_->IsResolvable()) {
         NEERROR << "Can not connect since resolve is failed due to "
                 << endpoint_->resolve_error() << ".";
 
         boost::asio::post(
-            socket_.get_executor(),
-            [this, handler, cancelable{life_time_cancelable()}]() {
+            socket_.get_executor(), [this, handler, cancelable{cancelable_}]() {
               if (cancelable.canceled()) {
                 return;
               }
 
               handler(std::move(socket_), endpoint_->resolve_error());
             });
-        return life_time_cancelable();
+        return cancelable_;
       } else {
-        (void)endpoint_->Resolve(
-            [this, handler,
-             cancelable{life_time_cancelable()}](std::error_code ec) mutable {
-              if (cancelable.canceled()) {
-                return;
-              }
+        (void)endpoint_->Resolve([this, handler, cancelable{cancelable_}](
+                                     std::error_code ec) mutable {
+          if (cancelable.canceled()) {
+            return;
+          }
 
-              if (ec) {
-                NEERROR << "Can not connect since resolve is failed due to "
-                        << endpoint_->resolve_error() << ".";
-                handler(std::move(socket_), ec);
-                return;
-              }
+          if (ec) {
+            NEERROR << "Can not connect since resolve is failed due to "
+                    << endpoint_->resolve_error() << ".";
+            handler(std::move(socket_), ec);
+            return;
+          }
 
-              NEDEBUG << "Domain resolved, connect now.";
-              addresses_ = endpoint_->resolved_addresses();
-              DoConnect(handler);
-            });
-        return life_time_cancelable();
+          NEDEBUG << "Domain resolved, connect now.";
+          addresses_ = endpoint_->resolved_addresses();
+          DoConnect(handler);
+        });
+        return cancelable_;
       }
     }
   }
@@ -110,7 +110,7 @@ utils::Cancelable TcpConnector::Connect(EventHandler handler) {
 
   DoConnect(handler);
 
-  return life_time_cancelable();
+  return cancelable_;
 }
 
 void TcpConnector::Bind(std::shared_ptr<utils::DeviceInterface> device) {
@@ -120,7 +120,7 @@ void TcpConnector::Bind(std::shared_ptr<utils::DeviceInterface> device) {
 void TcpConnector::DoConnect(EventHandler handler) {
   connecting_ = true;
 
-  if (life_time_cancelable().canceled()) {
+  if (cancelable_.canceled()) {
     connecting_ = false;
     return;
   }
@@ -146,7 +146,7 @@ void TcpConnector::DoConnect(EventHandler handler) {
 
   socket_.async_connect(
       boost::asio::ip::tcp::endpoint(*address, port_),
-      [this, handler, cancelable{life_time_cancelable()}](
+      [this, handler, cancelable{cancelable_}](
           const boost::system::error_code& ec) mutable {
         if (cancelable.canceled()) {
           return;

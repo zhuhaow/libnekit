@@ -50,6 +50,8 @@ Endpoint::Endpoint(const boost::asio::ip::address& ip, uint16_t port)
       address_{ip},
       port_{port} {}
 
+Endpoint::~Endpoint() { resolve_cancelable_.Cancel(); }
+
 Cancelable Endpoint::Resolve(EventHandler handler) {
   BOOST_ASSERT(resolver_);
   BOOST_ASSERT(!resolved_ && !resolving_);
@@ -67,7 +69,7 @@ Cancelable Endpoint::ForceResolve(EventHandler handler) {
 
   resolve_cancelable_ = resolver_->Resolve(
       domain_, ResolverInterface::AddressPreference::Any,
-      [this, handler, cancelable{life_time_cancelable()}](
+      [this, handler, cancelable{resolve_cancelable_}](
           std::shared_ptr<std::vector<boost::asio::ip::address>> addresses,
           std::error_code ec) {
         if (cancelable.canceled()) {
@@ -95,17 +97,18 @@ Cancelable Endpoint::ForceResolve(EventHandler handler) {
 }
 
 std::shared_ptr<Endpoint> Endpoint::Dup() const {
-  std::shared_ptr<Endpoint> endpoint_;
+  std::shared_ptr<Endpoint> endpoint;
   switch (type_) {
     case Type::Address:
-      endpoint_ = std::make_shared<Endpoint>(address_, port_);
+      endpoint = std::make_shared<Endpoint>(address_, port_);
     case Type::Domain:
-      endpoint_ = std::make_shared<Endpoint>(domain_, port_);
+      endpoint = std::make_shared<Endpoint>(domain_, port_);
   }
 
-  endpoint_->set_ip_protocol(ip_protocol_);
+  endpoint->set_ip_protocol(ip_protocol_);
+  endpoint->set_resolver(resolver_);
 
-  return endpoint_;
+  return endpoint;
 }
 
 }  // namespace utils

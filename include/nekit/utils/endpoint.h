@@ -34,7 +34,7 @@
 
 namespace nekit {
 namespace utils {
-class Endpoint : LifeTime {
+class Endpoint final {
  public:
   using EventHandler = std::function<void(std::error_code)>;
 
@@ -42,6 +42,8 @@ class Endpoint : LifeTime {
 
   Endpoint(const std::string& host, uint16_t port = 0);
   Endpoint(const boost::asio::ip::address& ip, uint16_t port = 0);
+
+  ~Endpoint();
 
   bool operator==(const std::string& rhs) const { return domain_ == rhs; }
 
@@ -56,7 +58,7 @@ class Endpoint : LifeTime {
   Type type() const { return type_; }
 
   // Prefer to return the domain name of the host if available.
-  std::string host() const { return domain_; }
+  const std::string& host() const { return domain_; }
 
   // The result only makes sense when `IsAddressAvailable` returns `true`.
   const boost::asio::ip::address& address() const {
@@ -85,8 +87,7 @@ class Endpoint : LifeTime {
 
   void set_resolver(ResolverInterface* resolver) { resolver_ = resolver; }
 
-  Cancelable Resolve(EventHandler handler)
-      __attribute__((warn_unused_result));
+  Cancelable Resolve(EventHandler handler) __attribute__((warn_unused_result));
   Cancelable ForceResolve(EventHandler handler)
       __attribute__((warn_unused_result));
 

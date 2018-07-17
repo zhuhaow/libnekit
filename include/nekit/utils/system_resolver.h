@@ -31,7 +31,7 @@
 
 namespace nekit {
 namespace utils {
-class SystemResolver : public ResolverInterface, private LifeTime {
+class SystemResolver : public ResolverInterface {
  public:
   SystemResolver(boost::asio::io_context* io, size_t thread_count);
   ~SystemResolver();
@@ -56,6 +56,8 @@ class SystemResolver : public ResolverInterface, private LifeTime {
       boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>
       work_guard_;
   std::unique_ptr<boost::asio::io_context> resolve_io_;
+
+  Cancelable lifetime_;
 };
 }  // namespace utils
 }  // namespace nekit
