@@ -50,7 +50,6 @@ TcpSocket::TcpSocket(boost::asio::ip::tcp::socket &&socket,
 TcpSocket::TcpSocket(std::shared_ptr<utils::Session> session)
     : socket_{*session->io()},
       session_{session},
-      connect_to_{session->current_endpoint()},
       write_buffer_{
           std::make_unique<std::vector<boost::asio::const_buffer>>(0)},
       read_buffer_{
@@ -269,8 +268,9 @@ utils::Cancelable TcpSocket::Continue(EventHandler handler) {
   return report_cancelable_;
 }
 
-utils::Cancelable TcpSocket::Connect(EventHandler handler) {
-  connect_to_ = session_->current_endpoint();
+utils::Cancelable TcpSocket::Connect(std::shared_ptr<utils::Endpoint> endpoint,
+                                     EventHandler handler) {
+  connect_to_ = endpoint;
 
   BOOST_ASSERT(connect_to_);
 

@@ -88,15 +88,16 @@ void Tunnel::MatchRule() {
 }
 
 void Tunnel::ConnectToRemote() {
-  rule_cancelable_ = remote_data_flow_->Connect([this](std::error_code ec) {
-    if (ec) {
-      LocalReportError(ec);
-      return;
-    }
+  rule_cancelable_ = remote_data_flow_->Connect(session_->endpoint()->Dup(),
+                                                [this](std::error_code ec) {
+                                                  if (ec) {
+                                                    LocalReportError(ec);
+                                                    return;
+                                                  }
 
-    ResetTimer();
-    FinishLocalNegotiation();
-  });
+                                                  ResetTimer();
+                                                  FinishLocalNegotiation();
+                                                });
 }
 
 void Tunnel::FinishLocalNegotiation() {

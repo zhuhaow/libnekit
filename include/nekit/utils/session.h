@@ -40,18 +40,14 @@ struct Session : public AsyncIoInterface {
   Session(boost::asio::io_context* io) : io_{io} {}
 
   Session(boost::asio::io_context* io, std::string host, uint16_t port = 0)
-      : io_{io},
-        endpoint_{std::make_shared<Endpoint>(host, port)},
-        current_endpoint_{endpoint_} {}
+      : io_{io}, endpoint_{std::make_shared<Endpoint>(host, port)} {}
 
   Session(boost::asio::io_context* io, boost::asio::ip::address ip,
           uint16_t port = 0)
-      : io_{io},
-        endpoint_{std::make_shared<Endpoint>(ip, port)},
-        current_endpoint_{endpoint_} {}
+      : io_{io}, endpoint_{std::make_shared<Endpoint>(ip, port)} {}
 
   Session(boost::asio::io_context* io, std::shared_ptr<Endpoint> endpoint)
-      : io_{io}, endpoint_{endpoint}, current_endpoint_{endpoint_} {}
+      : io_{io}, endpoint_{endpoint} {}
 
   std::map<std::string, int>& int_cache() { return int_cache_; }
   std::map<std::string, std::string>& string_cache() { return string_cache_; }
@@ -60,21 +56,12 @@ struct Session : public AsyncIoInterface {
   void set_endpoint(std::shared_ptr<Endpoint> endpoint) {
     endpoint_ = endpoint;
     endpoint_->set_resolver(resolver_);
-
-    if (!current_endpoint_) current_endpoint_ = endpoint_;
-  }
-
-  std::shared_ptr<Endpoint>& current_endpoint() { return current_endpoint_; }
-  void set_current_endpoint(std::shared_ptr<Endpoint> endpoint) {
-    current_endpoint_ = endpoint;
-    current_endpoint_->set_resolver(resolver_);
   }
 
   void set_resolver(ResolverInterface* resolver) {
     BOOST_ASSERT(resolver->io() == io_);
 
     resolver_ = resolver;
-    if (current_endpoint_) current_endpoint_->set_resolver(resolver);
     if (endpoint_) endpoint_->set_resolver(resolver);
   }
 
@@ -83,7 +70,6 @@ struct Session : public AsyncIoInterface {
  private:
   boost::asio::io_context* io_;
   std::shared_ptr<Endpoint> endpoint_;
-  std::shared_ptr<Endpoint> current_endpoint_;
 
   ResolverInterface* resolver_{nullptr};
 

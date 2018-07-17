@@ -171,9 +171,9 @@ std::shared_ptr<utils::Session> HttpDataFlow::Session() const {
 
 boost::asio::io_context* HttpDataFlow::io() { return session_->io(); }
 
-utils::Cancelable HttpDataFlow::Connect(EventHandler handler) {
-  target_endpoint_ = session_->current_endpoint();
-  session_->set_current_endpoint(server_endpoint_);
+utils::Cancelable HttpDataFlow::Connect(
+    std::shared_ptr<utils::Endpoint> endpoint, EventHandler handler) {
+  target_endpoint_ = endpoint;
 
   BOOST_ASSERT(target_endpoint_);
 
@@ -181,6 +181,7 @@ utils::Cancelable HttpDataFlow::Connect(EventHandler handler) {
 
   connect_cancelable_ = utils::Cancelable();
   connect_action_cancelable_ = data_flow_->Connect(
+      server_endpoint_,
       [this, handler, cancelable{connect_cancelable_}](std::error_code ec) {
         if (cancelable.canceled()) {
           return;

@@ -69,7 +69,8 @@ class HttpDataFlow : public RemoteDataFlowInterface {
 
   boost::asio::io_context* io() override;
 
-  utils::Cancelable Connect(EventHandler handler) override
+  utils::Cancelable Connect(std::shared_ptr<utils::Endpoint>,
+                            EventHandler handler) override
       __attribute__((warn_unused_result));
 
   RemoteDataFlowInterface* NextRemoteHop() const override;

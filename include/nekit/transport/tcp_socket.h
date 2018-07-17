@@ -67,7 +67,8 @@ class TcpSocket final : public data_flow::LocalDataFlowInterface,
   utils::Cancelable Continue(EventHandler) override
       __attribute__((warn_unused_result));
 
-  utils::Cancelable Connect(EventHandler) override
+  utils::Cancelable Connect(std::shared_ptr<utils::Endpoint>,
+                            EventHandler) override
       __attribute__((warn_unused_result));
 
   std::shared_ptr<utils::Endpoint> ConnectingTo() override;
