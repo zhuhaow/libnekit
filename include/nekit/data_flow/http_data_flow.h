@@ -99,8 +99,7 @@ class HttpDataFlow : public RemoteDataFlowInterface {
   std::unique_ptr<RemoteDataFlowInterface> data_flow_;
   std::unique_ptr<Credential> credential_;
 
-  utils::Cancelable connect_cancelable_, connect_action_cancelable_,
-      read_cancelable_, write_cancelable_;
+  utils::Cancelable connect_cancelable_, connect_action_cancelable_;
   utils::HttpMessageStreamRewriter rewriter_;
 
   bool finish_response_{false}, success_response_{false};

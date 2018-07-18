@@ -94,71 +94,28 @@ HttpDataFlow::HttpDataFlow(std::shared_ptr<utils::Endpoint> server_endpoint,
 
 HttpDataFlow::~HttpDataFlow() {
   connect_cancelable_.Cancel();
-  read_cancelable_.Cancel();
   connect_action_cancelable_.Cancel();
-  write_cancelable_.Cancel();
 }
 
 utils::Cancelable HttpDataFlow::Read(utils::Buffer&& buffer,
                                      DataEventHandler handler) {
-  state_machine_.ReadBegin();
-
-  read_cancelable_ = data_flow_->Read(
-      std::move(buffer),
-      [this, handler](utils::Buffer&& buffer, std::error_code ec) {
-        state_machine_.ReadEnd();
-
-        if (ec) {
-          if (ec == nekit::transport::ErrorCode::EndOfFile) {
-            state_machine_.ReadClosed();
-          } else {
-            state_machine_.Errored();
-          }
-          handler(std::move(buffer), ec);
-          return;
-        }
-
-        handler(std::move(buffer), ec);
-      });
-
-  return read_cancelable_;
+  return data_flow_->Read(std::move(buffer), handler);
 }
 
 utils::Cancelable HttpDataFlow::Write(utils::Buffer&& buffer,
                                       EventHandler handler) {
-  state_machine_.WriteBegin();
-
-  write_cancelable_ =
-      data_flow_->Write(std::move(buffer), [this, handler](std::error_code ec) {
-        state_machine_.WriteEnd();
-
-        if (ec) {
-          state_machine_.Errored();
-        }
-        handler(ec);
-      });
-  return write_cancelable_;
+  return data_flow_->Write(std::move(buffer), handler);
 }
 
 utils::Cancelable HttpDataFlow::CloseWrite(EventHandler handler) {
-  state_machine_.WriteCloseBegin();
-
-  write_cancelable_ =
-      data_flow_->CloseWrite([this, handler](std::error_code ec) {
-        state_machine_.WriteCloseEnd();
-
-        if (ec) {
-          state_machine_.Errored();
-        }
-
-        handler(ec);
-      });
-
-  return write_cancelable_;
+  return data_flow_->CloseWrite(handler);
 }
 
 const FlowStateMachine& HttpDataFlow::StateMachine() const {
-  return state_machine_;
+  if (state_machine_.State() != FlowState::Established)
+    return state_machine_;
+  else
+    return data_flow_->StateMachine();
 }
 
 DataFlowInterface* HttpDataFlow::NextHop() const { return data_flow_.get(); }
