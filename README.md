@@ -1,7 +1,6 @@
 # libnekit
 
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/50682cd3b084494f8d0ddb09fda139ab)](https://www.codacy.com/app/zhuhaow/libnekit?utm_source=github.com&utm_medium=referral&utm_content=zhuhaow/libnekit&utm_campaign=badger)
-[![Build Status](https://travis-ci.org/zhuhaow/libnekit.svg?branch=master)](https://travis-ci.org/zhuhaow/libnekit) [![Build status](https://ci.appveyor.com/api/projects/status/03jy4k9c8etur68u?svg=true)](https://ci.appveyor.com/project/zhuhaow/libnekit) [![codecov](https://codecov.io/gh/zhuhaow/libnekit/branch/master/graph/badge.svg)](https://codecov.io/gh/zhuhaow/libnekit)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/50682cd3b084494f8d0ddb09fda139ab)](https://www.codacy.com/app/zhuhaow/libnekit?utm_source=github.com&utm_medium=referral&utm_content=zhuhaow/libnekit&utm_campaign=badger) [![Build Status](https://travis-ci.org/zhuhaow/libnekit.svg?branch=master)](https://travis-ci.org/zhuhaow/libnekit) [![Build status](https://ci.appveyor.com/api/projects/status/03jy4k9c8etur68u?svg=true)](https://ci.appveyor.com/project/zhuhaow/libnekit) [![codecov](https://codecov.io/gh/zhuhaow/libnekit/branch/master/graph/badge.svg)](https://codecov.io/gh/zhuhaow/libnekit)
 
 
 libnekit is a cross-platform version of [NEKit](https://github.com/zhuhaow/NEKit) written in C++ to make building applications which **route or analyze network traffic** quick and simple. libnekit is built with security, efficiency and flexibility in mind. 
@@ -119,7 +118,7 @@ libnekit provides several rules and you can easily create new ones based on the 
 
 Now, with everything at hand, let's take a look at a real example.
 
-```cpp
+```c++
 #include <boost/asio.hpp>
 #include <boost/log/common.hpp>
 #include <boost/log/core.hpp>
@@ -165,19 +164,22 @@ int main() {
                   instance_name))[expr::stream << "[" << instance_name << "]"]
            << "[" << channel << "]" << expr::smessage));
 
-  // One instance is one run loop. You can create multiple instances if you want to use multi threads.
+  // One instance is one run loop. You can create multiple instances if you want
+  // to use multi threads.
   Instance instance{"Specht"};
-  
+
   // Proxy manager manages all the local proxies.
   auto proxy_manager = std::make_unique<ProxyManager>();
 
   // Rule manager handles rule matching.
   auto rule_manager = std::make_unique<rule::RuleManager>(instance.io());
 
-  // Unless you understand everything, make sure there is only one resolver used for one instance.
+  // Unless you understand everything, make sure there is only one resolver used
+  // for one instance.
   auto resolver = std::make_unique<utils::SystemResolver>(instance.io(), 5);
 
-  // This is the lambda to be called to create a data flow chain connects to remote http proxy.
+  // This is the lambda to be called to create a data flow chain connects to
+  // remote http proxy.
   rule::RuleHandler http_proxy_handler =
       [resolver(resolver.get())](std::shared_ptr<utils::Session> session) {
         auto endpoint = std::make_shared<utils::Endpoint>("1.2.3.4", 9090);
@@ -188,7 +190,8 @@ int main() {
             nullptr);
       };
 
-  // This is the lambda to be called to create a data flow chain automatically selects the fastest data flow becomes ready.
+  // This is the lambda to be called to create a data flow chain automatically
+  // selects the fastest data flow becomes ready.
   rule::RuleHandler speed_handler =
       [resolver(resolver.get())](std::shared_ptr<utils::Session> session) {
         auto endpoint = std::make_shared<utils::Endpoint>("1.2.3.4", 9091);
@@ -197,7 +200,8 @@ int main() {
             std::pair<std::unique_ptr<data_flow::RemoteDataFlowInterface>, int>>
             data_flows;
         data_flows.emplace_back(
-            // Socks5DataFlowv(1.2.3.4:9091) -> TcpSocket, delay 100 milliseconds before connecting
+            // Socks5DataFlowv(1.2.3.4:9091) -> TcpSocket, delay 100
+            // milliseconds before connecting
             std::make_pair(std::make_unique<data_flow::Socks5DataFlow>(
                                endpoint, session,
                                std::make_unique<transport::TcpSocket>(session)),
@@ -209,19 +213,19 @@ int main() {
         return std::make_unique<data_flow::SpeedDataFlow>(
             session, std::move(data_flows));
       };
-  
+
   // This is the lambda to be called to connect directly.
   rule::RuleHandler direct_handler =
       [](std::shared_ptr<utils::Session> session) {
         return std::make_unique<transport::TcpSocket>(session);
       };
-  
+
   // If target host is in China, connect directly by using direct_handler.
   std::shared_ptr<rule::RuleInterface> geo_cn_rule =
-     std::make_shared<rule::GeoRule>(utils::CountryIsoCode::CN, true,
-                                     direct_handler);
-                                     
-  // If resolution fails, connect through proxy.                      
+      std::make_shared<rule::GeoRule>(utils::CountryIsoCode::CN, true,
+                                      direct_handler);
+
+  // If resolution fails, connect through proxy.
   auto dns_fail_rule = std::make_shared<rule::DnsFailRule>(http_proxy_handler);
   // Choose which ways is fast automatically.
   auto all_rule = std::make_shared<rule::AllRule>(speed_handler);
@@ -233,14 +237,16 @@ int main() {
   proxy_manager->SetRuleManager(std::move(rule_manager));
   proxy_manager->SetResolver(std::move(resolver));
 
-  // When a new connection comes in locally, we treat it as a connection to a SOCSK5 server.
+  // When a new connection comes in locally, we treat it as a connection to a
+  // SOCSK5 server.
   auto socks5_listener = std::make_unique<transport::TcpListener>(
       instance.io(), [](auto data_flow) {
         return std::make_unique<data_flow::Socks5ServerDataFlow>(
             std::move(data_flow), data_flow->Session());
       });
-  
-  // When a new connection comes in locally, we treat it as a connection to a http server.
+
+  // When a new connection comes in locally, we treat it as a connection to a
+  // http server.
   auto http_listener = std::make_unique<transport::TcpListener>(
       instance.io(), [](auto data_flow) {
         return std::make_unique<data_flow::HttpServerDataFlow>(
@@ -252,7 +258,10 @@ int main() {
   proxy_manager->AddListener(std::move(socks5_listener));
   proxy_manager->AddListener(std::move(http_listener));
 
-  // We can add as many proxy managers as we want, each listens on different ports with different rules (note rules are created with `std::shared_ptr`, they can be shared among different rule manages as along as they all belongs to the same instance.
+  // We can add as many proxy managers as we want, each listens on different
+  // ports with different rules (note rules are created with `std::shared_ptr`,
+  // they can be shared among different rule manages as along as they all
+  // belongs to the same instance.
   instance.AddProxyManager(std::move(proxy_manager));
 
   boost::asio::signal_set signals(*instance.io(), SIGINT, SIGTERM);
@@ -263,6 +272,7 @@ int main() {
 
   return 0;
 }
+
 ```
 
 ## Extend libnekit
@@ -272,18 +282,18 @@ Data flow is the core of libnekit. Let's take a look at how data flow is handled
 
 Below is the outline of `DataFlowInterface`.
 
-```cpp
+```c++
 using DataEventHandler = std::function<void(utils::Buffer&&, utils::Error)>;
 using EventHandler = std::function<void(utils::Error)>;
 
 virtual utils::Cancelable Read(utils::Buffer&&, DataEventHandler)
-      __attribute__((warn_unused_result)) = 0;
-      
+    __attribute__((warn_unused_result)) = 0;
+
 virtual utils::Cancelable Write(utils::Buffer&&, EventHandler)
-      __attribute__((warn_unused_result)) = 0;
+    __attribute__((warn_unused_result)) = 0;
 
 virtual utils::Cancelable CloseWrite(EventHandler)
-      __attribute__((warn_unused_result)) = 0;
+    __attribute__((warn_unused_result)) = 0;
 
 virtual const FlowStateMachine& StateMachine() const = 0;
 
@@ -298,9 +308,9 @@ This brings great flexibility and allows you to basically do anything you want w
 
 Let's get back to the interface definition and take a closer look at the seemingly daunting definition of read method.
 
-```cpp
+```c++
 virtual utils::Cancelable Read(utils::Buffer&&, DataEventHandler)
-      __attribute__((warn_unused_result)) = 0;
+    __attribute__((warn_unused_result)) = 0;
 ```
 
 We pass in a buffer and a handler, since almost everything in libnekit is asynchronous, we shouldn't expect the method will block until it really gets something. Instead, we give an event handler which will be called when there is some data read into the buffer. The `DataEventHandler` which is defined as `std::function<void(utils::Buffer&&, utils::Error)>` is simply a lambda which takes a buffer filled with data and an error code. We should check the if there is any error before we process the data. 
@@ -317,7 +327,7 @@ Now, as you have read and understood how asio works, let's have a quick recap an
 
 It's very tempting to write a data flow that handle data encryption (with a FPE algorithm which keeps and ciphertext and plaintext and same length, like most block cipher) as this (only the read part):
 
-```cpp
+```c++
 class SecuredDataFlow {
  public:
   void Read(std::function<void(const boost::system::error_code &, std::size_t)>
@@ -344,7 +354,6 @@ class SecuredDataFlow {
   boost::asio::ip::tcp::socket socket_;
   uint8_t read_buffer_[1024];
 }
-
 ```
 
 Everything seems fine, except for one, what if we decide we no longer need the socket? For example, this data flow is reading data from remote but our local application encountered an error when processing the stream and can't not proceed. It makes little sense to keep the socket (data flow) available, but can we just release it immediately?
@@ -368,17 +377,19 @@ In order to avoid all of those issues, libnekit uses a very simple class holding
 
 The core of `utils::Cancelable` is just a `std::shared_ptr<bool>`.
 
-```cpp
+```c++
 class Cancelable {
  public:
   void Cancel();
-  
+
   ...
-  
-  bool canceled() const;
+
+      bool
+      canceled() const;
 
  private:
   std::shared_ptr<bool> canceled_;
+};
 ```
 
 If we want to cancel the handler, we just call the `Cancel()` method on the returned `utils::Cancelable`. The data flow will first check if the **captured** `utils::Cancelable` is cancelled or not. 
