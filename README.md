@@ -484,3 +484,6 @@ libnekit will use exception whenever possible. All exceptions from libnekit shou
 
 
 
+## License
+
+MIT.
