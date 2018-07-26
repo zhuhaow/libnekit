@@ -3,3 +3,6 @@
 clint = "*"
 plumbum = "*"
 requests = "*"
+
+[requires]
+python_version = "3"
