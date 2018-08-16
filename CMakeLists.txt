@@ -85,6 +85,7 @@ target_sources(nekit PRIVATE
   src/crypto/random.cc
   src/crypto/key_generator.cc
   src/crypto/stream_cipher_interface.cc
+  src/crypto/tls_tunnel.cc
   src/utils/buffer.cc
   src/utils/endpoint.cc
   src/data_flow/socks5_server_data_flow.cc
@@ -92,6 +93,7 @@ target_sources(nekit PRIVATE
   src/data_flow/http_data_flow.cc
   src/data_flow/socks5_data_flow.cc
   src/data_flow/speed_data_flow.cc
+  src/data_flow/tls_data_flow.cc
   modules/http_parser/http_parser.c
   )
 
