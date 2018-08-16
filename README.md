@@ -25,7 +25,7 @@ Things supported now:
 
 Things will be added or changed, ordered by priority:
 
-* [ ] TLS support (as client)
+* [x] TLS support (as client)
 * [ ] Minor API refinement
 * [ ] Build for Windows and Android
 * [ ] Better error handling
