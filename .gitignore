@@ -389,3 +389,4 @@ deps/
 /build
 /app/
 .cquery_cached_index/
+/doc
