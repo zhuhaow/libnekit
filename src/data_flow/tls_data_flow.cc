@@ -223,6 +223,7 @@ void TlsDataFlow::TryRead() {
   if (read_handler_) {
     if (tunnel_.HasPlainTextDataToRead()) {
       GetRunloop()->Post([this, buffer{tunnel_.ReadPlainTextData()},
+                          handler{read_handler_},
                           cancelable{read_cancelable_}]() mutable {
         if (cancelable.canceled()) {
           return;
@@ -230,10 +231,10 @@ void TlsDataFlow::TryRead() {
 
         state_machine_.ReadEnd();
 
-        auto handler = read_handler_;
-        read_handler_ = nullptr;
         handler(std::move(buffer), {});
       });
+
+      read_handler_ = nullptr;
 
       if (tunnel_.NeedCipherInput()) {
         TryReadNextHop();
@@ -254,17 +255,17 @@ void TlsDataFlow::TryRead() {
 
 void TlsDataFlow::TryWrite() {
   if (tunnel_.FinishWritingCipherData() && write_handler_) {
-    GetRunloop()->Post([this, cancelable{write_cancelable_}]() {
-      if (cancelable.canceled()) {
-        return;
-      }
+    GetRunloop()->Post(
+        [this, handler{write_handler_}, cancelable{write_cancelable_}]() {
+          if (cancelable.canceled()) {
+            return;
+          }
 
-      state_machine_.WriteEnd();
+          state_machine_.WriteEnd();
 
-      auto handler = write_handler_;
-      write_handler_ = nullptr;
-      handler({});
-    });
+          handler({});
+        });
+    write_handler_ = nullptr;
     return;
   };
 
