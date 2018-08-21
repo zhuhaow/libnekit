@@ -29,21 +29,21 @@
 
 #include <boost/asio.hpp>
 
-#include "../utils/async_io_interface.h"
+#include "../utils/async_interface.h"
 #include "../utils/cancelable.h"
 #include "../utils/resolver_interface.h"
 #include "rule_interface.h"
 
 namespace nekit {
 namespace rule {
-class RuleManager final : public utils::AsyncIoInterface {
+class RuleManager final : public utils::AsyncInterface {
  public:
   using EventHandler =
       std::function<void(std::shared_ptr<RuleInterface>, std::error_code)>;
 
   enum class ErrorCode { NoError, NoMatch };
 
-  explicit RuleManager(boost::asio::io_context* io);
+  explicit RuleManager(utils::Runloop* runloop);
 
   ~RuleManager();
 
@@ -53,7 +53,7 @@ class RuleManager final : public utils::AsyncIoInterface {
                           EventHandler handler)
       __attribute__((warn_unused_result));
 
-  boost::asio::io_context* io() override;
+  utils::Runloop* GetRunloop() override;
 
  private:
   void MatchIterator(
@@ -62,7 +62,7 @@ class RuleManager final : public utils::AsyncIoInterface {
       EventHandler handler);
 
   std::vector<std::shared_ptr<RuleInterface>> rules_;
-  boost::asio::io_context* io_;
+  utils::Runloop* runloop_;
   utils::Cancelable lifetime_;
 };
 

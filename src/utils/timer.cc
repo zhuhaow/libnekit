@@ -25,8 +25,10 @@
 namespace nekit {
 namespace utils {
 
-Timer::Timer(boost::asio::io_context* io, std::function<void()> handler)
-    : io_{io}, handler_{handler}, timer_{*io} {}
+Timer::Timer(utils::Runloop* runloop, std::function<void()> handler)
+    : runloop_{runloop},
+      handler_{handler},
+      timer_{*runloop->BoostIoContext()} {}
 
 Timer::~Timer() { Cancel(); }
 
@@ -55,6 +57,6 @@ void Timer::Cancel() {
   cancelable_.Cancel();
 }
 
-boost::asio::io_context* Timer::io() { return io_; }
+utils::Runloop* Timer::GetRunloop() { return runloop_; }
 }  // namespace utils
 }  // namespace nekit

@@ -126,7 +126,7 @@ std::shared_ptr<utils::Session> HttpDataFlow::Session() const {
   return session_;
 }
 
-boost::asio::io_context* HttpDataFlow::io() { return session_->io(); }
+utils::Runloop* HttpDataFlow::GetRunloop() { return session_->GetRunloop(); }
 
 utils::Cancelable HttpDataFlow::Connect(
     std::shared_ptr<utils::Endpoint> endpoint, EventHandler handler) {

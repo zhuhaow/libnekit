@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2017 Zhuhao Wang
+// Copyright (c) 2018 Zhuhao Wang
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,20 +22,48 @@
 
 #pragma once
 
-#include <boost/asio.hpp>
+#include <memory>
+
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/post.hpp>
+#include <boost/noncopyable.hpp>
+
+#include "async_task.h"
 
 namespace nekit {
 namespace utils {
-
-class AsyncIoInterface {
+class Runloop : private boost::noncopyable {
  public:
-  virtual ~AsyncIoInterface() = default;
+  Runloop() = default;
 
-  // It must be guaranteed that any `io_context` that will be returned by any
-  // instances of this interface should not be released before all instances are
-  // released.
-  virtual boost::asio::io_context* io() = 0;
+  template <typename... Args>
+  void Post(Args&&... args) {
+    boost::asio::post(io_context_, std::forward<Args>(args)...);
+  }
+
+  void Run() { io_context_.run(); }
+
+  void Stop() { io_context_.stop(); }
+
+  /**
+   * @brief Get the underlying boost `io_context`.
+   *
+
+   * @return boost::asio::io_context
+
+   * @note Please use this with discretion. Do not relay on boost asio since it
+   may be replaced anytime.
+   */
+  boost::asio::io_context* BoostIoContext() { return &io_context_; }
+
+ private:
+  boost::asio::io_context io_context_;
 };
 
+template <>
+inline void Runloop::Post<std::unique_ptr<AsyncTask>>(
+    std::unique_ptr<AsyncTask>&& task) {
+  Post([task{std::move(task)}]() { task->Run(); });
+}
 }  // namespace utils
 }  // namespace nekit

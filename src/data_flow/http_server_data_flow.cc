@@ -101,7 +101,7 @@ utils::Cancelable HttpServerDataFlow::Read(utils::Buffer&& buffer,
 
   if (first_header_) {
     read_cancelable_ = utils::Cancelable();
-    boost::asio::post(*io(), [this, handler, cancelable{read_cancelable_}]() {
+    GetRunloop()->Post([this, handler, cancelable{read_cancelable_}]() {
       if (cancelable.canceled()) {
         return;
       }
@@ -199,7 +199,9 @@ std::shared_ptr<utils::Session> HttpServerDataFlow::Session() const {
   return session_;
 }
 
-boost::asio::io_context* HttpServerDataFlow::io() { return data_flow_->io(); }
+utils::Runloop* HttpServerDataFlow::GetRunloop() {
+  return data_flow_->GetRunloop();
+}
 
 utils::Cancelable HttpServerDataFlow::Open(EventHandler handler) {
   state_machine_.ConnectBegin();

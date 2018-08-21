@@ -59,7 +59,7 @@ class TcpSocket final : public data_flow::LocalDataFlowInterface,
 
   std::shared_ptr<utils::Session> Session() const override;
 
-  boost::asio::io_context* io() override;
+  utils::Runloop* GetRunloop() override;
 
   utils::Cancelable Open(EventHandler) override
       __attribute__((warn_unused_result));

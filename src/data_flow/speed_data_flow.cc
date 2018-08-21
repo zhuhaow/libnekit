@@ -67,8 +67,9 @@ std::shared_ptr<utils::Session> SpeedDataFlow::Session() const {
   return session_;
 }
 
-boost::asio::io_context* SpeedDataFlow::io() {
-  return data_flows_.size() ? data_flows_[0].first->io() : data_flow_->io();
+utils::Runloop* SpeedDataFlow::GetRunloop() {
+  return data_flows_.size() ? data_flows_[0].first->GetRunloop()
+                            : data_flow_->GetRunloop();
 }
 
 utils::Cancelable SpeedDataFlow::Connect(
@@ -80,7 +81,7 @@ utils::Cancelable SpeedDataFlow::Connect(
   current_active_connection_ = data_flows_.size();
   for (size_t i = 0; i < data_flows_.size(); i++) {
     connect_timers_.emplace_back(
-        io(), [this, cancelable{connect_cancelable_}, i, handler]() {
+        GetRunloop(), [this, cancelable{connect_cancelable_}, i, handler]() {
           if (cancelable.canceled()) {
             return;
           }

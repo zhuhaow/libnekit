@@ -98,7 +98,7 @@ std::shared_ptr<utils::Session> TlsDataFlow::Session() const {
   return session_;
 }
 
-boost::asio::io_context* TlsDataFlow::io() { return data_flow_->io(); }
+utils::Runloop* TlsDataFlow::GetRunloop() { return data_flow_->GetRunloop(); }
 
 utils::Cancelable TlsDataFlow::Connect(
     std::shared_ptr<utils::Endpoint> endpoint, EventHandler handler) {
@@ -222,8 +222,8 @@ void TlsDataFlow::Process() {
 void TlsDataFlow::TryRead() {
   if (read_handler_) {
     if (tunnel_.HasPlainTextDataToRead()) {
-      boost::asio::post(*io(), [this, buffer{tunnel_.ReadPlainTextData()},
-                                cancelable{read_cancelable_}]() mutable {
+      GetRunloop()->Post([this, buffer{tunnel_.ReadPlainTextData()},
+                          cancelable{read_cancelable_}]() mutable {
         if (cancelable.canceled()) {
           return;
         }
@@ -254,7 +254,7 @@ void TlsDataFlow::TryRead() {
 
 void TlsDataFlow::TryWrite() {
   if (tunnel_.FinishWritingCipherData() && write_handler_) {
-    boost::asio::post(*io(), [this, cancelable{write_cancelable_}]() {
+    GetRunloop()->Post([this, cancelable{write_cancelable_}]() {
       if (cancelable.canceled()) {
         return;
       }

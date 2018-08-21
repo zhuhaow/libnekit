@@ -131,7 +131,7 @@ std::shared_ptr<utils::Session> Socks5ServerDataFlow::Session() const {
   return session_;
 }
 
-boost::asio::io_context* Socks5ServerDataFlow::io() { return data_flow_->io(); }
+utils::Runloop* Socks5ServerDataFlow::GetRunloop() { return data_flow_->GetRunloop(); }
 
 utils::Cancelable Socks5ServerDataFlow::Open(EventHandler handler) {
   state_machine_.ConnectBegin();

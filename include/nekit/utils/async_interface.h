@@ -22,41 +22,28 @@
 
 #pragma once
 
-#include <memory>
-
-#include <boost/asio.hpp>
-#include <boost/thread/thread.hpp>
-
-#include "resolver_interface.h"
+#include "runloop.h"
 
 namespace nekit {
 namespace utils {
-class SystemResolver : public ResolverInterface {
+
+/**
+ * @brief Interface any class with asynchronous methods should inherit.
+ *
+ * @note It must be guaranteed that the `Runloop` will not be released before
+ * any instance that will return that `Runloop` is released.
+ */
+class AsyncInterface {
  public:
-  SystemResolver(Runloop* runloop, size_t thread_count);
-  ~SystemResolver();
+  virtual ~AsyncInterface() = default;
 
-  Cancelable Resolve(std::string domain, AddressPreference preference,
-                     EventHandler handler) override
-      __attribute__((warn_unused_result));
-
-  void Stop() override;
-
-  Runloop* GetRunloop() override;
-
- private:
-  std::error_code ConvertBoostError(const boost::system::error_code& ec);
-
-  utils::Runloop* runloop_;
-
-  size_t thread_count_;
-  boost::thread_group thread_group_;
-  std::unique_ptr<
-      boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>
-      work_guard_;
-  utils::Runloop resolve_runloop_;
-
-  Cancelable lifetime_;
+  /**
+   * @brief Get the underlying `Runloop`.
+   *
+   * @return The `Runloop`.
+   */
+  virtual Runloop* GetRunloop() = 0;
 };
+
 }  // namespace utils
 }  // namespace nekit

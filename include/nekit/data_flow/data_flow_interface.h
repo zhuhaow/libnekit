@@ -27,7 +27,7 @@
 
 #include <boost/noncopyable.hpp>
 
-#include "../utils/async_io_interface.h"
+#include "../utils/async_interface.h"
 #include "../utils/buffer.h"
 #include "../utils/cancelable.h"
 #include "../utils/error.h"
@@ -39,7 +39,7 @@ namespace data_flow {
 
 enum class DataType { Stream, Packet };
 
-class DataFlowInterface : public utils::AsyncIoInterface,
+class DataFlowInterface : public utils::AsyncInterface,
                           // This is probably not necessary, but we enforce it
                           // here to avoid any potential error.
                           private boost::noncopyable {

@@ -24,30 +24,29 @@
 
 #include "transport/listener_interface.h"
 #include "transport/tunnel.h"
-#include "utils/async_io_interface.h"
+#include "utils/async_interface.h"
 #include "utils/resolver_interface.h"
 
 namespace nekit {
-class ProxyManager : public utils::AsyncIoInterface {
+class ProxyManager : public utils::AsyncInterface {
  public:
+  ProxyManager(utils::Runloop *runloop);
+
   void SetRuleManager(std::unique_ptr<rule::RuleManager> &&rule_manager);
   void SetResolver(std::unique_ptr<utils::ResolverInterface> &&resolver);
   void AddListener(std::unique_ptr<transport::ListenerInterface> &&listener);
 
   void Run();
   void Stop();
-  void Reset();
 
-  boost::asio::io_context *io() override;
+  utils::Runloop *GetRunloop() override;
 
  private:
-  bool CheckOrSetIo(utils::AsyncIoInterface *io_interface);
-
   std::unique_ptr<rule::RuleManager> rule_manager_;
   std::unique_ptr<utils::ResolverInterface> resolver_;
   std::vector<std::unique_ptr<transport::ListenerInterface>> listeners_;
   transport::TunnelManager tunnel_manager_;
 
-  boost::asio::io_context *io_{nullptr};
+  utils::Runloop *runloop_;
 };
 }  // namespace nekit

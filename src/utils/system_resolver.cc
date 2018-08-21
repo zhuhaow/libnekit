@@ -32,9 +32,16 @@
 namespace nekit {
 namespace utils {
 
-SystemResolver::SystemResolver(boost::asio::io_context* io, size_t thread_count)
-    : main_io_{io}, thread_count_{thread_count} {
-  Reset();
+SystemResolver::SystemResolver(Runloop* runloop, size_t thread_count)
+    : runloop_{runloop}, thread_count_{thread_count} {
+  work_guard_ = std::make_unique<
+      boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>(
+      boost::asio::make_work_guard(*resolve_runloop_.BoostIoContext()));
+
+  for (size_t i = 0; i < thread_count_; i++) {
+    thread_group_.create_thread(boost::bind(&boost::asio::io_context::run,
+                                            resolve_runloop_.BoostIoContext()));
+  }
 }
 
 Cancelable SystemResolver::Resolve(std::string domain,
@@ -47,21 +54,22 @@ Cancelable SystemResolver::Resolve(std::string domain,
 
   Cancelable cancelable{};
 
-  boost::asio::post(*resolve_io_.get(), [this, domain, handler, cancelable,
-                                         lifetime{lifetime_}]() mutable {
-    // Note it should be guaranteed that one io_context should never be
-    // released before all the instances implementing `AsyncIoInterface`
-    // which will return that io_context are released. This resolver will
-    // never be released before `main_io_` is released. In the destructor
-    // this thread is guaranteed to exit before resolver is finished, so
-    // there is no need to worry any thread issues here. Resolver and
-    // `main_io_` will exist when this thread is running.
+  resolve_runloop_.Post([this, domain, handler, cancelable,
+                         lifetime{lifetime_}]() mutable {
+    // Note it will be guaranteed that the `runloop_` will never be
+    // released before all the instances implementing `AsyncInterface`
+    // which will return that `runloop_` are released. This resolver will
+    // never be released before `runloop_` is released. In the destructor
+    // this thread is guaranteed to exit before resolver is released, so
+    // there is no need to worry about any thread issues here. Resolver and
+    // `runloop_` will exist when this thread is running.
 
     if (cancelable.canceled() || lifetime.canceled()) {
       return;
     }
 
-    auto resolver = boost::asio::ip::tcp::resolver(*resolve_io_.get());
+    auto resolver =
+        boost::asio::ip::tcp::resolver(*resolve_runloop_.BoostIoContext());
 
     NEDEBUG << "Trying to resolve " << domain << ".";
 
@@ -72,14 +80,13 @@ Cancelable SystemResolver::Resolve(std::string domain,
       auto error = ConvertBoostError(ec);
       NEERROR << "Failed to resolve " << domain << " due to " << error << ".";
 
-      boost::asio::post(*main_io_,
-                        [handler, error, cancelable, life_time{lifetime_}]() {
-                          if (cancelable.canceled() || life_time.canceled()) {
-                            return;
-                          }
+      runloop_->Post([handler, error, cancelable, life_time{lifetime_}]() {
+        if (cancelable.canceled() || life_time.canceled()) {
+          return;
+        }
 
-                          handler(nullptr, error);
-                        });
+        handler(nullptr, error);
+      });
       return;
     }
 
@@ -91,14 +98,13 @@ Cancelable SystemResolver::Resolve(std::string domain,
 
     NEINFO << "Successfully resolved domain " << domain << ".";
 
-    boost::asio::post(*main_io_,
-                      [handler, addresses, cancelable, life_time{lifetime_}]() {
-                        if (cancelable.canceled() || life_time.canceled()) {
-                          return;
-                        }
+    runloop_->Post([handler, addresses, cancelable, life_time{lifetime_}]() {
+      if (cancelable.canceled() || life_time.canceled()) {
+        return;
+      }
 
-                        handler(addresses, NEKitErrorCode::NoError);
-                      });
+      handler(addresses, NEKitErrorCode::NoError);
+    });
   });
 
   return cancelable;
@@ -107,26 +113,10 @@ Cancelable SystemResolver::Resolve(std::string domain,
 void SystemResolver::Stop() {
   work_guard_.reset();
   thread_group_.join_all();
-  resolve_io_.reset();
-}
-
-void SystemResolver::Reset() {
-  NEDEBUG << "Resetting system resolver";
-
-  resolve_io_ = std::make_unique<boost::asio::io_context>();
-
-  work_guard_ = std::make_unique<
-      boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>(
-      boost::asio::make_work_guard(*resolve_io_));
-
-  for (size_t i = 0; i < thread_count_; i++) {
-    thread_group_.create_thread(
-        boost::bind(&boost::asio::io_context::run, resolve_io_.get()));
-  }
 }
 
 SystemResolver::~SystemResolver() {
-  thread_group_.join_all();
+  Stop();
   lifetime_.Cancel();
 }
 
@@ -141,6 +131,6 @@ std::error_code SystemResolver::ConvertBoostError(
   return std::make_error_code(ec);
 }
 
-boost::asio::io_context* SystemResolver::io() { return main_io_; }
+utils::Runloop* SystemResolver::GetRunloop() { return runloop_; }
 }  // namespace utils
 }  // namespace nekit

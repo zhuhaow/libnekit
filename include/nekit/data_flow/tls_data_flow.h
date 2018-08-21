@@ -52,7 +52,7 @@ class TlsDataFlow final : public data_flow::RemoteDataFlowInterface {
 
   std::shared_ptr<utils::Session> Session() const override;
 
-  boost::asio::io_context* io() override;
+  utils::Runloop* GetRunloop() override;
 
   utils::Cancelable Connect(std::shared_ptr<utils::Endpoint>,
                             EventHandler) override

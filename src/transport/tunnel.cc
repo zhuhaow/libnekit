@@ -40,7 +40,7 @@ Tunnel::Tunnel(
     : session_{local_data_flow->Session()},
       rule_manager_{rule_manager},
       local_data_flow_{std::move(local_data_flow)},
-      timeout_timer_{session_->io(), [this]() { ReleaseTunnel(); }} {}
+      timeout_timer_{session_->GetRunloop(), [this]() { ReleaseTunnel(); }} {}
 
 Tunnel::~Tunnel() {
   open_cancelable_.Cancel();
@@ -71,6 +71,8 @@ void Tunnel::Open() {
     MatchRule();
   });
 }
+
+utils::Runloop* Tunnel::GetRunloop() { return session_->GetRunloop(); }
 
 void Tunnel::MatchRule() {
   rule_cancelable_ = rule_manager_->Match(

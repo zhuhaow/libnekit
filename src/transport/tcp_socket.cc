@@ -44,11 +44,12 @@ TcpSocket::TcpSocket(boost::asio::ip::tcp::socket &&socket,
       read_buffer_{
           std::make_unique<std::vector<boost::asio::mutable_buffer>>(0)},
       state_machine_{data_flow::FlowType::Local} {
-  BOOST_ASSERT(&socket_.get_io_context() == session->io());
+  BOOST_ASSERT(&socket_.get_io_context() ==
+               session->GetRunloop()->BoostIoContext());
 }
 
 TcpSocket::TcpSocket(std::shared_ptr<utils::Session> session)
-    : socket_{*session->io()},
+    : socket_{*session->GetRunloop()->BoostIoContext()},
       session_{session},
       write_buffer_{
           std::make_unique<std::vector<boost::asio::const_buffer>>(0)},
@@ -194,16 +195,15 @@ utils::Cancelable TcpSocket::CloseWrite(EventHandler handler) {
 
   state_machine_.WriteCloseBegin();
 
-  boost::asio::post(*io(),
-                    [this, handler, cancelable{write_cancelable_}, error]() {
-                      if (cancelable.canceled()) {
-                        return;
-                      }
+  GetRunloop()->Post([this, handler, cancelable{write_cancelable_}, error]() {
+    if (cancelable.canceled()) {
+      return;
+    }
 
-                      state_machine_.WriteCloseEnd();
+    state_machine_.WriteCloseEnd();
 
-                      handler(error);
-                    });
+    handler(error);
+  });
 
   return write_cancelable_;
 }
@@ -224,7 +224,7 @@ data_flow::DataType TcpSocket::FlowDataType() const {
 
 std::shared_ptr<utils::Session> TcpSocket::Session() const { return session_; }
 
-boost::asio::io_context *TcpSocket::io() { return &socket_.get_io_context(); }
+utils::Runloop *TcpSocket::GetRunloop() { return session_->GetRunloop(); }
 
 utils::Cancelable TcpSocket::Open(EventHandler handler) {
   state_machine_.ConnectBegin();
@@ -236,7 +236,7 @@ utils::Cancelable TcpSocket::Open(EventHandler handler) {
 
   NETRACE << "Open TCP socket that is already connected, do nothing.";
 
-  boost::asio::post(*io(), [handler, cancelable{report_cancelable_}]() {
+  GetRunloop()->Post([handler, cancelable{report_cancelable_}]() {
     if (cancelable.canceled()) {
       return;
     }
@@ -254,7 +254,7 @@ utils::Cancelable TcpSocket::Continue(EventHandler handler) {
 
   NETRACE << "Continue to establish connection.";
 
-  boost::asio::post(*io(), [this, handler, cancelable{report_cancelable_}]() {
+  GetRunloop()->Post([this, handler, cancelable{report_cancelable_}]() {
     if (cancelable.canceled()) {
       return;
     }
@@ -274,7 +274,7 @@ utils::Cancelable TcpSocket::Connect(std::shared_ptr<utils::Endpoint> endpoint,
 
   BOOST_ASSERT(connect_to_);
 
-  connector_ = std::make_unique<TcpConnector>(connect_to_, io());
+  connector_ = std::make_unique<TcpConnector>(GetRunloop(), connect_to_);
 
   state_machine_.ConnectBegin();
 

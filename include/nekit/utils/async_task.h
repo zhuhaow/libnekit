@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2017 Zhuhao Wang
+// Copyright (c) 2018 Zhuhao Wang
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,43 +20,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
-
-#include <memory>
-
-#include <boost/asio.hpp>
-#include <boost/thread/thread.hpp>
-
-#include "resolver_interface.h"
-
 namespace nekit {
 namespace utils {
-class SystemResolver : public ResolverInterface {
+class AsyncTask {
  public:
-  SystemResolver(Runloop* runloop, size_t thread_count);
-  ~SystemResolver();
+  virtual ~AsyncTask() = default;
 
-  Cancelable Resolve(std::string domain, AddressPreference preference,
-                     EventHandler handler) override
-      __attribute__((warn_unused_result));
-
-  void Stop() override;
-
-  Runloop* GetRunloop() override;
-
- private:
-  std::error_code ConvertBoostError(const boost::system::error_code& ec);
-
-  utils::Runloop* runloop_;
-
-  size_t thread_count_;
-  boost::thread_group thread_group_;
-  std::unique_ptr<
-      boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>
-      work_guard_;
-  utils::Runloop resolve_runloop_;
-
-  Cancelable lifetime_;
+  virtual void Run() = 0;
 };
 }  // namespace utils
 }  // namespace nekit

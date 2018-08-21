@@ -29,12 +29,12 @@
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
 
-#include "async_io_interface.h"
+#include "async_interface.h"
 #include "cancelable.h"
 
 namespace nekit {
 namespace utils {
-class ResolverInterface : public AsyncIoInterface, private boost::noncopyable {
+class ResolverInterface : public AsyncInterface, private boost::noncopyable {
  public:
   using EventHandler = std::function<void(
       std::shared_ptr<std::vector<boost::asio::ip::address>> addresses,
@@ -44,13 +44,11 @@ class ResolverInterface : public AsyncIoInterface, private boost::noncopyable {
 
   virtual ~ResolverInterface() = default;
 
-  virtual Cancelable Resolve(std::string domain,
-                                    AddressPreference preference,
-                                    EventHandler handler)
+  virtual Cancelable Resolve(std::string domain, AddressPreference preference,
+                             EventHandler handler)
       __attribute__((warn_unused_result)) = 0;
 
   virtual void Stop() = 0;
-  virtual void Reset() = 0;
 };
 
 }  // namespace utils

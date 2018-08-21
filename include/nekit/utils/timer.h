@@ -27,23 +27,24 @@
 #include <boost/asio/high_resolution_timer.hpp>
 #include <boost/noncopyable.hpp>
 
-#include "async_io_interface.h"
+#include "async_interface.h"
 #include "cancelable.h"
 
 namespace nekit {
 namespace utils {
-class Timer : public AsyncIoInterface, private boost::noncopyable {
+class Timer : public AsyncInterface, private boost::noncopyable {
  public:
-  Timer(boost::asio::io_context* io, std::function<void()> handler);
+  Timer(utils::Runloop* runloop, std::function<void()> handler);
 
   ~Timer();
 
   void Wait(uint32_t milliseconds);
   void Cancel();
-  boost::asio::io_context* io();
+
+  utils::Runloop* GetRunloop() override;
 
  private:
-  boost::asio::io_context* io_;
+  utils::Runloop* runloop_;
   std::function<void()> handler_;
   boost::asio::high_resolution_timer timer_;
 

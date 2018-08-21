@@ -30,6 +30,7 @@
 #include "../data_flow/local_data_flow_interface.h"
 #include "../data_flow/remote_data_flow_interface.h"
 #include "../rule/rule_manager.h"
+#include "../utils/async_interface.h"
 #include "../utils/cancelable.h"
 #include "../utils/session.h"
 #include "../utils/timer.h"
@@ -39,13 +40,15 @@ namespace transport {
 
 class TunnelManager;
 
-class Tunnel final : private boost::noncopyable {
+class Tunnel final : public utils::AsyncInterface, private boost::noncopyable {
  public:
   Tunnel(std::unique_ptr<data_flow::LocalDataFlowInterface>&& local_data_flow,
          rule::RuleManager* rule_manager);
   ~Tunnel();
 
   void Open();
+
+  utils::Runloop* GetRunloop() override;
 
   friend class TunnelManager;
 

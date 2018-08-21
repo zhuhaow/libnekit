@@ -24,14 +24,14 @@
 
 #include <vector>
 
-#include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
 
 #include "proxy_manager.h"
-#include "utils/async_io_interface.h"
+#include "utils/async_interface.h"
+#include "utils/runloop.h"
 
 namespace nekit {
-class Instance : public utils::AsyncIoInterface, private boost::noncopyable {
+class Instance : public utils::AsyncInterface, private boost::noncopyable {
  public:
   explicit Instance(std::string name);
 
@@ -41,11 +41,11 @@ class Instance : public utils::AsyncIoInterface, private boost::noncopyable {
   void Stop();
   void Reset();
 
-  boost::asio::io_context *io() override;
+  utils::Runloop *GetRunloop() override;
 
  private:
   std::string name_;
-  std::unique_ptr<boost::asio::io_context> io_;
+  utils::Runloop runloop_;
 
   std::vector<std::unique_ptr<ProxyManager>> proxy_managers_;
 

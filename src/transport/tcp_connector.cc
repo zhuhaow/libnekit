@@ -33,19 +33,30 @@
 namespace nekit {
 namespace transport {
 TcpConnector::TcpConnector(
+    utils::Runloop* runloop,
     std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses,
-    uint16_t port, boost::asio::io_context* io)
-    : socket_{*io}, addresses_{addresses}, port_{port} {
+    uint16_t port)
+    : socket_{*runloop->BoostIoContext()},
+      addresses_{addresses},
+      port_{port},
+      runloop_{runloop} {
   assert(!addresses_->empty());
 }
 
-TcpConnector::TcpConnector(const boost::asio::ip::address& address,
-                           uint16_t port, boost::asio::io_context* io)
-    : socket_{*io}, address_{address}, port_{port} {}
+TcpConnector::TcpConnector(utils::Runloop* runloop,
+                           const boost::asio::ip::address& address,
+                           uint16_t port)
+    : socket_{*runloop->BoostIoContext()},
+      address_{address},
+      port_{port},
+      runloop_{runloop} {}
 
-TcpConnector::TcpConnector(std::shared_ptr<utils::Endpoint> endpoint,
-                           boost::asio::io_context* io)
-    : socket_{*io}, endpoint_{endpoint}, port_{endpoint->port()} {}
+TcpConnector::TcpConnector(utils::Runloop* runloop,
+                           std::shared_ptr<utils::Endpoint> endpoint)
+    : socket_{*runloop->BoostIoContext()},
+      endpoint_{endpoint},
+      port_{endpoint->port()},
+      runloop_{runloop} {}
 
 TcpConnector::~TcpConnector() { cancelable_.Cancel(); }
 
@@ -146,8 +157,8 @@ void TcpConnector::DoConnect(EventHandler handler) {
 
   socket_.async_connect(
       boost::asio::ip::tcp::endpoint(*address, port_),
-      [this, handler, cancelable{cancelable_}](
-          const boost::system::error_code& ec) mutable {
+      [this, handler,
+       cancelable{cancelable_}](const boost::system::error_code& ec) mutable {
         if (cancelable.canceled()) {
           return;
         }
@@ -172,9 +183,7 @@ void TcpConnector::DoConnect(EventHandler handler) {
       });
 }
 
-boost::asio::io_context* TcpConnector::io() {
-  return &socket_.get_io_context();
-}
+utils::Runloop* TcpConnector::GetRunloop() { return runloop_; }
 
 }  // namespace transport
 }  // namespace nekit

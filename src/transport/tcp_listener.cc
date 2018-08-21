@@ -31,8 +31,11 @@
 
 namespace nekit {
 namespace transport {
-TcpListener::TcpListener(boost::asio::io_context *io, DataFlowHandler handler)
-    : acceptor_(*io), socket_(*io), handler_{handler} {}
+TcpListener::TcpListener(utils::Runloop *runloop, DataFlowHandler handler)
+    : acceptor_(*runloop->BoostIoContext()),
+      socket_(*runloop->BoostIoContext()),
+      runloop_{runloop},
+      handler_{handler} {}
 
 std::error_code TcpListener::Bind(std::string ip, uint16_t port) {
   return Bind(boost::asio::ip::address::from_string(ip), port);
@@ -98,8 +101,7 @@ void TcpListener::Accept(EventHandler handler) {
 
         // Can't use `make_unique` since the constructor is a private friend.
         TcpSocket *socket = new TcpSocket(
-            std::move(socket_),
-            std::make_shared<utils::Session>(&socket_.get_io_context()));
+            std::move(socket_), std::make_shared<utils::Session>(runloop_));
 
         handler(handler_(std::unique_ptr<TcpSocket>(socket)),
                 TcpListener::ErrorCode::NoError);
@@ -110,9 +112,7 @@ void TcpListener::Accept(EventHandler handler) {
 
 void TcpListener::Close() { acceptor_.close(); }
 
-boost::asio::io_context *TcpListener::io() {
-  return &acceptor_.get_io_context();
-}
+utils::Runloop *TcpListener::GetRunloop() { return runloop_; }
 
 namespace {
 struct TcpListenerErrorCategory : std::error_category {

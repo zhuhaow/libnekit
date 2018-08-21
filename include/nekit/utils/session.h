@@ -29,25 +29,24 @@
 
 #include <boost/asio.hpp>
 
-#include "async_io_interface.h"
+#include "async_interface.h"
 #include "endpoint.h"
 #include "resolver_interface.h"
 
 namespace nekit {
 namespace utils {
-struct Session : public AsyncIoInterface {
+struct Session : public AsyncInterface {
  public:
-  Session(boost::asio::io_context* io) : io_{io} {}
+  Session(Runloop* runloop) : runloop_{runloop} {}
 
-  Session(boost::asio::io_context* io, std::string host, uint16_t port = 0)
-      : io_{io}, endpoint_{std::make_shared<Endpoint>(host, port)} {}
+  Session(Runloop* runloop, std::string host, uint16_t port = 0)
+      : runloop_{runloop}, endpoint_{std::make_shared<Endpoint>(host, port)} {}
 
-  Session(boost::asio::io_context* io, boost::asio::ip::address ip,
-          uint16_t port = 0)
-      : io_{io}, endpoint_{std::make_shared<Endpoint>(ip, port)} {}
+  Session(Runloop* runloop, boost::asio::ip::address ip, uint16_t port = 0)
+      : runloop_{runloop}, endpoint_{std::make_shared<Endpoint>(ip, port)} {}
 
-  Session(boost::asio::io_context* io, std::shared_ptr<Endpoint> endpoint)
-      : io_{io}, endpoint_{endpoint} {}
+  Session(Runloop* runloop, std::shared_ptr<Endpoint> endpoint)
+      : runloop_{runloop}, endpoint_{endpoint} {}
 
   std::map<std::string, int>& int_cache() { return int_cache_; }
   std::map<std::string, std::string>& string_cache() { return string_cache_; }
@@ -59,16 +58,16 @@ struct Session : public AsyncIoInterface {
   }
 
   void set_resolver(ResolverInterface* resolver) {
-    BOOST_ASSERT(resolver->io() == io_);
+    BOOST_ASSERT(resolver->GetRunloop() == GetRunloop());
 
     resolver_ = resolver;
     if (endpoint_) endpoint_->set_resolver(resolver);
   }
 
-  boost::asio::io_context* io() override { return io_; };
+  Runloop* GetRunloop() override { return runloop_; };
 
  private:
-  boost::asio::io_context* io_;
+  Runloop* runloop_;
   std::shared_ptr<Endpoint> endpoint_;
 
   ResolverInterface* resolver_{nullptr};

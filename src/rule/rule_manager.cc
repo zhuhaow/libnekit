@@ -25,7 +25,7 @@
 namespace nekit {
 namespace rule {
 
-RuleManager::RuleManager(boost::asio::io_context* io) : io_{io} {}
+RuleManager::RuleManager(utils::Runloop* runloop) : runloop_{runloop} {}
 
 RuleManager::~RuleManager() { lifetime_.Cancel(); }
 
@@ -36,14 +36,13 @@ void RuleManager::AppendRule(std::shared_ptr<RuleInterface> rule) {
 utils::Cancelable RuleManager::Match(std::shared_ptr<utils::Session> session,
                                      EventHandler handler) {
   auto cancelable = utils::Cancelable();
-  boost::asio::post(
-      *io(), [this, session, cancelable, lifetime{lifetime_}, handler]() {
-        if (cancelable.canceled() || lifetime.canceled()) {
-          return;
-        }
+  runloop_->Post([this, session, cancelable, lifetime{lifetime_}, handler]() {
+    if (cancelable.canceled() || lifetime.canceled()) {
+      return;
+    }
 
-        MatchIterator(rules_.cbegin(), session, cancelable, handler);
-      });
+    MatchIterator(rules_.cbegin(), session, cancelable, handler);
+  });
 
   return cancelable;
 }
@@ -87,7 +86,7 @@ void RuleManager::MatchIterator(
   handler(nullptr, ErrorCode::NoMatch);
 }
 
-boost::asio::io_context* RuleManager::io() { return io_; }
+utils::Runloop* RuleManager::GetRunloop() { return runloop_; }
 
 namespace {
 struct RuleManagerErrorCategory : std::error_category {

@@ -33,20 +33,21 @@
 namespace nekit {
 namespace transport {
 
-class TcpConnector : public utils::AsyncIoInterface {
+class TcpConnector : public utils::AsyncInterface {
  public:
   using EventHandler =
       std::function<void(boost::asio::ip::tcp::socket&&, std::error_code)>;
 
-  TcpConnector(const boost::asio::ip::address& address, uint16_t port,
-               boost::asio::io_context* io);
+  TcpConnector(utils::Runloop* runloop, const boost::asio::ip::address& address,
+               uint16_t port);
 
   TcpConnector(
+      utils::Runloop* runloop,
       std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses,
-      uint16_t port, boost::asio::io_context* io);
+      uint16_t port);
 
-  TcpConnector(std::shared_ptr<utils::Endpoint> endpoint,
-               boost::asio::io_context* io);
+  TcpConnector(utils::Runloop* runloop,
+               std::shared_ptr<utils::Endpoint> endpoint);
 
   ~TcpConnector();
 
@@ -55,7 +56,7 @@ class TcpConnector : public utils::AsyncIoInterface {
 
   void Bind(std::shared_ptr<utils::DeviceInterface> device);
 
-  boost::asio::io_context* io() override;
+  utils::Runloop* GetRunloop() override;
 
  private:
   void DoConnect(EventHandler handler);
@@ -64,9 +65,10 @@ class TcpConnector : public utils::AsyncIoInterface {
   std::shared_ptr<const std::vector<boost::asio::ip::address>> addresses_;
   boost::asio::ip::address address_;
   std::shared_ptr<utils::Endpoint> endpoint_;
-
   uint16_t port_;
   std::shared_ptr<utils::DeviceInterface> device_;
+
+  utils::Runloop* runloop_;
 
   std::error_code last_error_;
 

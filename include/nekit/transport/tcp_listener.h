@@ -36,7 +36,7 @@ class TcpListener : public ListenerInterface, private boost::noncopyable {
  public:
   enum class ErrorCode { NoError = 0 };
 
-  TcpListener(boost::asio::io_context* io, DataFlowHandler handler);
+  TcpListener(utils::Runloop* runloop, DataFlowHandler handler);
 
   std::error_code Bind(std::string ip, uint16_t port);
   std::error_code Bind(boost::asio::ip::address ip, uint16_t port);
@@ -45,11 +45,12 @@ class TcpListener : public ListenerInterface, private boost::noncopyable {
 
   void Close() override;
 
-  boost::asio::io_context* io() override;
+  utils::Runloop* GetRunloop() override;
 
  private:
   boost::asio::ip::tcp::acceptor acceptor_;
   boost::asio::ip::tcp::socket socket_;
+  utils::Runloop* runloop_;
 
   DataFlowHandler handler_;
 };

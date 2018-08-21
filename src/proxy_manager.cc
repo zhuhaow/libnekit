@@ -26,23 +26,25 @@
 #include "nekit/utils/log.h"
 
 namespace nekit {
+ProxyManager::ProxyManager(utils::Runloop *runloop) : runloop_{runloop} {}
+
 void ProxyManager::SetRuleManager(
     std::unique_ptr<rule::RuleManager> &&rule_manager) {
-  BOOST_VERIFY(CheckOrSetIo(rule_manager.get()));
+  BOOST_ASSERT(rule_manager->GetRunloop() == GetRunloop());
 
   rule_manager_ = std::move(rule_manager);
 }
 
 void ProxyManager::SetResolver(
     std::unique_ptr<utils::ResolverInterface> &&resolver) {
-  BOOST_VERIFY(CheckOrSetIo(resolver.get()));
+  BOOST_ASSERT(resolver->GetRunloop() == GetRunloop());
 
   resolver_ = std::move(resolver);
 }
 
 void ProxyManager::AddListener(
     std::unique_ptr<transport::ListenerInterface> &&listener) {
-  BOOST_VERIFY(CheckOrSetIo(listener.get()));
+  BOOST_ASSERT(listener->GetRunloop() == GetRunloop());
 
   listeners_.emplace_back(std::move(listener));
 }
@@ -78,17 +80,6 @@ void ProxyManager::Stop() {
   }
 }
 
-void ProxyManager::Reset() { resolver_->Reset(); }
-
-boost::asio::io_context *ProxyManager::io() { return io_; }
-
-bool ProxyManager::CheckOrSetIo(utils::AsyncIoInterface *io_interface) {
-  if (!io_) {
-    io_ = io_interface->io();
-    return true;
-  }
-
-  return io_ == io_interface->io();
-}
+utils::Runloop *ProxyManager::GetRunloop() { return runloop_; }
 
 }  // namespace nekit

@@ -32,18 +32,16 @@
 
 namespace nekit {
 
-Instance::Instance(std::string name)
-    : name_{name}, io_{std::make_unique<boost::asio::io_context>()} {}
+Instance::Instance(std::string name) : name_{name} {}
 
 void Instance::AddProxyManager(std::unique_ptr<ProxyManager> &&proxy_manager) {
-  BOOST_ASSERT(proxy_manager->io() == io());
+  BOOST_ASSERT(proxy_manager->GetRunloop() == GetRunloop());
 
   proxy_managers_.emplace_back(std::move(proxy_manager));
 }
 
 void Instance::Run() {
   BOOST_ASSERT(ready_);
-  BOOST_ASSERT(proxy_managers_.size());
 
   BOOST_LOG_SCOPED_THREAD_ATTR(
       "Instance", boost::log::attributes::constant<std::string>(name_));
@@ -53,28 +51,19 @@ void Instance::Run() {
   }
 
   NEINFO << "Start running instance.";
-  io_->run();
+  runloop_.Run();
 
   NEINFO << "Instance stopped.";
 }
 
 void Instance::Stop() {
-  io_->stop();
+  runloop_.Stop();
   for (auto &manager : proxy_managers_) {
     manager->Stop();
   }
   ready_ = false;
 }
 
-void Instance::Reset() {
-  for (auto &manager : proxy_managers_) {
-    manager->Reset();
-  }
-
-  io_ = std::make_unique<boost::asio::io_context>();
-  ready_ = true;
-}
-
-boost::asio::io_context *Instance::io() { return io_.get(); }
+utils::Runloop *Instance::GetRunloop() { return &runloop_; }
 
 }  // namespace nekit
