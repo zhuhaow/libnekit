@@ -202,7 +202,11 @@ def cmake_compile(source_dir,
 
         cmake[config] & FG
 
-        cmake["--build", tempd, "-j", "4", "--target", "install", "--config", "Release"] & FG
+        if Platform.current_platform() in [Platform.OSX, Platform.Linux]:
+            cmake["--build", tempd, "--target", "install", "--config", "Release", "--", "-j4"] & FG
+        else:
+            cmake["--build", tempd, "--target", "install", "--config", "Release"] & FG
+
 
 
 def build_boost(boost_dir, install_prefix, target_platform):
