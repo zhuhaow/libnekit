@@ -202,7 +202,7 @@ def cmake_compile(source_dir,
 
         cmake[config] & FG
 
-        cmake["--build", tempd, "--", "-j4", "install"] & FG
+        cmake["--build", tempd, "-j", "4", "--target", "install", "--config", "Release"] & FG
 
 
 def build_boost(boost_dir, install_prefix, target_platform):
