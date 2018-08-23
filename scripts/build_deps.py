@@ -417,6 +417,9 @@ def main():
                 library[1],
             )
 
+        for library in DOWNLOAD_LIBRARIES:
+            download_library(tempd, library[0], library[1], library[2])
+
         # Remove built binaries and headers.
         shutil.rmtree(install_path(target_platform), True)
         ensure_path_exist(install_path(target_platform))
@@ -435,9 +438,6 @@ def main():
             install_path(target_platform),
             target_platform,
         )
-
-        for library in DOWNLOAD_LIBRARIES:
-            download_library(tempd, library[0], library[1], library[2])
 
         build_libsodium(
             os.path.join(tempd, "libsodium"),
