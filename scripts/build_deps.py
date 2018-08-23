@@ -313,7 +313,7 @@ def build_boost(boost_dir, install_prefix, target_platform):
                         shutil.copy("libboost.lib", lib_install_dir)
 
 
-def build_openssl(openssl_dir, install_prefix, target_platform):
+def build_openssl(openssl_dir, install_prefix, target_platform, nasm_dir=""):
     if target_platform == Platform.iOS:
         with local.cwd(openssl_dir):
             local[local.cwd / "build-libssl.sh"][
@@ -347,6 +347,7 @@ def build_openssl(openssl_dir, install_prefix, target_platform):
 
     elif target_platform in [Platform.Windows]:
         with local.cwd(openssl_dir):
+            local.env.path.insert(0, nasm_dir)
             local["perl"]["Configure", "VC-WIN64A", "--prefix={}".format(install_prefix), ] & FG
             local["nmake"]["install_sw"] & FG
 
@@ -431,13 +432,11 @@ def main():
             target_platform,
         )
 
-        if target_platform == Platform.Windows:
-            local.env.path.insert(0, os.path.join(tempd, "nasm"))
-
         build_openssl(
             os.path.join(tempd, "openssl"),
             install_path(target_platform),
             target_platform,
+            os.path.join(tempd, "nasm") if target_platform == Platform.Windows else ""
         )
 
         build_libsodium(
