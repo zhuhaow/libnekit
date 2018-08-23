@@ -24,10 +24,10 @@
         },
         "certifi": {
             "hashes": [
-                "sha256:13e698f54293db9f89122b0581843a782ad0934a4fe0172d2a980ba77fc61bb7",
-                "sha256:9fa520c1bacfb634fa7af20a76bcbd3d5fb390481724c597da32c719a7dca4b0"
+                "sha256:4c1d68a1408dd090d2f3a869aa94c3947cc1d967821d1ed303208c9f41f0f2f4",
+                "sha256:b6e8b28b2b7e771a41ecdd12d4d43262ecab52adebbafa42c77d6b57fb6ad3a4"
             ],
-            "version": "==2018.4.16"
+            "version": "==2018.8.13"
         },
         "chardet": {
             "hashes": [
@@ -52,11 +52,11 @@
         },
         "plumbum": {
             "hashes": [
-                "sha256:4b5af076fef56fe7345b67f7fa4c79185fa64ac5bc14a9de1aa1447b58b6cbd0",
-                "sha256:d179b90a9927f91427a28c1bac2864c61342cb43ef39aa7324c7c9a96bcc23eb"
+                "sha256:d143f079bfb60b11e9bec09a49695ce2e55ce5ca0246877bdb0818ab7c7fc312",
+                "sha256:df96a5facf621db4a6d682bdc93afa5ed6b107a8667c73c3f0a0f0fab4217c81"
             ],
             "index": "pypi",
-            "version": "==1.6.6"
+            "version": "==1.6.7"
         },
         "requests": {
             "hashes": [
