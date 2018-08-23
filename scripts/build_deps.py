@@ -53,7 +53,7 @@ LIBSODIUM_REPO = ("jedisct1/libsodium", "1.0.16", "libsodium")
 
 NASM_WIN_BINARY = ("https://www.nasm.us/pub/nasm/releasebuilds/2.13.03/win64/nasm-2.13.03-win64.zip",
                    "nasm",
-                   "")
+                   "nasm-2.13.03")
 
 DOWNLOAD_LIBRARIES = [(
     "https://dl.bintray.com/boostorg/release/1.67.0/source/boost_1_67_0.tar.gz",
