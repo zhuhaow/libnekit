@@ -347,7 +347,7 @@ def build_openssl(openssl_dir, install_prefix, target_platform):
 
     elif target_platform in [Platform.Windows]:
         with local.cwd(openssl_dir):
-            local["perl"]["Configure", "VC-WIN64A-masm", "--prefix={}".format(install_prefix), ] & FG
+            local["perl"]["Configure", "VC-WIN64A", "--prefix={}".format(install_prefix), ] & FG
             local["nmake"]["install_sw"] & FG
 
 
