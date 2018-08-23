@@ -10,15 +10,30 @@ platform:
 
 install:
   # Python 3
-  - cmd: set PATH=C:\Python34-x64;C:\Python34-x64\Scripts;%PATH%
+  - set PATH=C:\Python34-x64;C:\Python34-x64\Scripts;%PATH%
 
-  - cmd: pip install pipenv
-  - cmd: pipenv install
+  - pip install pipenv
+  - pipenv install
 
   - git submodule update --init --recursive
 
+before_build:
+  - if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017" call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
+  - if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2015" call "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x64
+  - if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2015" call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86_amd64
+  - pipenv run scripts/build_deps.py windows
+
 build_script:
-  - cmd: pipenv run scripts/build_deps.py windows
-  - cmd: cmake . -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/win.cmake
-  - cmd: cmake --build . --target install --config release
+  - cmake . -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/win.cmake -DCONVERAGE=ON -DPLATFORM=win
+  - cmake --build . --target install --config release
+
+before_test:
+  - choco install codecov
+
+test_script:
+  - ctest
+  - codecov -f .
+
+cache:
+  - deps -> scripts/build_deps.py
 
