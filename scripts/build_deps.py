@@ -30,6 +30,7 @@ import platform
 import errno
 import logging
 import tarfile
+import zipfile
 from contextlib import contextmanager
 
 from plumbum import FG, local
@@ -431,7 +432,7 @@ def main():
         )
 
         if target_platform == Platform.Windows:
-            local.env.insert(0, os.path.join(tempd, "nasm"))
+            local.env.path.insert(0, os.path.join(tempd, "nasm"))
 
         build_openssl(
             os.path.join(tempd, "openssl"),
