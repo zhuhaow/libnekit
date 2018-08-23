@@ -1,73 +1,23 @@
-# Derived from https://github.com/travis-ci-tester/toolchain-table
+image:
+  - Visual Studio 2015
+  - Visual Studio 2017
 
-environment:
-  matrix:
-    # VS 2013 complains "typename cannot be used outside a template declaration"
-    # - TOOLCHAIN: "vs-12-2013-win64"
-    #   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
-    #   CONFIG: Debug
+configuration:
+  - Release
 
-    # - TOOLCHAIN: "vs-12-2013-xp"
-    #   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
-    #   CONFIG: Debug
-
-    # - TOOLCHAIN: "vs-12-2013"
-    #   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
-    #   CONFIG: Debug
-
-    - TOOLCHAIN: "vs-14-2015"
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-      CONFIG: Debug
-
-    - TOOLCHAIN: "vs-15-2017"
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      CONFIG: Debug
-
-cache:
-  - hunter
+platform:
+  - x64
 
 install:
   # Python 3
   - cmd: set PATH=C:\Python34-x64;C:\Python34-x64\Scripts;%PATH%
 
-  # Install Python package 'requests'
-  - cmd: pip install requests
+  - cmd: pipenv install
 
-  # Install latest Polly toolchains and scripts
-  - cmd: appveyor DownloadFile https://github.com/ruslo/polly/archive/master.zip
-  - cmd: 7z x master.zip
-  - cmd: set POLLY_ROOT=%cd%\polly-master
-
-  # Alternatively the exact version can be used:
-  # - cmd: set POLLY_VERSION=0.10.0
-  # - cmd: appveyor DownloadFile https://github.com/ruslo/polly/archive/v%POLLY_VERSION%.zip
-  # - cmd: 7z x v%POLLY_VERSION%.zip
-  # - cmd: set POLLY_ROOT=%cd%\polly-%POLLY_VERSION%
-
-  # Install dependencies (CMake, Ninja)
-  - cmd: python %POLLY_ROOT%\bin\install-ci-dependencies.py
-
-  # Tune locations
-  - cmd: set PATH=%cd%\_ci\cmake\bin;%PATH%
-  - cmd: set PATH=%cd%\_ci\ninja;%PATH%
-
-  # If submodules used
-  # - git submodule update --init --recursive
-
-  # Remove entry with sh.exe from PATH to fix error with MinGW toolchain
-  # (For MinGW make to work correctly sh.exe must NOT be in your path)
-  # * http://stackoverflow.com/a/3870338/2288008
-  - cmd: set PATH=%PATH:C:\Program Files\Git\usr\bin;=%
-
-  # Use MinGW from Qt tools because version is higher
-  # * http://www.appveyor.com/docs/installed-software#qt
-  - cmd: set MINGW_PATH=C:\Qt\Tools\mingw492_32\bin
-
-  # MSYS2 location
-  - cmd: set MSYS_PATH=C:\msys64\usr\bin
-
-  - cmd: set HUNTER_ROOT=%cd%\hunter
+  - git submodule update --init --recursive
 
 build_script:
-  - cmd: python %POLLY_ROOT%\bin\build.py --toolchain "%TOOLCHAIN%" --config "%CONFIG%" --test --verbose
+  - cmd: pipenv run scripts/build_deps.py windows
+  - cmd: cmake . -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/win.cmake
+  - cmd: cmake --build . --target install --config release
 
