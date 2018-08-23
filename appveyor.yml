@@ -12,6 +12,7 @@ install:
   # Python 3
   - cmd: set PATH=C:\Python34-x64;C:\Python34-x64\Scripts;%PATH%
 
+  - cmd: pip install pipenv
   - cmd: pipenv install
 
   - git submodule update --init --recursive
