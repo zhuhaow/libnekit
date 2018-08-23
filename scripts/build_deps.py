@@ -50,6 +50,10 @@ LIBSODIUM_WIN_BINARY = ("https://download.libsodium.org/libsodium/releases/libso
                         "")
 LIBSODIUM_REPO = ("jedisct1/libsodium", "1.0.16", "libsodium")
 
+NASM_WIN_BINARY = ("https://www.nasm.us/pub/nasm/releasebuilds/2.13.03/win64/nasm-2.13.03-win64.zip",
+                   "nasm",
+                   "")
+
 DOWNLOAD_LIBRARIES = [(
     "https://dl.bintray.com/boostorg/release/1.67.0/source/boost_1_67_0.tar.gz",
     "boost",
@@ -401,6 +405,7 @@ def main():
 
         if target_platform == Platform.Windows:
             DOWNLOAD_LIBRARIES.append(LIBSODIUM_WIN_BINARY)
+            DOWNLOAD_LIBRARIES.append(NASM_WIN_BINARY)
         else:
             LIBRARIES.append(LIBSODIUM_REPO)
 
@@ -421,6 +426,9 @@ def main():
             install_path(target_platform),
             target_platform,
         )
+
+        if target_platform == Platform.Windows:
+            local.env.insert(0, os.path.join(tempd, "nasm"))
 
         build_openssl(
             os.path.join(tempd, "openssl"),
