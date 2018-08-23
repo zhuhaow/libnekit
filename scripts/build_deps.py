@@ -220,7 +220,7 @@ def build_boost(boost_dir, install_prefix, target_platform):
         "archive,core,boost/asio.hpp,system,log,phoenix,endian,range,assert,pool,thread"
     )
 
-    if Platform.current_platform == Platform.Windows:
+    if Platform.current_platform != Platform.Windows:
         bootstrapscript = "bootstrap.sh"
     else:
         bootstrapscript = "bootstrap.bat"
