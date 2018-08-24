@@ -24,16 +24,16 @@ add_library(nekit "")
 include(CheckCXXCompilerFlag)
 
 check_cxx_compiler_flag(-Wall HAS_WALL)
-target_compile_options(nekit PRIVATE $<$<BOOL:HAS_WALL>:-Wall>)
+target_compile_options(nekit PRIVATE $<$<BOOL:${HAS_WALL}>:-Wall>)
 
 check_cxx_compiler_flag(-Wextra HAS_WEXTRA)
-target_compile_options(nekit PRIVATE $<$<BOOL:HAS_WEXTRA>:-Wextra>)
+target_compile_options(nekit PRIVATE $<$<BOOL:${HAS_WEXTRA}>:-Wextra>)
 
 check_cxx_compiler_flag(-pedantic HAS_PEDANTIC)
-target_compile_options(nekit PRIVATE $<$<BOOL:HAS_PEDANTIC>:-Wpedantic>)
+target_compile_options(nekit PRIVATE $<$<BOOL:${HAS_PEDANTIC}>:-Wpedantic>)
 
 check_cxx_compiler_flag(-Wno-pragma-once-outside-header HAS_PRAGMA_ONCE_WARNING)
-target_compile_options(nekit PRIVATE $<$<BOOL:HAS_PRAGMA_ONCE_WARNING>:-Wno-pragma-once-outside-header>)
+target_compile_options(nekit PRIVATE $<$<BOOL:${HAS_PRAGMA_ONCE_WARNING}>:-Wno-pragma-once-outside-header>)
 
 option(COVERAGE "Generate coverage report" OFF)
 if(COVERAGE)
@@ -48,7 +48,8 @@ target_include_directories(nekit PUBLIC "include")
 target_include_directories(nekit PRIVATE "modules")
 target_include_directories(nekit SYSTEM PUBLIC "deps/${PLATFORM}/include")
 
-set(CMAKE_FIND_ROOT_PATH "${PROJECT_SOURCE_DIR}/deps/${PLATFORM}")
+list(APPEND CMAKE_LIBRARY_PATH "${PROJECT_SOURCE_DIR}/deps/${PLATFORM}/lib")
+list(APPEND CMAKE_FIND_LIBRARY_PREFIXES "" "lib")
 
 if(WIN32)
   target_compile_definitions(nekit PUBLIC -DELPP_WINSOCK2 -DWIN32_LEAN_AND_MEAN)
@@ -102,32 +103,31 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/contrib" AND IS_DIRECTORY "${CMAKE_CURREN
   add_subdirectory("contrib")
 endif()
 
-find_library(BOOST boost
-  NO_SYSTEM_ENVIROMENT_PATH)
+find_library(BOOST boost)
 if(NOT BOOST)
   message(FATAL_ERROR "Boost not found. Build dependency first.")
 endif()
 set(LIBS ${LIBS} ${BOOST})
 
-find_library(OPENSSL_CRYPTO crypto NO_SYSTEM_ENVIROMENT_PATH)
+find_library(OPENSSL_CRYPTO crypto)
 if(NOT OPENSSL_CRYPTO)
   message(FATAL_ERROR "OpenSSL not found. Build dependency first.")
 endif()
 set(LIBS ${LIBS} ${OPENSSL_CRYPTO})
 
-find_library(OPENSSL_SSL ssl NO_SYSTEM_ENVIROMENT_PATH)
+find_library(OPENSSL_SSL ssl)
 if(NOT OPENSSL_SSL)
   message(FATAL_ERROR "OpenSSL not found. Build dependency first.")
 endif()
 set(LIBS ${LIBS} ${OPENSSL_SSL})
 
-find_library(SODIUM sodium NO_SYSTEM_ENVIROMENT_PATH)
+find_library(SODIUM sodium)
 if(NOT SODIUM)
   message(FATAL_ERROR "libsodium not found. Build dependency first.")
 endif()
 set(LIBS ${LIBS} ${SODIUM})
 
-find_library(MAXMINDDB maxminddb NO_SYSTEM_ENVIROMENT_PATH)
+find_library(MAXMINDDB maxminddb)
 if(NOT MAXMINDDB)
   message(FATAL_ERROR "maxminddb not found. Build dependency first.")
 endif()
