@@ -44,11 +44,13 @@ endif()
 target_compile_options(nekit PRIVATE $<$<CONFIG:DEBUG>:-g -O0>)
 target_compile_options(nekit PRIVATE $<$<CONFIG:RELEASE>:-O3>)
 
+set(DEPENDENCY_ROOT "${PROJECT_SOURCE_DIR}/deps/${PLATFORM}")
+
 target_include_directories(nekit PUBLIC "include")
 target_include_directories(nekit PRIVATE "modules")
-target_include_directories(nekit SYSTEM PUBLIC "deps/${PLATFORM}/include")
+target_include_directories(nekit SYSTEM PUBLIC "${DEPENDENCY_ROOT}/include")
 
-list(APPEND CMAKE_LIBRARY_PATH "${PROJECT_SOURCE_DIR}/deps/${PLATFORM}/lib")
+list(APPEND CMAKE_LIBRARY_PATH "${DEPENDENCY_ROOT}/lib")
 list(APPEND CMAKE_FIND_LIBRARY_PREFIXES "" "lib")
 
 if(WIN32)
