@@ -24,7 +24,7 @@ before_build:
   - pipenv run scripts/build_deps.py windows
 
 build_script:
-  - cmake . -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/win.cmake -DCONVERAGE=ON -DPLATFORM=win -A x64
+  - cmake . -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/win.cmake -DCOVERAGE=ON -DPLATFORM=win -A x64
   - cmake --build . --target install --config release
 
 before_test:
