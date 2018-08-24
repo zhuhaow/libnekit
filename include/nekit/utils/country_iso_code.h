@@ -129,7 +129,7 @@ enum class CountryIsoCode {
   HK,
   HU,
   IS,
-  IN,
+  IND, // MS loves to occupy IN for no use...
   ID,
   IR,
   IQ,
