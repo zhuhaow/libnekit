@@ -286,14 +286,11 @@ Below is the outline of `DataFlowInterface`.
 using DataEventHandler = std::function<void(utils::Buffer&&, utils::Error)>;
 using EventHandler = std::function<void(utils::Error)>;
 
-virtual utils::Cancelable Read(utils::Buffer&&, DataEventHandler)
-    __attribute__((warn_unused_result)) = 0;
+virtual utils::Cancelable Read(utils::Buffer&&, DataEventHandler) = 0;
 
-virtual utils::Cancelable Write(utils::Buffer&&, EventHandler)
-    __attribute__((warn_unused_result)) = 0;
+virtual utils::Cancelable Write(utils::Buffer&&, EventHandler) = 0;
 
-virtual utils::Cancelable CloseWrite(EventHandler)
-    __attribute__((warn_unused_result)) = 0;
+virtual utils::Cancelable CloseWrite(EventHandler) = 0;
 
 virtual const FlowStateMachine& StateMachine() const = 0;
 
@@ -309,8 +306,7 @@ This brings great flexibility and allows you to basically do anything you want w
 Let's get back to the interface definition and take a closer look at the seemingly daunting definition of read method.
 
 ```c++
-virtual utils::Cancelable Read(utils::Buffer&&, DataEventHandler)
-    __attribute__((warn_unused_result)) = 0;
+virtual utils::Cancelable Read(utils::Buffer&&, DataEventHandler) = 0;
 ```
 
 We pass in a buffer and a handler, since almost everything in libnekit is asynchronous, we shouldn't expect the method will block until it really gets something. Instead, we give an event handler which will be called when there is some data read into the buffer. The `DataEventHandler` which is defined as `std::function<void(utils::Buffer&&, utils::Error)>` is simply a lambda which takes a buffer filled with data and an error code. We should check the if there is any error before we process the data. 
