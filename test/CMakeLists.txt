@@ -1,15 +1,9 @@
-list(APPEND CMAKE_LIBRARY_PATH "../deps/${PLATFORM}/lib")
-
 find_package(Threads REQUIRED)
 
-find_library(GTEST gtest NO_SYSTEM_ENVIROMENT_PATH)
-find_library(GMOCK gmock NO_SYSTEM_ENVIROMENT_PATH)
-find_library(GMOCK_MAIN gmock_main NO_SYSTEM_ENVIROMENT_PATH)
-if(NOT GMOCK_MAIN OR NOT GMOCK OR NOT GTEST)
-  message(FATAL_ERROR "GoogleTest not found. Build dependency first.")
-endif()
+list(APPEND CMAKE_PREFIX_PATH ${DEPENDENCY_ROOT})
+find_package(GTest REQUIRED NO_SYSTEM_ENVIRONMENT_PATH)
 
-set(LIBS ${GTEST} ${GMOCK} ${GMOCK_MAIN} ${CMAKE_THREAD_LIBS_INIT})
+set(LIBS GTest::gmock_main ${CMAKE_THREAD_LIBS_INIT})
 
 option(NE_ENABLE_MEMCHECK "Enable valgrind when running tests." ON)
 find_program(CTEST_MEMORYCHECK_COMMAND valgrind)
