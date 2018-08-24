@@ -28,7 +28,7 @@
 
 namespace nekit {
 namespace utils {
-Subnet::Subnet(const boost::asio::ip::address& address, uint prefix)
+Subnet::Subnet(const boost::asio::ip::address& address, int prefix)
     : is_ipv4_{address.is_v4()}, prefix_{prefix} {
   BOOST_ASSERT(prefix);
 
@@ -51,7 +51,7 @@ Subnet::Subnet(const boost::asio::ip::address& address, uint prefix)
 
     mask_data_ = std::make_unique<uint32_t[]>(4);
 
-    uint remain = prefix_;
+    int remain = prefix_;
     uint32_t* mask = mask_data_.get();
     uint32_t* network = network_address_data_.get();
     int n = 4;

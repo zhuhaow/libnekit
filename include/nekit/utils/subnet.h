@@ -30,7 +30,7 @@ namespace nekit {
 namespace utils {
 class Subnet {
  public:
-  Subnet(const boost::asio::ip::address &address, uint prefix);
+  Subnet(const boost::asio::ip::address &address, int prefix);
 
   bool Contains(const boost::asio::ip::address &address) const;
 
@@ -38,7 +38,7 @@ class Subnet {
   std::unique_ptr<uint32_t[]> network_address_data_;
   std::unique_ptr<uint32_t[]> mask_data_;
   bool is_ipv4_;
-  uint prefix_;
+  int prefix_;
 };
 }  // namespace utils
 }  // namespace nekit

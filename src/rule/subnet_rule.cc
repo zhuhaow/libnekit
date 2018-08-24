@@ -29,7 +29,7 @@ namespace rule {
 SubnetRule::SubnetRule(RuleHandler handler) : handler_{handler} {}
 
 void SubnetRule::AddSubnet(const boost::asio::ip::address &address,
-                           uint prefix) {
+                           int prefix) {
   subnets_.emplace_back(address, prefix);
 }
 

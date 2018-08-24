@@ -37,7 +37,7 @@ class SubnetRule : public RuleInterface {
  public:
   SubnetRule(RuleHandler handler);
 
-  void AddSubnet(const boost::asio::ip::address &address, uint prefix);
+  void AddSubnet(const boost::asio::ip::address &address, int prefix);
 
   MatchResult Match(std::shared_ptr<utils::Session> session) override;
   std::unique_ptr<data_flow::RemoteDataFlowInterface> GetDataFlow(
