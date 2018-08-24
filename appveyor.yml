@@ -24,7 +24,7 @@ before_build:
   - pipenv run scripts/build_deps.py windows
 
 build_script:
-  - cmake . -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/win.cmake -DCONVERAGE=ON -DPLATFORM=win
+  - cmake . -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/win.cmake -DCONVERAGE=ON -DPLATFORM=win -A x64
   - cmake --build . --target install --config release
 
 before_test:
@@ -35,5 +35,5 @@ test_script:
   - codecov -f .
 
 cache:
-  - deps -> scripts/build_deps.py
+  - deps -> scripts/build_deps.py, appveyor.yml
 
