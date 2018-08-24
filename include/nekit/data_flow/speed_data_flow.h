@@ -39,15 +39,14 @@ class SpeedDataFlow : public RemoteDataFlowInterface {
 
   ~SpeedDataFlow();
 
-  utils::Cancelable Read(utils::Buffer&& buffer,
-                         DataEventHandler handler) override
-      __attribute__((warn_unused_result));
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Read(
+      utils::Buffer&& buffer, DataEventHandler handler) override;
 
-  utils::Cancelable Write(utils::Buffer&& buffer, EventHandler handler) override
-      __attribute__((warn_unused_result));
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Write(
+      utils::Buffer&& buffer, EventHandler handler) override;
 
-  utils::Cancelable CloseWrite(EventHandler handler) override
-      __attribute__((warn_unused_result));
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable CloseWrite(
+      EventHandler handler) override;
 
   const FlowStateMachine& StateMachine() const override;
 
@@ -59,9 +58,8 @@ class SpeedDataFlow : public RemoteDataFlowInterface {
 
   utils::Runloop* GetRunloop() override;
 
-  utils::Cancelable Connect(std::shared_ptr<utils::Endpoint>,
-                            EventHandler handler) override
-      __attribute__((warn_unused_result));
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Connect(
+      std::shared_ptr<utils::Endpoint>, EventHandler handler) override;
 
   std::shared_ptr<utils::Endpoint> ConnectingTo() override;
 

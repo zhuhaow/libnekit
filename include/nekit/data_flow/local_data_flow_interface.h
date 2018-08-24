@@ -30,11 +30,10 @@ class LocalDataFlowInterface : public DataFlowInterface {
  public:
   virtual ~LocalDataFlowInterface() = default;
 
-  virtual utils::Cancelable Open(EventHandler)
-      __attribute__((warn_unused_result)) = 0;
+  HEDLEY_WARN_UNUSED_RESULT virtual utils::Cancelable Open(EventHandler) = 0;
 
-  virtual utils::Cancelable Continue(EventHandler)
-      __attribute__((warn_unused_result)) = 0;
+  HEDLEY_WARN_UNUSED_RESULT virtual utils::Cancelable Continue(
+      EventHandler) = 0;
 
   virtual LocalDataFlowInterface* NextLocalHop() const {
     return static_cast<LocalDataFlowInterface*>(NextHop());

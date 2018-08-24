@@ -28,6 +28,7 @@
 #include <boost/asio/ip/address.hpp>
 #include <boost/noncopyable.hpp>
 
+#include "../hedley.h"
 #include "cancelable.h"
 #include "ip_protocol.h"
 #include "resolver_interface.h"
@@ -87,9 +88,8 @@ class Endpoint final {
 
   void set_resolver(ResolverInterface* resolver) { resolver_ = resolver; }
 
-  Cancelable Resolve(EventHandler handler) __attribute__((warn_unused_result));
-  Cancelable ForceResolve(EventHandler handler)
-      __attribute__((warn_unused_result));
+  HEDLEY_WARN_UNUSED_RESULT Cancelable Resolve(EventHandler handler);
+  HEDLEY_WARN_UNUSED_RESULT Cancelable ForceResolve(EventHandler handler);
 
   std::shared_ptr<const std::vector<boost::asio::ip::address>>
   resolved_addresses() const {

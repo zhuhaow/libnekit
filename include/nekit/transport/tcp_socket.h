@@ -31,6 +31,7 @@
 
 #include "../data_flow/local_data_flow_interface.h"
 #include "../data_flow/remote_data_flow_interface.h"
+#include "../hedley.h"
 #include "tcp_connector.h"
 #include "tcp_listener.h"
 
@@ -43,13 +44,12 @@ class TcpSocket final : public data_flow::LocalDataFlowInterface,
   explicit TcpSocket(std::shared_ptr<utils::Session> session);
   ~TcpSocket();
 
-  utils::Cancelable Read(utils::Buffer&&, DataEventHandler) override
-      __attribute__((warn_unused_result));
-  utils::Cancelable Write(utils::Buffer&&, EventHandler) override
-      __attribute__((warn_unused_result));
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Read(utils::Buffer&&,
+                                                   DataEventHandler) override;
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Write(utils::Buffer&&,
+                                                    EventHandler) override;
 
-  utils::Cancelable CloseWrite(EventHandler) override
-      __attribute__((warn_unused_result));
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable CloseWrite(EventHandler) override;
 
   const data_flow::FlowStateMachine& StateMachine() const override;
 
@@ -61,15 +61,12 @@ class TcpSocket final : public data_flow::LocalDataFlowInterface,
 
   utils::Runloop* GetRunloop() override;
 
-  utils::Cancelable Open(EventHandler) override
-      __attribute__((warn_unused_result));
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Open(EventHandler) override;
 
-  utils::Cancelable Continue(EventHandler) override
-      __attribute__((warn_unused_result));
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Continue(EventHandler) override;
 
-  utils::Cancelable Connect(std::shared_ptr<utils::Endpoint>,
-                            EventHandler) override
-      __attribute__((warn_unused_result));
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Connect(
+      std::shared_ptr<utils::Endpoint>, EventHandler) override;
 
   std::shared_ptr<utils::Endpoint> ConnectingTo() override;
 

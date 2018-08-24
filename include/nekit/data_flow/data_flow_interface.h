@@ -27,6 +27,7 @@
 
 #include <boost/noncopyable.hpp>
 
+#include "../hedley.h"
 #include "../utils/async_interface.h"
 #include "../utils/buffer.h"
 #include "../utils/cancelable.h"
@@ -49,13 +50,13 @@ class DataFlowInterface : public utils::AsyncInterface,
   using DataEventHandler = std::function<void(utils::Buffer&&, utils::Error)>;
   using EventHandler = std::function<void(utils::Error)>;
 
-  virtual utils::Cancelable Read(utils::Buffer&&, DataEventHandler)
-      __attribute__((warn_unused_result)) = 0;
-  virtual utils::Cancelable Write(utils::Buffer&&, EventHandler)
-      __attribute__((warn_unused_result)) = 0;
+  HEDLEY_WARN_UNUSED_RESULT virtual utils::Cancelable Read(
+      utils::Buffer&&, DataEventHandler) = 0;
+  HEDLEY_WARN_UNUSED_RESULT virtual utils::Cancelable Write(utils::Buffer&&,
+                                                            EventHandler) = 0;
 
-  virtual utils::Cancelable CloseWrite(EventHandler)
-      __attribute__((warn_unused_result)) = 0;
+  HEDLEY_WARN_UNUSED_RESULT virtual utils::Cancelable CloseWrite(
+      EventHandler) = 0;
 
   virtual const FlowStateMachine& StateMachine() const = 0;
 

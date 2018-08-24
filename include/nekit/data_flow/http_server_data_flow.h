@@ -39,13 +39,12 @@ class HttpServerDataFlow : public LocalDataFlowInterface {
                      std::shared_ptr<utils::Session> session);
   ~HttpServerDataFlow();
 
-  utils::Cancelable Read(utils::Buffer&&, DataEventHandler) override
-      __attribute__((warn_unused_result));
-  utils::Cancelable Write(utils::Buffer&&, EventHandler) override
-      __attribute__((warn_unused_result));
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Read(utils::Buffer&&,
+                                                   DataEventHandler) override;
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Write(utils::Buffer&&,
+                                                    EventHandler) override;
 
-  utils::Cancelable CloseWrite(EventHandler) override
-      __attribute__((warn_unused_result));
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable CloseWrite(EventHandler) override;
 
   const FlowStateMachine& StateMachine() const override;
 
@@ -57,11 +56,9 @@ class HttpServerDataFlow : public LocalDataFlowInterface {
 
   utils::Runloop* GetRunloop() override;
 
-  utils::Cancelable Open(EventHandler) override
-      __attribute__((warn_unused_result));
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Open(EventHandler) override;
 
-  utils::Cancelable Continue(EventHandler) override
-      __attribute__((warn_unused_result));
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Continue(EventHandler) override;
 
   bool OnMethod();
 

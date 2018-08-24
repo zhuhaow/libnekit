@@ -37,8 +37,7 @@ class SystemResolver : public ResolverInterface {
   ~SystemResolver();
 
   Cancelable Resolve(std::string domain, AddressPreference preference,
-                     EventHandler handler) override
-      __attribute__((warn_unused_result));
+                     EventHandler handler) override;
 
   void Stop() override;
 

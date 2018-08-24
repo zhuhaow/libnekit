@@ -25,8 +25,8 @@
 #include <array>
 #include <string>
 
-#include <boost/range/adaptors.hpp>
 #include <boost/noncopyable.hpp>
+#include <boost/range/adaptors.hpp>
 
 namespace nekit {
 namespace utils {

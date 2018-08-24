@@ -26,6 +26,7 @@
 
 #include <boost/asio.hpp>
 
+#include "../hedley.h"
 #include "../utils/cancelable.h"
 #include "../utils/device.h"
 #include "../utils/endpoint.h"
@@ -51,8 +52,7 @@ class TcpConnector : public utils::AsyncInterface {
 
   ~TcpConnector();
 
-  utils::Cancelable Connect(EventHandler handler)
-      __attribute__((warn_unused_result));
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Connect(EventHandler handler);
 
   void Bind(std::shared_ptr<utils::DeviceInterface> device);
 

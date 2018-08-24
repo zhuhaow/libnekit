@@ -29,6 +29,7 @@
 
 #include <boost/asio.hpp>
 
+#include "../hedley.h"
 #include "../utils/async_interface.h"
 #include "../utils/cancelable.h"
 #include "../utils/resolver_interface.h"
@@ -49,9 +50,8 @@ class RuleManager final : public utils::AsyncInterface {
 
   void AppendRule(std::shared_ptr<RuleInterface> rule);
 
-  utils::Cancelable Match(std::shared_ptr<utils::Session> session,
-                          EventHandler handler)
-      __attribute__((warn_unused_result));
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Match(
+      std::shared_ptr<utils::Session> session, EventHandler handler);
 
   utils::Runloop* GetRunloop() override;
 

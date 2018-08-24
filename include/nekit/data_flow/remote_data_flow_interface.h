@@ -30,9 +30,8 @@ class RemoteDataFlowInterface : public DataFlowInterface {
  public:
   virtual ~RemoteDataFlowInterface() = default;
 
-  virtual utils::Cancelable Connect(std::shared_ptr<utils::Endpoint>,
-                                    EventHandler)
-      __attribute__((warn_unused_result)) = 0;
+  HEDLEY_WARN_UNUSED_RESULT virtual utils::Cancelable Connect(
+      std::shared_ptr<utils::Endpoint>, EventHandler) = 0;
 
   virtual RemoteDataFlowInterface* NextRemoteHop() const {
     return static_cast<RemoteDataFlowInterface*>(NextHop());

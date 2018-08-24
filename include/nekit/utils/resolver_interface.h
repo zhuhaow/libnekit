@@ -29,6 +29,7 @@
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
 
+#include "../hedley.h"
 #include "async_interface.h"
 #include "cancelable.h"
 
@@ -44,9 +45,9 @@ class ResolverInterface : public AsyncInterface, private boost::noncopyable {
 
   virtual ~ResolverInterface() = default;
 
-  virtual Cancelable Resolve(std::string domain, AddressPreference preference,
-                             EventHandler handler)
-      __attribute__((warn_unused_result)) = 0;
+  HEDLEY_WARN_UNUSED_RESULT virtual Cancelable Resolve(
+      std::string domain, AddressPreference preference,
+      EventHandler handler) = 0;
 
   virtual void Stop() = 0;
 };
