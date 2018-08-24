@@ -25,7 +25,7 @@ before_build:
 
 build_script:
   - cmake . -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/win.cmake -DCOVERAGE=ON -DPLATFORM=win -A x64
-  - cmake --build . --target install --config release
+  - cmake --build .
 
 before_test:
   - choco install codecov
