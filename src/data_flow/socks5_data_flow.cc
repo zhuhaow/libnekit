@@ -66,7 +66,9 @@ std::shared_ptr<utils::Session> Socks5DataFlow::Session() const {
   return session_;
 }
 
-utils::Runloop* Socks5DataFlow::GetRunloop() { return data_flow_->GetRunloop(); }
+utils::Runloop* Socks5DataFlow::GetRunloop() {
+  return data_flow_->GetRunloop();
+}
 
 utils::Cancelable Socks5DataFlow::Connect(
     std::shared_ptr<utils::Endpoint> endpoint, EventHandler handler) {

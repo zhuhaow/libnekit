@@ -27,7 +27,5 @@
 #include <openssl/evp.h>
 
 namespace nekit {
-void Initailize() {
-  boost::log::add_common_attributes();
-}
+void Initailize() { boost::log::add_common_attributes(); }
 }  // namespace nekit

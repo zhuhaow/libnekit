@@ -77,19 +77,21 @@ class OpenSslStreamCipher : public StreamCipherInterface {
     }
 
     if (!EVP_CipherUpdate(context_, static_cast<uint8_t *>(output), &output_len,
-                          static_cast<const uint8_t*>(input), int(len))) {
+                          static_cast<const uint8_t *>(input), int(len))) {
       return ErrorCode::UnknownError;
     }
     BOOST_ASSERT(output_len == int(len));
 
     if (action_ == Action::Decryption && input_tag != nullptr) {
-      if (EVP_CipherFinal_ex(context_, static_cast<uint8_t*>(output), &output_len) <= 0) {
+      if (EVP_CipherFinal_ex(context_, static_cast<uint8_t *>(output),
+                             &output_len) <= 0) {
         return ErrorCode::ValidationFailed;
       }
 
       BOOST_ASSERT(output_len == 0);
     } else if (action_ == Action::Encryption && output_tag != nullptr) {
-      if (!EVP_CipherFinal_ex(context_, static_cast<uint8_t*>(output), &output_len)) {
+      if (!EVP_CipherFinal_ex(context_, static_cast<uint8_t *>(output),
+                              &output_len)) {
         return ErrorCode::UnknownError;
       }
 

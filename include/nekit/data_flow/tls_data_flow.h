@@ -34,13 +34,12 @@ class TlsDataFlow final : public data_flow::RemoteDataFlowInterface {
       std::unique_ptr<data_flow::RemoteDataFlowInterface>&& data_flow);
   ~TlsDataFlow();
 
-  utils::Cancelable Read(utils::Buffer&&, DataEventHandler) override
-      __attribute__((warn_unused_result));
-  utils::Cancelable Write(utils::Buffer&&, EventHandler) override
-      __attribute__((warn_unused_result));
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Read(utils::Buffer&&,
+                                                   DataEventHandler) override;
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Write(utils::Buffer&&,
+                                                    EventHandler) override;
 
-  utils::Cancelable CloseWrite(EventHandler) override
-      __attribute__((warn_unused_result));
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable CloseWrite(EventHandler) override;
 
   const data_flow::FlowStateMachine& StateMachine() const override;
 
@@ -54,9 +53,8 @@ class TlsDataFlow final : public data_flow::RemoteDataFlowInterface {
 
   utils::Runloop* GetRunloop() override;
 
-  utils::Cancelable Connect(std::shared_ptr<utils::Endpoint>,
-                            EventHandler) override
-      __attribute__((warn_unused_result));
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Connect(
+      std::shared_ptr<utils::Endpoint>, EventHandler) override;
 
   RemoteDataFlowInterface* NextRemoteHop() const override;
 
