@@ -205,6 +205,9 @@ def cmake_compile(source_dir,
                 "-DIOS_DEPLOYMENT_TARGET=9.0",
             ])
 
+        if target_platform == Platform.Windows:
+            config.extend(["-A", "x64"])
+
         config.append("-DCMAKE_TOOLCHAIN_FILE={}".format(
             toolchain_path(target_platform)))
 
