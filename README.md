@@ -26,12 +26,15 @@ Things supported now:
 Things will be added or changed, ordered by priority:
 
 * [x] TLS support (as client)
-* [ ] Minor API refinement
-* [ ] Build for Windows and Android
+* [x] Minor API refinement
+* [x] Build for Windows 
 * [ ] Better error handling
 * [ ] More detailed log
 * [ ] Class level doc
+* [ ] Use Conan as dependency management system
+* [ ] Build for Android
 * [ ] TLS support (as server, MITM)
+* [ ] UDP support
 * [ ] Python/Lua binding (not sure which one yet, please advise)
 * [ ] Raw DNS request/response parsing
 * [ ] IP stack support
