@@ -191,7 +191,7 @@ def mac_sdk_path():
 def cmake_compile(source_dir,
                   install_prefix,
                   target_platform,
-                  extra_config=None):
+                  extra_config=[]):
     with temp_dir() as tempd:
         config = [
             "-H{}".format(source_dir),
@@ -212,7 +212,7 @@ def cmake_compile(source_dir,
             toolchain_path(target_platform)))
 
         if extra_config:
-            config.append(extra_config)
+            config.extend(extra_config)
 
         cmake[config] & FG
 
@@ -459,6 +459,8 @@ def main():
                 os.path.join(tempd, "googletest"),
                 install_path(target_platform),
                 target_platform,
+                ['-Dgtest_force_shared_crt=ON'] if target_platform == Platform.Windows else []
+
             )
 
 
