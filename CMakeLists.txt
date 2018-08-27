@@ -23,17 +23,20 @@ add_library(nekit "")
 
 include(CheckCXXCompilerFlag)
 
-check_cxx_compiler_flag(-Wall HAS_WALL)
-target_compile_options(nekit PRIVATE $<$<BOOL:${HAS_WALL}>:-Wall>)
+if (NOT WIN32)
+  # I can't get VS suppress warnings from thrid party libraries, tried CAExcludePath and IncludePath but got no luck.
+  check_cxx_compiler_flag(-Wall HAS_WALL)
+  target_compile_options(nekit PRIVATE $<$<BOOL:${HAS_WALL}>:-Wall>)
 
-check_cxx_compiler_flag(-Wextra HAS_WEXTRA)
-target_compile_options(nekit PRIVATE $<$<BOOL:${HAS_WEXTRA}>:-Wextra>)
+  check_cxx_compiler_flag(-Wextra HAS_WEXTRA)
+  target_compile_options(nekit PRIVATE $<$<BOOL:${HAS_WEXTRA}>:-Wextra>)
 
-check_cxx_compiler_flag(-pedantic HAS_PEDANTIC)
-target_compile_options(nekit PRIVATE $<$<BOOL:${HAS_PEDANTIC}>:-Wpedantic>)
+  check_cxx_compiler_flag(-pedantic HAS_PEDANTIC)
+  target_compile_options(nekit PRIVATE $<$<BOOL:${HAS_PEDANTIC}>:-Wpedantic>)
 
-check_cxx_compiler_flag(-Wno-pragma-once-outside-header HAS_PRAGMA_ONCE_WARNING)
-target_compile_options(nekit PRIVATE $<$<BOOL:${HAS_PRAGMA_ONCE_WARNING}>:-Wno-pragma-once-outside-header>)
+  check_cxx_compiler_flag(-Wno-pragma-once-outside-header HAS_PRAGMA_ONCE_WARNING)
+  target_compile_options(nekit PRIVATE $<$<BOOL:${HAS_PRAGMA_ONCE_WARNING}>:-Wno-pragma-once-outside-header>)
+endif()
 
 option(COVERAGE "Generate coverage report" OFF)
 if(COVERAGE)
