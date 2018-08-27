@@ -28,7 +28,7 @@ using namespace nekit::utils;
 
 class Environment : public ::testing::Environment {
  public:
-  void SetUp() { assert(Maxmind::Initalize("GeoLite2-Country.mmdb")); }
+  void SetUp() { ASSERT_TRUE(Maxmind::Initalize("GeoLite2-Country.mmdb")); }
 };
 
 ::testing::Environment* const env =
