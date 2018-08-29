@@ -24,74 +24,88 @@
 
 #include <map>
 #include <memory>
-#include <system_error>
 
 #include <boost/any.hpp>
+#include <boost/assert.hpp>
 
 namespace nekit {
 namespace utils {
 
-enum class NEKitErrorCode {
-  NoError,
-  GeneralError,
-  Canceled,
-  MemoryAllocationFailed
-};
-std::error_code make_error_code(NEKitErrorCode);
+class Error;
 
-}  // namespace utils
-}  // namespace nekit
-
-namespace std {
-template <>
-struct is_error_code_enum<nekit::utils::NEKitErrorCode> : true_type {};
-}  // namespace std
-
-namespace nekit {
-namespace utils {
-
-class Error {
+class ErrorCategory {
  public:
-  Error() : Error(NEKitErrorCode::NoError) {}
-  Error(std::error_code ec) : ec_{ec} {}
-  template <typename ErrorCodeEnum,
-            typename =
-                std::enable_if_t<std::is_error_code_enum<ErrorCodeEnum>::value>>
-  Error(ErrorCodeEnum ec) : ec_{make_error_code(ec)} {}
+  static ErrorCategory& GlobalDefaultErrorCategory() {
+    static ErrorCategory default_error_category;
+    return default_error_category;
+  }
 
-  explicit operator bool() const { return bool(ec_); }
+  friend class Error;
 
-  const std::error_code& ErrorCode() const { return ec_; }
+ protected:
+  virtual std::string Description(const Error& error) const {
+    (void)error;
+    return "no error";
+  };
+
+  virtual std::string DebugDescription(const Error& error) const {
+    (void)error;
+    return "no error";
+  };
+
+  ErrorCategory();
+};
+
+class Error final {
+ public:
+  Error() : Error(ErrorCategory::GlobalDefaultErrorCategory(), 0, false) {}
+
+  Error(const ErrorCategory& category, int error_code,
+        bool has_error_info = false)
+      : category_{&category}, error_code_{error_code} {
+    if (has_error_info) {
+      info_ = std::make_unique<std::map<int, boost::any>>();
+    }
+  };
+
+  explicit operator bool() const { return error_code_; }
 
   template <typename T>
   void AddInfo(int key, T value) {
-    if (!info_) {
-      info_ = std::make_shared<std::map<int, boost::any>>();
-    }
-
+    BOOST_ASSERT(info_);
     info_->emplace(key, value);
   }
 
   bool HasInfo(int key) const {
+    BOOST_ASSERT(info_);
     return info_ && info_->find(key) != info_->cend();
   }
+
   template <typename T>
   const T& GetInfo(int key) const {
+    BOOST_ASSERT(info_);
     return boost::any_cast<T>(info_->at(key));
   }
 
+  std::string Description() { return category_->Description(*this); };
+
+  std::string DebugDescription() { return category_->DebugDescription(*this); };
+
+  const ErrorCategory& Category() const { return *category_; }
+
+  int ErrorCode() const { return error_code_; }
+
  private:
-  std::error_code ec_;
-  std::shared_ptr<std::map<int, boost::any>> info_;
+  std::unique_ptr<std::map<int, boost::any>> info_;
+  const ErrorCategory* category_;
+
+  int error_code_;
 };
 
-inline std::error_code make_error_code(Error error) {
-  return error.ErrorCode();
+bool operator==(const Error& err1, const Error& err2) {
+  return &err1.Category() == &err2.Category() &&
+         err1.ErrorCode() == err2.ErrorCode();
 }
+
 }  // namespace utils
 }  // namespace nekit
-
-namespace std {
-template <>
-struct is_error_code_enum<nekit::utils::Error> : true_type {};
-}  // namespace std
