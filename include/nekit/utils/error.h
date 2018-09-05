@@ -67,9 +67,6 @@ class ErrorCategory {
  public:
   NE_DEFINE_STATIC_ERROR_CATEGORY(ErrorCategory)
 
-  friend class Error;
-
- protected:
   virtual std::string Description(const Error& error) const {
     (void)error;
     return "no error";
