@@ -71,11 +71,10 @@ std::unique_ptr<data_flow::RemoteDataFlowInterface> GeoRule::GetDataFlow(
 utils::CountryIsoCode GeoRule::LookupAndCache(
     std::shared_ptr<utils::Session> session,
     const boost::asio::ip::address &address) {
-  auto result = utils::Maxmind::Lookup(address);
-  assert(!result.error());
-  session->int_cache()[CountryIsoCodeCacheKey] =
-      static_cast<int>(result.country_iso_code());
-  return result.country_iso_code();
+  auto geo_result = utils::Maxmind::Lookup(address);
+  auto code = geo_result->country_iso_code();
+  session->int_cache()[CountryIsoCodeCacheKey] = static_cast<int>(code);
+  return code;
 }
 }  // namespace rule
 }  // namespace nekit

@@ -25,13 +25,13 @@
 #include <functional>
 #include <memory>
 
+#include "../hedley/hedley.h"
 #include <boost/noncopyable.hpp>
 
-#include "../hedley.h"
 #include "../utils/async_interface.h"
 #include "../utils/buffer.h"
 #include "../utils/cancelable.h"
-#include "../utils/error.h"
+#include "../utils/result.h"
 #include "../utils/session.h"
 #include "flow_state_machine.h"
 
@@ -47,11 +47,11 @@ class DataFlowInterface : public utils::AsyncInterface,
  public:
   virtual ~DataFlowInterface() = default;
 
-  using DataEventHandler = std::function<void(utils::Buffer&&, utils::Error)>;
-  using EventHandler = std::function<void(utils::Error)>;
+  using DataEventHandler = std::function<void(utils::Result<utils::Buffer>&&)>;
+  using EventHandler = std::function<void(utils::Result<void>&&)>;
 
   HEDLEY_WARN_UNUSED_RESULT virtual utils::Cancelable Read(
-      utils::Buffer&&, DataEventHandler) = 0;
+      DataEventHandler) = 0;
   HEDLEY_WARN_UNUSED_RESULT virtual utils::Cancelable Write(utils::Buffer&&,
                                                             EventHandler) = 0;
 

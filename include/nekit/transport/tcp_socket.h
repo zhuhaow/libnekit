@@ -26,17 +26,38 @@
 #include <system_error>
 #include <vector>
 
+#include "../hedley/hedley.h"
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
 
 #include "../data_flow/local_data_flow_interface.h"
 #include "../data_flow/remote_data_flow_interface.h"
-#include "../hedley.h"
 #include "tcp_connector.h"
 #include "tcp_listener.h"
 
+#define NE_TCP_BOOST_CODE_ERROR_KEY 1
+
 namespace nekit {
 namespace transport {
+
+enum class TcpErrorCode {
+  ConnectionAborted = 1,
+  ConnectionReset,
+  HostUnreachable,
+  NetworkDown,
+  NetworkReset,
+  NetworkUnreachable,
+  TimedOut
+};
+
+class TcpErrorCategory : public utils::ErrorCategory {
+ public:
+  NE_DEFINE_STATIC_ERROR_CATEGORY(TcpErrorCategory)
+
+ protected:
+  std::string Description(const utils::Error& error) const override;
+  std::string DebugDescription(const utils::Error& error) const override;
+};
 
 class TcpSocket final : public data_flow::LocalDataFlowInterface,
                         public data_flow::RemoteDataFlowInterface {
@@ -44,8 +65,7 @@ class TcpSocket final : public data_flow::LocalDataFlowInterface,
   explicit TcpSocket(std::shared_ptr<utils::Session> session);
   ~TcpSocket();
 
-  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Read(utils::Buffer&&,
-                                                   DataEventHandler) override;
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Read(DataEventHandler) override;
   HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Write(utils::Buffer&&,
                                                     EventHandler) override;
 
@@ -76,7 +96,7 @@ class TcpSocket final : public data_flow::LocalDataFlowInterface,
   explicit TcpSocket(boost::asio::ip::tcp::socket&& socket,
                      std::shared_ptr<utils::Session> session);
 
-  std::error_code ConvertBoostError(const boost::system::error_code&) const;
+  utils::Error ConvertBoostError(const boost::system::error_code&) const;
 
   boost::asio::ip::tcp::socket socket_;
   std::unique_ptr<TcpConnector> connector_;
@@ -91,3 +111,5 @@ class TcpSocket final : public data_flow::LocalDataFlowInterface,
 };
 }  // namespace transport
 }  // namespace nekit
+
+NE_DEFINE_NEW_ERROR_CODE(Tcp, nekit, transport)

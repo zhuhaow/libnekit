@@ -40,7 +40,7 @@ class SpeedDataFlow : public RemoteDataFlowInterface {
   ~SpeedDataFlow();
 
   HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Read(
-      utils::Buffer&& buffer, DataEventHandler handler) override;
+      DataEventHandler handler) override;
 
   HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Write(
       utils::Buffer&& buffer, EventHandler handler) override;

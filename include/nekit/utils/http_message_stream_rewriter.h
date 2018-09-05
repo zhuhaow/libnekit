@@ -27,9 +27,28 @@
 
 #include "../modules/http_parser/http_parser.h"
 #include "http_message_rewriter_interface.h"
+#include "result.h"
+
+#define NE_HTTP_MESSAGE_STREAM_PARSE_ERROR_INFO_KEY 1
 
 namespace nekit {
 namespace utils {
+
+enum class HttpMessageStreamRewriterErrorCode {
+  ParserError = 1,
+  BlockTooLong,
+  UserError
+};
+
+class HttpMessageStreamRewriterErrorCategory : public ErrorCategory {
+ public:
+  NE_DEFINE_STATIC_ERROR_CATEGORY(HttpMessageStreamRewriterErrorCategory)
+
+  static Error FromParserError(decltype(http_parser::http_errno) error);
+
+  std::string Description(const Error& error) const override;
+  std::string DebugDescription(const Error& error) const override;
+};
 
 class HttpMessageStreamRewriter;
 
@@ -90,7 +109,7 @@ class HttpMessageStreamRewriter : public HttpMessageRewriterInterface {
       std::shared_ptr<HttpMessageStreamRewriterDelegateInterface> delegate);
   ~HttpMessageStreamRewriter();
 
-  bool RewriteBuffer(Buffer* buffer) override;
+  utils::Result<void> RewriteBuffer(Buffer* buffer) override;
 
   const Header& CurrentHeader();
   void RewriteCurrentHeader(const Header& header);
@@ -107,3 +126,5 @@ class HttpMessageStreamRewriter : public HttpMessageRewriterInterface {
 };
 }  // namespace utils
 }  // namespace nekit
+
+NE_DEFINE_NEW_ERROR_CODE(HttpMessageStreamRewriter, nekit, utils)

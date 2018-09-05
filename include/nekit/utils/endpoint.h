@@ -25,19 +25,20 @@
 #include <memory>
 #include <vector>
 
+#include "../hedley/hedley.h"
 #include <boost/asio/ip/address.hpp>
 #include <boost/noncopyable.hpp>
 
-#include "../hedley.h"
 #include "cancelable.h"
 #include "ip_protocol.h"
 #include "resolver_interface.h"
+#include "result.h"
 
 namespace nekit {
 namespace utils {
 class Endpoint final {
  public:
-  using EventHandler = std::function<void(std::error_code)>;
+  using EventHandler = std::function<void(utils::Result<void>&&)>;
 
   enum class Type { Domain, Address };
 
@@ -84,7 +85,7 @@ class Endpoint final {
 
   bool IsResolveFailed() const { return resolved_ && !resolved_addresses_; }
 
-  std::error_code resolve_error() const { return error_; }
+  const utils::Error& ResolveError() const { return error_; }
 
   void set_resolver(ResolverInterface* resolver) { resolver_ = resolver; }
 
@@ -106,7 +107,7 @@ class Endpoint final {
   IPProtocol ip_protocol_{IPProtocol::TCP};
 
   std::shared_ptr<std::vector<boost::asio::ip::address>> resolved_addresses_;
-  std::error_code error_;
+  utils::Error error_;
   ResolverInterface* resolver_{nullptr};
   bool resolved_{false};
   bool resolving_{false};

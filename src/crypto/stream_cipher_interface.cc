@@ -26,27 +26,20 @@
 
 namespace nekit {
 namespace crypto {
-namespace {
-struct StreamCipherErrorCategory : std::error_category {
-  const char* name() const noexcept override { return "Stream cipher"; }
 
-  std::string message(int error_code) const override {
-    switch (static_cast<StreamCipherInterface::ErrorCode>(error_code)) {
-      case StreamCipherInterface::ErrorCode::NoError:
-        return "no error";
-      case StreamCipherInterface::ErrorCode::ValidationFailed:
-        return "data validation failed";
-      case StreamCipherInterface::ErrorCode::UnknownError:
-        return "unknown error";
-    }
+std::string StreamCipherErrorCategory::Description(
+    const utils::Error& error) const {
+  switch ((StreamCipherErrorCode)error.ErrorCode()) {
+    case StreamCipherErrorCode::ValidationFailed:
+      return "data validation failed";
+    case StreamCipherErrorCode::UnknownError:
+      return "unknown error";
   }
-};
+}
 
-const StreamCipherErrorCategory streamCipherErrorCategory{};
-}  // namespace
-
-std::error_code make_error_code(StreamCipherInterface::ErrorCode ec) {
-  return {static_cast<int>(ec), streamCipherErrorCategory};
+std::string StreamCipherErrorCategory::DebugDescription(
+    const utils::Error& error) const {
+  return Description(error);
 }
 }  // namespace crypto
 }  // namespace nekit

@@ -27,22 +27,31 @@
 #include <system_error>
 #include <vector>
 
+#include "../hedley/hedley.h"
 #include <boost/asio.hpp>
 
-#include "../hedley.h"
 #include "../utils/async_interface.h"
 #include "../utils/cancelable.h"
 #include "../utils/resolver_interface.h"
+#include "../utils/result.h"
 #include "rule_interface.h"
 
 namespace nekit {
 namespace rule {
+enum class RuleManagerErrorCode { NoMatch = 1 };
+
+class RuleManagerErrorCategory : public utils::ErrorCategory {
+ public:
+  NE_DEFINE_STATIC_ERROR_CATEGORY(RuleManagerErrorCategory)
+
+  std::string Description(const utils::Error& error) const override;
+  std::string DebugDescription(const utils::Error& error) const override;
+};
+
 class RuleManager final : public utils::AsyncInterface {
  public:
   using EventHandler =
-      std::function<void(std::shared_ptr<RuleInterface>, std::error_code)>;
-
-  enum class ErrorCode { NoError, NoMatch };
+      std::function<void(utils::Result<std::shared_ptr<RuleInterface>>&&)>;
 
   explicit RuleManager(utils::Runloop* runloop);
 
@@ -66,11 +75,5 @@ class RuleManager final : public utils::AsyncInterface {
   utils::Cancelable lifetime_;
 };
 
-std::error_code make_error_code(RuleManager::ErrorCode ec);
 }  // namespace rule
 }  // namespace nekit
-
-namespace std {
-template <>
-struct is_error_code_enum<nekit::rule::RuleManager::ErrorCode> : true_type {};
-}  // namespace std

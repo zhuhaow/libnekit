@@ -33,9 +33,8 @@ SpeedDataFlow::SpeedDataFlow(
 
 SpeedDataFlow::~SpeedDataFlow() { connect_cancelable_.Cancel(); }
 
-utils::Cancelable SpeedDataFlow::Read(utils::Buffer&& buffer,
-                                      DataEventHandler handler) {
-  return data_flow_->Read(std::move(buffer), handler);
+utils::Cancelable SpeedDataFlow::Read(DataEventHandler handler) {
+  return data_flow_->Read(handler);
 }
 
 utils::Cancelable SpeedDataFlow::Write(utils::Buffer&& buffer,
@@ -88,17 +87,18 @@ utils::Cancelable SpeedDataFlow::Connect(
 
           auto _ = data_flows_[i].first->Connect(
               target_endpoint_->Dup(),
-              [this, cancelable, i, handler](utils::Error error) {
+              [this, cancelable, i, handler](utils::Result<void>&& result) {
                 if (cancelable.canceled()) {
                   return;
                 }
 
                 current_active_connection_--;
-                if (error) {
+                if (!result) {
                   if (current_active_connection_ == 0) {
-                    handler(error);
-                    return;
+                    handler(std::move(result));
                   }
+
+                  return;
                 }
 
                 cancelable.canceled();
@@ -109,7 +109,7 @@ utils::Cancelable SpeedDataFlow::Connect(
 
                 state_machine_.Connected();
 
-                handler(error);
+                handler({});
               });
         });
 

@@ -22,6 +22,8 @@
 
 #include "nekit/transport/tcp_connector.h"
 
+#include <boost/assert.hpp>
+
 #include "nekit/transport/tcp_socket.h"
 #include "nekit/utils/boost_error.h"
 #include "nekit/utils/error.h"
@@ -40,7 +42,7 @@ TcpConnector::TcpConnector(
       addresses_{addresses},
       port_{port},
       runloop_{runloop} {
-  assert(!addresses_->empty());
+  BOOST_ASSERT(!addresses_->empty());
 }
 
 TcpConnector::TcpConnector(utils::Runloop* runloop,
@@ -61,7 +63,7 @@ TcpConnector::TcpConnector(utils::Runloop* runloop,
 TcpConnector::~TcpConnector() { cancelable_.Cancel(); }
 
 utils::Cancelable TcpConnector::Connect(EventHandler handler) {
-  assert(!connecting_);
+  BOOST_ASSERT(!connecting_);
 
   NEDEBUG << "Begin connecting to remote.";
 
@@ -83,7 +85,7 @@ utils::Cancelable TcpConnector::Connect(EventHandler handler) {
     } else {
       if (!endpoint_->IsResolvable()) {
         NEERROR << "Can not connect since resolve is failed due to "
-                << endpoint_->resolve_error() << ".";
+                << endpoint_->ResolveError() << ".";
 
         boost::asio::post(
             socket_.get_executor(), [this, handler, cancelable{cancelable_}]() {
@@ -91,26 +93,27 @@ utils::Cancelable TcpConnector::Connect(EventHandler handler) {
                 return;
               }
 
-              handler(std::move(socket_), endpoint_->resolve_error());
+              handler(utils::MakeErrorResult(endpoint_->ResolveError().Dup()));
             });
         return cancelable_;
       } else {
         (void)endpoint_->Resolve([this, handler, cancelable{cancelable_}](
-                                     std::error_code ec) mutable {
+                                     utils::Result<void>&& result) mutable {
           if (cancelable.canceled()) {
             return;
           }
 
-          if (ec) {
-            NEERROR << "Can not connect since resolve is failed due to "
-                    << endpoint_->resolve_error() << ".";
-            handler(std::move(socket_), ec);
-            return;
-          }
-
-          NEDEBUG << "Domain resolved, connect now.";
-          addresses_ = endpoint_->resolved_addresses();
-          DoConnect(handler);
+          std::move(result)
+              .map([&]() {
+                NEDEBUG << "Domain resolved, connect now.";
+                addresses_ = endpoint_->resolved_addresses();
+                DoConnect(handler);
+              })
+              .or_else([&](auto error) {
+                NEERROR << "Can not connect since resolve is failed due to "
+                        << error << ".";
+                handler(utils::MakeErrorResult(std::move(error)));
+              });
         });
         return cancelable_;
       }
@@ -140,13 +143,14 @@ void TcpConnector::DoConnect(EventHandler handler) {
       (addresses_ && current_ind_ >= addresses_->size())) {
     NEERROR << "Fail to connect to all addresses, the last known error is "
             << last_error_ << ".";
-    handler(std::move(socket_), last_error_);
+    handler(utils::MakeErrorResult(
+        utils::BoostErrorCategory::FromBoostError(last_error_)));
     return;
   }
 
   boost::system::error_code ec;
   socket_.close(ec);
-  assert(!ec);
+  BOOST_ASSERT(!ec);
 
   const boost::asio::ip::address* address;
   if (addresses_) {
@@ -170,7 +174,7 @@ void TcpConnector::DoConnect(EventHandler handler) {
             return;
           }
 
-          last_error_ = std::make_error_code(ec);
+          last_error_ = ec;
           current_ind_++;
           DoConnect(handler);
           return;
@@ -178,7 +182,7 @@ void TcpConnector::DoConnect(EventHandler handler) {
 
         NEINFO << "Successfully connected to remote.";
         connecting_ = false;
-        handler(std::move(socket_), utils::NEKitErrorCode::NoError);
+        handler(std::move(socket_));
         return;
       });
 }

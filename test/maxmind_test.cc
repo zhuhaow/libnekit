@@ -35,13 +35,11 @@ class Environment : public ::testing::Environment {
     ::testing::AddGlobalTestEnvironment(new Environment);
 
 TEST(MaxmindUnitTest, CountryIsoCodeLookup) {
-  MaxmindLookupResult result = Maxmind::Lookup("127.0.0.1");
-  ASSERT_FALSE(result.error());
-  ASSERT_FALSE(result.found());
-  ASSERT_EQ(result.country_iso_code(), CountryIsoCode::XX);
+  auto result = Maxmind::Lookup("127.0.0.1");
+  ASSERT_TRUE(result);
+  ASSERT_EQ(result->country_iso_code(), CountryIsoCode::XX);
 
   result = Maxmind::Lookup("8.8.8.8");
-  ASSERT_FALSE(result.error());
-  ASSERT_TRUE(result.found());
-  ASSERT_EQ(result.country_iso_code(), CountryIsoCode::US);
+  ASSERT_TRUE(result);
+  ASSERT_EQ(result->country_iso_code(), CountryIsoCode::US);
 }

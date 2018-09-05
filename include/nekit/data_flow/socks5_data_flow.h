@@ -22,10 +22,27 @@
 
 #pragma once
 
+#include "../utils/error.h"
+#include "../utils/stream_reader.h"
 #include "remote_data_flow_interface.h"
 
 namespace nekit {
 namespace data_flow {
+enum class Socks5ErrorCode {
+  ServerVersionNotSupported = 1,
+  AuthenticationNotSupported,
+  InvalidResponse,
+  ConnectionFailed
+};
+
+class Socks5ErrorCategory : public utils::ErrorCategory {
+ public:
+  NE_DEFINE_STATIC_ERROR_CATEGORY(Socks5ErrorCategory)
+
+  std::string Description(const utils::Error& error) const override;
+  std::string DebugDescription(const utils::Error& error) const override;
+};
+
 class Socks5DataFlow : public RemoteDataFlowInterface {
  public:
   Socks5DataFlow(std::shared_ptr<utils::Endpoint> server_endpoint,
@@ -35,7 +52,7 @@ class Socks5DataFlow : public RemoteDataFlowInterface {
   ~Socks5DataFlow();
 
   HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Read(
-      utils::Buffer&& buffer, DataEventHandler handler) override;
+      DataEventHandler handler) override;
 
   HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Write(
       utils::Buffer&& buffer, EventHandler handler) override;
@@ -70,6 +87,10 @@ class Socks5DataFlow : public RemoteDataFlowInterface {
   FlowStateMachine state_machine_{FlowType::Remote};
 
   utils::Cancelable connect_cancelable_, connect_action_cancelable_;
+
+  utils::StreamReader stream_reader_;
 };
 }  // namespace data_flow
 }  // namespace nekit
+
+NE_DEFINE_NEW_ERROR_CODE(Socks5, nekit, data_flow)

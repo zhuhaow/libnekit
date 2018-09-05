@@ -65,45 +65,46 @@ class OpenSslStreamCipher : public StreamCipherInterface {
     }
   }
 
-  ErrorCode Process(const void *input, size_t len, const void *input_tag,
-                    void *output, void *output_tag) override {
+  utils::Result<void> Process(const void *input, size_t len,
+                              const void *input_tag, void *output,
+                              void *output_tag) override {
     int output_len;
 
     if (action_ == Action::Decryption && input_tag != nullptr) {
       if (!EVP_CIPHER_CTX_ctrl(context_, EVP_CTRL_AEAD_SET_TAG, int(tag_size_),
                                const_cast<void *>(input_tag))) {
-        return ErrorCode::UnknownError;
+        return utils::MakeErrorResult(StreamCipherErrorCode::UnknownError);
       }
     }
 
     if (!EVP_CipherUpdate(context_, static_cast<uint8_t *>(output), &output_len,
                           static_cast<const uint8_t *>(input), int(len))) {
-      return ErrorCode::UnknownError;
+      return utils::MakeErrorResult(StreamCipherErrorCode::UnknownError);
     }
     BOOST_ASSERT(output_len == int(len));
 
     if (action_ == Action::Decryption && input_tag != nullptr) {
       if (EVP_CipherFinal_ex(context_, static_cast<uint8_t *>(output),
                              &output_len) <= 0) {
-        return ErrorCode::ValidationFailed;
+        return utils::MakeErrorResult(StreamCipherErrorCode::ValidationFailed);
       }
 
       BOOST_ASSERT(output_len == 0);
     } else if (action_ == Action::Encryption && output_tag != nullptr) {
       if (!EVP_CipherFinal_ex(context_, static_cast<uint8_t *>(output),
                               &output_len)) {
-        return ErrorCode::UnknownError;
+        return utils::MakeErrorResult(StreamCipherErrorCode::UnknownError);
       }
 
       BOOST_ASSERT(output_len == 0);
 
       if (!EVP_CIPHER_CTX_ctrl(context_, EVP_CTRL_AEAD_GET_TAG, tag_size_,
                                output_tag)) {
-        return ErrorCode::UnknownError;
+        return utils::MakeErrorResult(StreamCipherErrorCode::UnknownError);
       }
     }
 
-    return ErrorCode::NoError;
+    return {};
   }
 
   void Reset() override {

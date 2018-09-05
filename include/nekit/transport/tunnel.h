@@ -64,11 +64,9 @@ class Tunnel final : public utils::AsyncInterface, private boost::noncopyable {
   void CheckTunnelStatus();
   void ReleaseTunnel();
 
-  void LocalReportError(std::error_code ec);
+  void LocalReportError(utils::Error&& error);
 
   void ResetTimer();
-
-  utils::Buffer CreateBuffer();
 
   std::shared_ptr<utils::Session> session_;
 

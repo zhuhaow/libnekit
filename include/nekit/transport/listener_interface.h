@@ -28,13 +28,32 @@
 
 #include "../data_flow/local_data_flow_interface.h"
 #include "../utils/async_interface.h"
+#include "../utils/error.h"
+#include "../utils/result.h"
 
 namespace nekit {
 namespace transport {
+
+enum class ListenerErrorCode { AddressInUse = 1 };
+
+class ListenerErrorCategory : public utils::ErrorCategory {
+ public:
+  NE_DEFINE_STATIC_ERROR_CATEGORY(ListenerErrorCategory)
+
+ protected:
+  std::string Description(const utils::Error& error) const override {
+    (void)error;
+    return "address in use";
+  }
+  std::string DebugDescription(const utils::Error& error) const override {
+    return Description(error);
+  }
+};
+
 class ListenerInterface : public utils::AsyncInterface {
  public:
   using EventHandler = std::function<void(
-      std::unique_ptr<data_flow::LocalDataFlowInterface>&&, std::error_code)>;
+      utils::Result<std::unique_ptr<data_flow::LocalDataFlowInterface>>&&)>;
 
   using DataFlowHandler =
       std::function<std::unique_ptr<data_flow::LocalDataFlowInterface>(
@@ -48,3 +67,5 @@ class ListenerInterface : public utils::AsyncInterface {
 };
 }  // namespace transport
 }  // namespace nekit
+
+NE_DEFINE_NEW_ERROR_CODE(Listener, nekit, transport)

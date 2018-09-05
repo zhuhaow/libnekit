@@ -24,7 +24,7 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include "nekit/transport/error_code.h"
+#include "nekit/utils/common_error.h"
 #include "nekit/utils/error.h"
 #include "nekit/utils/log.h"
 
@@ -95,8 +95,7 @@ HttpServerDataFlow::~HttpServerDataFlow() {
   write_cancelable_.Cancel();
 }
 
-utils::Cancelable HttpServerDataFlow::Read(utils::Buffer&& buffer,
-                                           DataEventHandler handler) {
+utils::Cancelable HttpServerDataFlow::Read(DataEventHandler handler) {
   state_machine_.ReadBegin();
 
   if (first_header_) {
@@ -107,41 +106,42 @@ utils::Cancelable HttpServerDataFlow::Read(utils::Buffer&& buffer,
       }
 
       state_machine_.ReadEnd();
-      handler(std::move(first_header_), ErrorCode::NoError);
+      handler(std::move(first_header_));
     });
 
     return read_cancelable_;
   }
 
-  read_cancelable_ = data_flow_->Read(
-      std::move(buffer),
-      [this, handler](utils::Buffer&& buffer, std::error_code ec) {
+  read_cancelable_ =
+      data_flow_->Read([this, handler](utils::Result<utils::Buffer>&& buffer) {
         state_machine_.ReadEnd();
 
-        if (ec) {
-          if (ec == transport::ErrorCode::EndOfFile) {
+        if (!buffer) {
+          if (utils::CommonErrorCategory::IsEof(buffer.error())) {
             state_machine_.ReadClosed();
             NEDEBUG << "Data flow got EOF.";
           } else {
-            NEERROR << "Reading from data flow failed due to " << ec << ".";
+            NEERROR << "Reading from data flow failed due to " << buffer.error()
+                    << ".";
             state_machine_.Errored();
             // report and connect cancelable should not be in use.
             write_cancelable_.Cancel();
           }
 
-          handler(std::move(buffer), ec);
+          handler(std::move(buffer));
           return;
         }
 
         if (!is_connect_) {
-          if (!rewriter_.RewriteBuffer(&buffer)) {
+          auto result = rewriter_.RewriteBuffer(&*buffer);
+          if (!result) {
             state_machine_.Errored();
-            handler(std::move(buffer), ErrorCode::InvalidRequest);
+            handler(utils::MakeErrorResult(std::move(result).error()));
             return;
           }
         }
 
-        handler(std::move(buffer), ec);
+        handler(std::move(buffer));
       });
 
   return read_cancelable_;
@@ -151,16 +151,18 @@ utils::Cancelable HttpServerDataFlow::Write(utils::Buffer&& buffer,
                                             EventHandler handler) {
   state_machine_.WriteBegin();
 
-  write_cancelable_ =
-      data_flow_->Write(std::move(buffer), [this, handler](std::error_code ec) {
+  write_cancelable_ = data_flow_->Write(
+      std::move(buffer), [this, handler](utils::Result<void>&& result) {
         state_machine_.WriteEnd();
 
-        if (ec) {
-          NEERROR << "Write to data flow failed due to " << ec << ".";
+        if (!result) {
+          NEERROR << "Write to data flow failed due to " << result.error()
+                  << ".";
 
           state_machine_.Errored();
         }
-        handler(ec);
+
+        handler(std::move(result));
       });
 
   return write_cancelable_;
@@ -170,14 +172,14 @@ utils::Cancelable HttpServerDataFlow::CloseWrite(EventHandler handler) {
   state_machine_.WriteCloseBegin();
 
   write_cancelable_ =
-      data_flow_->CloseWrite([this, handler](std::error_code ec) {
+      data_flow_->CloseWrite([this, handler](utils::Result<void>&& result) {
         state_machine_.WriteCloseEnd();
 
-        if (ec) {
+        if (!result) {
           state_machine_.Errored();
         }
 
-        handler(ec);
+        handler(std::move(result));
       });
 
   return write_cancelable_;
@@ -208,20 +210,21 @@ utils::Cancelable HttpServerDataFlow::Open(EventHandler handler) {
 
   NEDEBUG << "Getting next hop ready.";
 
-  open_cancelable_ = data_flow_->Open([this, handler](std::error_code ec) {
-    if (ec) {
+  handler_ = handler;
+  open_cancelable_ = data_flow_->Open([this](utils::Result<void>&& result) {
+    if (!result) {
       NEERROR << "Error happened when HTTP server data flow read from next "
                  "hop, error code is "
-              << ec;
+              << result.error();
 
       state_machine_.Errored();
 
-      handler(ec);
+      handler_(std::move(result));
       return;
     }
 
     NEDEBUG << "Start HTTP proxy negotiation.";
-    NegotiateRead(handler);
+    NegotiateRead();
   });
 
   return open_cancelable_;
@@ -237,91 +240,93 @@ utils::Cancelable HttpServerDataFlow::Continue(EventHandler handler) {
                    connect_response_header.c_str());
 
     open_cancelable_ = data_flow_->Write(
-        std::move(buffer), [this, handler](std::error_code ec) {
-          if (ec) {
+        std::move(buffer), [this, handler](utils::Result<void>&& result) {
+          if (!result) {
             state_machine_.Errored();
-            handler(ec);
+            handler(std::move(result));
             return;
           }
 
           write_cancelable_ = data_flow_->Continue(
               [this, handler,
-               cancelable{open_cancelable_}](std::error_code ec) {
+               cancelable{open_cancelable_}](utils::Result<void>&& result) {
                 if (cancelable.canceled()) return;
-                if (ec) {
+                if (!result) {
                   state_machine_.Errored();
                 } else {
                   state_machine_.Connected();
                 }
-                handler(ec);
+                handler(std::move(result));
               });
         });
   } else {
-    open_cancelable_ = data_flow_->Continue(
-        [this, handler, cancelable{open_cancelable_}](std::error_code ec) {
+    open_cancelable_ =
+        data_flow_->Continue([this, handler, cancelable{open_cancelable_}](
+                                 utils::Result<void>&& result) {
           if (cancelable.canceled()) return;
-          if (ec) {
+          if (!result) {
             state_machine_.Errored();
           } else {
             state_machine_.Connected();
           }
-          handler(ec);
+          handler(std::move(result));
         });
   }
 
   return open_cancelable_;
 }
 
-void HttpServerDataFlow::NegotiateRead(EventHandler handler) {
-  read_cancelable_ = data_flow_->Read(
-      utils::Buffer(AUTH_READ_BUFFER_SIZE),
-      [this, handler](utils::Buffer&& buffer, std::error_code ec) mutable {
-        if (ec) {
+void HttpServerDataFlow::NegotiateRead() {
+  read_cancelable_ =
+      data_flow_->Read([this](utils::Result<utils::Buffer>&& buffer) mutable {
+        if (!buffer) {
           NEERROR
               << "Error happened when reading first request from HTTP client, "
                  "error code is:"
-              << ec;
+              << buffer.error();
 
           state_machine_.Errored();
 
-          handler(ec);
+          handler_(utils::MakeErrorResult(std::move(buffer).error()));
           return;
         }
 
-        if (!rewriter_.RewriteBuffer(&buffer)) {
+        auto result = rewriter_.RewriteBuffer(&*buffer);
+        if (!result) {
           NEERROR << "Error happened when reading first request from HTTP "
                      "client, request is invalid.";
 
           state_machine_.Errored();
 
-          handler(ErrorCode::InvalidRequest);
+          handler_(std::move(result));
           return;
         }
 
         if (has_read_method_) {
           if (is_connect_) {
             if (reading_first_header_) {
-              NegotiateRead(handler);
+              NegotiateRead();
               return;
             } else {
-              if (buffer.size() != first_header_offset_) {
+              if (buffer->size() != first_header_offset_) {
                 state_machine_.Errored();
-                handler(ErrorCode::DataBeforeConnectRequestFinish);
+                handler_(utils::MakeErrorResult(
+                    HttpServerErrorCode::DataBeforeConnectRequestFinish));
                 return;
               }
 
-              handler(ErrorCode::NoError);
+              handler_({});
               return;
             }
           }
         }
 
-        first_header_.InsertBack(std::move(buffer));
+        first_header_.InsertBack(*std::move(buffer));
         if (reading_first_header_) {
-          NegotiateRead(handler);
+          NegotiateRead();
           return;
         } else {
-          handler(ErrorCode::NoError);
+          handler_({});
           return;
         }
       });
@@ -436,33 +441,20 @@ bool HttpServerDataFlow::OnMessageComplete(size_t buffer_offset, bool upgrade) {
   return true;
 }
 
-namespace {
-struct HttpServerDataFlowErrorCategory : std::error_category {
-  const char* name() const noexcept override;
-  std::string message(int) const override;
-};
-
-const char* HttpServerDataFlowErrorCategory::name() const BOOST_NOEXCEPT {
-  return "HTTP server stream coder";
-}
-
-std::string HttpServerDataFlowErrorCategory::message(int error_code) const {
-  switch (static_cast<HttpServerDataFlow::ErrorCode>(error_code)) {
-    case HttpServerDataFlow::ErrorCode::NoError:
-      return "no error";
-    case HttpServerDataFlow::ErrorCode::DataBeforeConnectRequestFinish:
+std::string HttpServerErrorCategory::Description(
+    const utils::Error& error) const {
+  switch ((HttpServerErrorCode)error.ErrorCode()) {
+    case HttpServerErrorCode::DataBeforeConnectRequestFinish:
       return "client send more data before CONNECT request finished";
-    case HttpServerDataFlow::ErrorCode::InvalidRequest:
+    case HttpServerErrorCode::InvalidRequest:
       return "client send an invalid request";
   }
 }
 
-const HttpServerDataFlowErrorCategory httpServerDataFlowErrorCategory{};
-
-}  // namespace
-
-std::error_code make_error_code(HttpServerDataFlow::ErrorCode ec) {
-  return {static_cast<int>(ec), httpServerDataFlowErrorCategory};
+std::string HttpServerErrorCategory::DebugDescription(
+    const utils::Error& error) const {
+  return Description(error);
 }
+
 }  // namespace data_flow
 }  // namespace nekit

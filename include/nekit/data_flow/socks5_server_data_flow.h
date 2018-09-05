@@ -23,27 +23,34 @@
 #pragma once
 
 #include "../utils/cancelable.h"
+#include "../utils/stream_reader.h"
 #include "local_data_flow_interface.h"
 
 namespace nekit {
 namespace data_flow {
+enum class Socks5ServerErrorCode {
+  IllegalRequest = 1,
+  UnsupportedVersion,
+  UnsupportedAuthenticationMethod,
+  UnsupportedCommand,
+  UnsupportedAddressType
+};
+
+class Socks5ServerErrorCategory : public utils::ErrorCategory {
+ public:
+  NE_DEFINE_STATIC_ERROR_CATEGORY(Socks5ServerErrorCategory);
+
+  std::string Description(const utils::Error& error) const;
+  std::string DebugDescription(const utils::Error& error) const;
+};
+
 class Socks5ServerDataFlow final : public LocalDataFlowInterface {
  public:
-  enum class ErrorCode {
-    NoError = 0,
-    IllegalRequest,
-    UnsupportedVersion,
-    UnsupportedAuthenticationMethod,
-    UnsupportedCommand,
-    UnsupportedAddressType
-  };
-
   Socks5ServerDataFlow(std::unique_ptr<LocalDataFlowInterface>&& data_flow,
                        std::shared_ptr<utils::Session> session);
   ~Socks5ServerDataFlow();
 
-  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Read(utils::Buffer&&,
-                                                   DataEventHandler) override;
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Read(DataEventHandler) override;
   HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Write(utils::Buffer&&,
                                                     EventHandler) override;
 
@@ -67,13 +74,14 @@ class Socks5ServerDataFlow final : public LocalDataFlowInterface {
  private:
   void EnsurePendingAuthBuffer();
   void AppendToAuthBuffer(const utils::Buffer& buffer);
-  void NegotiateRead(EventHandler handler);
+  void NegotiateRead();
 
   std::unique_ptr<LocalDataFlowInterface> data_flow_;
   std::shared_ptr<utils::Session> session_;
 
   std::unique_ptr<uint8_t[]> pending_auth_;
   size_t pending_auth_length_{0};
+  EventHandler handler_;
 
   FlowStateMachine state_machine_{FlowType::Local};
 
@@ -83,12 +91,7 @@ class Socks5ServerDataFlow final : public LocalDataFlowInterface {
   utils::Cancelable open_cancelable_, read_cancelable_, write_cancelable_;
 };
 
-std::error_code make_error_code(Socks5ServerDataFlow::ErrorCode ec);
 }  // namespace data_flow
 }  // namespace nekit
 
-namespace std {
-template <>
-struct is_error_code_enum<nekit::data_flow::Socks5ServerDataFlow::ErrorCode>
-    : true_type {};
-}  // namespace std
+NE_DEFINE_NEW_ERROR_CODE(Socks5Server, nekit, data_flow)

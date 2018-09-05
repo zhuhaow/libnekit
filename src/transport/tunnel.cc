@@ -23,7 +23,7 @@
 #include "nekit/transport/tunnel.h"
 
 #include "nekit/config.h"
-#include "nekit/transport/error_code.h"
+#include "nekit/utils/common_error.h"
 #include "nekit/utils/log.h"
 
 #undef NECHANNEL
@@ -56,19 +56,21 @@ void Tunnel::Open() {
 
   ResetTimer();
 
-  open_cancelable_ = local_data_flow_->Open([this](std::error_code ec) {
-    if (ec) {
-      NEERROR << "Error happened when opening a new tunnel, error code is: "
-              << ec << ".";
+  open_cancelable_ = local_data_flow_->Open([this](
+                                                utils::Result<void>&& result) {
+    std::move(result)
+        .map([this]() {
+          NEDEBUG << "Tunnel successfully opened, matching rule.";
 
-      ReleaseTunnel();
-      return;
-    }
+          ResetTimer();
+          MatchRule();
+        })
+        .or_else([this](auto error) {
+          NEERROR << "Error happened when opening a new tunnel, error code is: "
+                  << error << ".";
 
-    NEDEBUG << "Tunnel successfully opened, matching rule.";
-
-    ResetTimer();
-    MatchRule();
+          ReleaseTunnel();
+        });
   });
 }
 
@@ -77,41 +79,41 @@ utils::Runloop* Tunnel::GetRunloop() { return session_->GetRunloop(); }
 void Tunnel::MatchRule() {
   rule_cancelable_ = rule_manager_->Match(
       session_,
-      [this](std::shared_ptr<rule::RuleInterface> rule, std::error_code ec) {
-        if (ec) {
-          LocalReportError(ec);
-          return;
-        }
-
-        remote_data_flow_ = rule->GetDataFlow(session_);
-        ResetTimer();
-        ConnectToRemote();
+      [this](utils::Result<std::shared_ptr<rule::RuleInterface>>&& rule) {
+        std::move(rule)
+            .map([this](auto rule) {
+              remote_data_flow_ = rule->GetDataFlow(session_);
+              ResetTimer();
+              ConnectToRemote();
+            })
+            .or_else(
+                [this](auto error) { LocalReportError(std::move(error)); });
       });
 }
 
 void Tunnel::ConnectToRemote() {
-  rule_cancelable_ = remote_data_flow_->Connect(session_->endpoint()->Dup(),
-                                                [this](std::error_code ec) {
-                                                  if (ec) {
-                                                    LocalReportError(ec);
-                                                    return;
-                                                  }
-
-                                                  ResetTimer();
-                                                  FinishLocalNegotiation();
-                                                });
+  rule_cancelable_ = remote_data_flow_->Connect(
+      session_->endpoint()->Dup(), [this](utils::Result<void>&& result) {
+        std::move(result)
+            .map([this]() {
+              ResetTimer();
+              FinishLocalNegotiation();
+            })
+            .or_else(
+                [this](auto error) { LocalReportError(std::move(error)); });
+      });
 }
 
 void Tunnel::FinishLocalNegotiation() {
-  open_cancelable_ = local_data_flow_->Continue([this](std::error_code ec) {
-    if (ec) {
-      ReleaseTunnel();
-      return;
-    }
-
-    ResetTimer();
-    BeginForward();
-  });
+  open_cancelable_ =
+      local_data_flow_->Continue([this](utils::Result<void>&& result) {
+        std::move(result)
+            .map([this]() {
+              ResetTimer();
+              BeginForward();
+            })
+            .or_else([this](auto) { ReleaseTunnel(); });
+      });
 }
 
 void Tunnel::BeginForward() {
@@ -125,41 +127,41 @@ void Tunnel::ForwardLocal() {
   BOOST_ASSERT(local_data_flow_->StateMachine().IsReadable());
   BOOST_ASSERT(remote_data_flow_->StateMachine().IsWritable());
 
-  local_read_cancelable_ = local_data_flow_->Read(
-      CreateBuffer(), [this](utils::Buffer&& buffer, std::error_code ec) {
+  local_read_cancelable_ =
+      local_data_flow_->Read([this](utils::Result<utils::Buffer>&& buffer) {
         ResetTimer();
 
-        if (ec) {
-          if (ec == nekit::transport::ErrorCode::EndOfFile) {
-            // Close remote write if it is not closed yet.
-            if (remote_data_flow_->StateMachine().IsWriteClosable()) {
-              remote_write_cancelable_ =
-                  remote_data_flow_->CloseWrite([this](std::error_code ec) {
-                    (void)ec;
+        std::move(buffer)
+            .map([this](auto buffer) {
+              remote_write_cancelable_ = remote_data_flow_->Write(
+                  std::move(buffer), [this](utils::Result<void>&& result) {
                     ResetTimer();
-                    CheckTunnelStatus();
+
+                    std::move(result)
+                        .map([this]() { ForwardLocal(); })
+                        .or_else([this](auto error) {
+                          LocalReportError(std::move(error));
+                        });
                   });
-              return;
-            } else {
-              CheckTunnelStatus();
-            }
+            })
+            .or_else([this](auto error) {
+              if (utils::CommonErrorCategory::IsEof(error)) {
+                // Close remote write if it is not closed yet.
+                if (remote_data_flow_->StateMachine().IsWriteClosable()) {
+                  remote_write_cancelable_ = remote_data_flow_->CloseWrite(
+                      [this](utils::Result<void>&&) {
+                        ResetTimer();
+                        CheckTunnelStatus();
+                      });
+                  return;
+                } else {
+                  CheckTunnelStatus();
+                }
 
-            return;
-          }
-
-          ReleaseTunnel();
-          return;
-        }
-
-        remote_write_cancelable_ = remote_data_flow_->Write(
-            std::move(buffer), [this](std::error_code ec) {
-              ResetTimer();
-              if (ec) {
-                LocalReportError(ec);
                 return;
               }
 
-              ForwardLocal();
+              ReleaseTunnel();
             });
       });
 }
@@ -170,45 +172,41 @@ void Tunnel::ForwardRemote() {
   BOOST_ASSERT(local_data_flow_->StateMachine().IsWritable());
   BOOST_ASSERT(remote_data_flow_->StateMachine().IsReadable());
 
-  remote_read_cancelable_ = remote_data_flow_->Read(
-      CreateBuffer(), [this](utils::Buffer&& buffer, std::error_code ec) {
+  remote_read_cancelable_ =
+      remote_data_flow_->Read([this](utils::Result<utils::Buffer>&& buffer) {
         ResetTimer();
-        if (ec) {
-          if (ec == nekit::transport::ErrorCode::EndOfFile) {
-            if (local_data_flow_->StateMachine().IsWriteClosable()) {
-              local_write_cancelable_ =
-                  local_data_flow_->CloseWrite([this](std::error_code ec) {
-                    (void)ec;
+
+        std::move(buffer)
+            .map([this](auto buffer) {
+              local_write_cancelable_ = local_data_flow_->Write(
+                  std::move(buffer), [this](utils::Result<void> result) {
                     ResetTimer();
-                    CheckTunnelStatus();
+
+                    std::move(result)
+                        .map([this]() { ForwardRemote(); })
+                        .or_else([this](auto) { ReleaseTunnel(); });
                   });
-            } else {
-              CheckTunnelStatus();
-            }
-            return;
-          }
-
-          LocalReportError(ec);
-          return;
-        }
-
-        local_write_cancelable_ = local_data_flow_->Write(
-            std::move(buffer), [this](std::error_code ec) {
-              ResetTimer();
-              if (ec) {
-                ReleaseTunnel();
+            })
+            .or_else([this](auto error) {
+              if (utils::CommonErrorCategory::IsEof(error)) {
+                if (local_data_flow_->StateMachine().IsWriteClosable()) {
+                  local_write_cancelable_ =
+                      local_data_flow_->CloseWrite([this](utils::Result<void>) {
+                        ResetTimer();
+                        CheckTunnelStatus();
+                      });
+                } else {
+                  CheckTunnelStatus();
+                }
                 return;
               }
 
-              ForwardRemote();
+              LocalReportError(std::move(error));
             });
       });
 }
 
-void Tunnel::LocalReportError(std::error_code ec) {
-  (void)ec;
-  ReleaseTunnel();
-}
+void Tunnel::LocalReportError(utils::Error&&) { ReleaseTunnel(); }
 
 void Tunnel::CheckTunnelStatus() {
   if (local_data_flow_->StateMachine().State() ==
@@ -222,10 +220,6 @@ void Tunnel::CheckTunnelStatus() {
 void Tunnel::ReleaseTunnel() { tunnel_manager_->NotifyClosed(this); }
 
 void Tunnel::ResetTimer() { timeout_timer_.Wait(TIMEOUT_INTERVAL); }
-
-utils::Buffer Tunnel::CreateBuffer() {
-  return utils::Buffer(NEKIT_TUNNEL_BUFFER_SIZE);
-}
 
 Tunnel& TunnelManager::Build(
     std::unique_ptr<data_flow::LocalDataFlowInterface>&& local_data_flow,

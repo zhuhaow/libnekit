@@ -31,14 +31,14 @@ using namespace nekit;
 void EvaluateBufferRange(utils::Buffer* buffer, size_t offset, size_t len,
                          size_t start) {
   for (size_t i = 0; i < len; i++) {
-    EXPECT_EQ(buffer->GetByte(offset + i), start + i);
+    EXPECT_EQ((*buffer)[offset + i], start + i);
   }
 }
 
 void FillBuffer(utils::Buffer* buffer, size_t offset, size_t len,
                 size_t start) {
   for (size_t i = 0; i < len; i++) {
-    buffer->SetByte(offset + i, start + i);
+    (*buffer)[offset + i] = start + i;
   }
 }
 
@@ -106,4 +106,20 @@ TEST(BufferInsertTest, CheckInsertOnChunkedBuffer) {
   EXPECT_EQ(buffer->size(), 31);
   EvaluateBufferRange(buffer.get(), 0, 1, 0);
   EvaluateBufferRange(buffer.get(), 2, 29, 1);
+}
+
+TEST(BufferBreakTest, CheckBreak) {
+  auto buffer = BufferFactory::WholeBuffer(30);
+  FillBuffer(buffer.get(), 0, 30, 0);
+  auto b = buffer->Break(20);
+  EvaluateBufferRange(buffer.get(), 0, 20, 0);
+  EvaluateBufferRange(&b, 0, 10, 20);
+}
+
+TEST(BufferBreakTest, CheckChunkedBufferBreak) {
+  auto buffer = BufferFactory::ChunkedBuffer(10, 3);
+  FillBuffer(buffer.get(), 0, 30, 0);
+  auto b = buffer->Break(20);
+  EvaluateBufferRange(buffer.get(), 0, 20, 0);
+  EvaluateBufferRange(&b, 0, 10, 20);
 }

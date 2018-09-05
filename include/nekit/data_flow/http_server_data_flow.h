@@ -27,20 +27,26 @@
 
 namespace nekit {
 namespace data_flow {
+enum class HttpServerErrorCode {
+  DataBeforeConnectRequestFinish = 1,
+  InvalidRequest,
+};
+
+class HttpServerErrorCategory : public utils::ErrorCategory {
+ public:
+  NE_DEFINE_STATIC_ERROR_CATEGORY(HttpServerErrorCategory)
+
+  std::string Description(const utils::Error& error) const override;
+  std::string DebugDescription(const utils::Error& error) const override;
+};
+
 class HttpServerDataFlow : public LocalDataFlowInterface {
  public:
-  enum class ErrorCode {
-    NoError = 0,
-    DataBeforeConnectRequestFinish,
-    InvalidRequest,
-  };
-
   HttpServerDataFlow(std::unique_ptr<LocalDataFlowInterface>&& data_flow,
                      std::shared_ptr<utils::Session> session);
   ~HttpServerDataFlow();
 
-  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Read(utils::Buffer&&,
-                                                   DataEventHandler) override;
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Read(DataEventHandler) override;
   HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Write(utils::Buffer&&,
                                                     EventHandler) override;
 
@@ -75,7 +81,7 @@ class HttpServerDataFlow : public LocalDataFlowInterface {
   bool OnMessageComplete(size_t buffer_offset, bool upgrade);
 
  private:
-  void NegotiateRead(EventHandler handler);
+  void NegotiateRead();
 
   std::unique_ptr<LocalDataFlowInterface> data_flow_;
   std::shared_ptr<utils::Session> session_;
@@ -91,14 +97,11 @@ class HttpServerDataFlow : public LocalDataFlowInterface {
 
   utils::HttpMessageStreamRewriter rewriter_;
   http_parser_url url_parser_;
+
+  EventHandler handler_;
 };
 
-std::error_code make_error_code(HttpServerDataFlow::ErrorCode ec);
 }  // namespace data_flow
 }  // namespace nekit
 
-namespace std {
-template <>
-struct is_error_code_enum<nekit::data_flow::HttpServerDataFlow::ErrorCode>
-    : true_type {};
-}  // namespace std
+NE_DEFINE_NEW_ERROR_CODE(HttpServer, nekit, data_flow)

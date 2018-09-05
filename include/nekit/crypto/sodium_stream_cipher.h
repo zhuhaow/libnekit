@@ -59,8 +59,9 @@ class SodiumStreamCipher : public StreamCipherInterface {
     std::memcpy(iv_.get(), data, iv_size_);
   }
 
-  ErrorCode Process(const void *input, size_t len, const void *input_tag,
-                    void *output, void *output_tag) override {
+  utils::Result<void> Process(const void *input, size_t len,
+                              const void *input_tag, void *output,
+                              void *output_tag) override {
     (void)input_tag;
     (void)output_tag;
 
@@ -82,7 +83,7 @@ class SodiumStreamCipher : public StreamCipherInterface {
     // Process all left over content
     method_(output, input, len, iv_.data(), counter / block_size_, key_.data());
     counter += len;
-    return ErrorCode::NoError;
+    return {};
   }
 
   void Reset() override {

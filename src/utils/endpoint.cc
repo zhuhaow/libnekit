@@ -70,8 +70,8 @@ Cancelable Endpoint::ForceResolve(EventHandler handler) {
   resolve_cancelable_ = resolver_->Resolve(
       domain_, ResolverInterface::AddressPreference::Any,
       [this, handler, cancelable{resolve_cancelable_}](
-          std::shared_ptr<std::vector<boost::asio::ip::address>> addresses,
-          std::error_code ec) {
+          utils::Result<std::shared_ptr<
+              std::vector<boost::asio::ip::address>>>&& addresses) {
         if (cancelable.canceled()) {
           return;
         }
@@ -79,18 +79,20 @@ Cancelable Endpoint::ForceResolve(EventHandler handler) {
         resolving_ = false;
         resolved_ = true;
 
-        if (ec) {
-          NEERROR << "Failed to resolve " << domain_ << " due to " << ec << ".";
-          error_ = ec;
-          resolved_addresses_ = nullptr;
-          handler(ec);
-          return;
-        }
+        std::move(addresses)
+            .map([&](auto addresses) {
+              NEINFO << "Successfully resolved domain " << domain_ << ".";
 
-        NEINFO << "Successfully resolved domain " << domain_ << ".";
-
-        resolved_addresses_ = addresses;
-        handler(ec);
+              resolved_addresses_ = addresses;
+              handler({});
+            })
+            .map_error([&](auto error) {
+              NEERROR << "Failed to resolve " << domain_ << " due to " << error
+                      << ".";
+              error_ = error.Dup();
+              resolved_addresses_ = nullptr;
+              handler(utils::MakeErrorResult(std::move(error)));
+            });
       });
 
   return resolve_cancelable_;
@@ -101,8 +103,10 @@ std::shared_ptr<Endpoint> Endpoint::Dup() const {
   switch (type_) {
     case Type::Address:
       endpoint = std::make_shared<Endpoint>(address_, port_);
+      break;
     case Type::Domain:
       endpoint = std::make_shared<Endpoint>(domain_, port_);
+      break;
   }
 
   endpoint->set_ip_protocol(ip_protocol_);

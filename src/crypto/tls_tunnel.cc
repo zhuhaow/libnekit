@@ -26,23 +26,44 @@
 #include <openssl/x509v3.h>
 #include <boost/assert.hpp>
 
-#include "nekit/utils/error.h"
+#include "nekit/hedley/hedley.h"
 
-#define SSL_READ_SIZE 8192
+#include "nekit/config.h"
 
-#define ENSURE_VALID(x)                                 \
-  do {                                                  \
-    if (!(x)) {                                         \
-      throw nekit::utils::NEKitErrorCode::GeneralError; \
-    }                                                   \
-  } while (0)
+#define NE_TLS_ERROR_MESSAGE_LENGTH 1024
 
 namespace nekit {
 namespace crypto {
+
+std::string TlsTunnelErrorCategory::Description(
+    const utils::Error& error) const {
+  char buf[NE_TLS_ERROR_MESSAGE_LENGTH];
+  ERR_error_string_n(error.ErrorCode(), buf, NE_TLS_ERROR_MESSAGE_LENGTH);
+  return buf;
+}
+
+std::string TlsTunnelErrorCategory::DebugDescription(
+    const utils::Error& error) const {
+  return utils::ErrorCategory::Description(error);
+}
+
+utils::Error TlsTunnelErrorCategory::FromSslError(SslErrorCode error_code) {
+  return utils::Error(TlsTunnelErrorCategory::GlobalTlsTunnelErrorCategory(),
+                      (int)error_code);
+}
+
 TlsTunnel::TlsTunnel(std::shared_ptr<SSL_CTX> ctx, Mode mode)
     : cipher_bio_{nullptr, BIO_free_all}, ssl_{nullptr, SSL_free}, mode_{mode} {
   SSL* ssl = SSL_new(ctx.get());
-  ENSURE_VALID(ssl);
+  // Here we see the problem with C style error handling, we don't know what
+  // error may happen so we can do nothing about it. Here we output the error
+  // stack then terminate. This is not right way to do things, but there is
+  // nothing we can do to improve.
+  if (!ssl) {
+    ERR_print_errors_fp(stderr);
+    exit(1);
+  }
+
   ssl_ = std::unique_ptr<SSL, decltype(&SSL_free)>(ssl, SSL_free);
 
   if (mode_ == Mode::Server) {
@@ -52,7 +73,12 @@ TlsTunnel::TlsTunnel(std::shared_ptr<SSL_CTX> ctx, Mode mode)
   }
 
   BIO *cipher_buffer, *plain_buffer;
-  ENSURE_VALID(BIO_new_bio_pair(&cipher_buffer, 0, &plain_buffer, 0));
+
+  if (!BIO_new_bio_pair(&cipher_buffer, 0, &plain_buffer, 0)) {
+    // Wrong way again.
+    ERR_print_errors_fp(stderr);
+    exit(1);
+  }
   cipher_bio_ = std::unique_ptr<BIO, decltype(&BIO_free_all)>(cipher_buffer,
                                                               BIO_free_all);
   SSL_set_bio(ssl_.get(), plain_buffer, plain_buffer);
@@ -62,19 +88,29 @@ bool TlsTunnel::HasPlainTextDataToRead() const {
   return (bool)pending_read_plain_;
 }
 
-utils::Buffer TlsTunnel::ReadPlainTextData() {
+utils::Result<utils::Buffer> TlsTunnel::ReadPlainTextData() {
   // Aka, SSL_read
+
+  if (error_) {
+    return utils::MakeErrorResult(std::move(error_));
+  }
 
   return std::move(pending_read_plain_);
 }
 
-void TlsTunnel::WritePlainTextData(utils::Buffer&& buffer) {
+utils::Result<void> TlsTunnel::WritePlainTextData(utils::Buffer&& buffer) {
   // Aka, SSL_write
 
   BOOST_ASSERT(FinishWritingCipherData());
 
   pending_write_plain_ = std::move(buffer);
   InternalPlainWrite();
+
+  if (error_) {
+    return utils::MakeErrorResult(std::move(error_));
+  }
+
+  return {};
 }
 
 bool TlsTunnel::FinishWritingCipherData() const {
@@ -82,7 +118,8 @@ bool TlsTunnel::FinishWritingCipherData() const {
 }
 
 bool TlsTunnel::HasCipherTextDataToRead() const {
-  return (bool)pending_read_cipher_;
+  // Error is also readable
+  return (bool)pending_read_cipher_ || error_;
 }
 
 utils::Buffer TlsTunnel::ReadCipherTextData() {
@@ -91,7 +128,7 @@ utils::Buffer TlsTunnel::ReadCipherTextData() {
 
 void TlsTunnel::WriteCipherTextData(utils::Buffer&& buffer) {
   size_t buffer_processed = 0;
-  while (buffer_processed != buffer.size() && !errored_) {
+  while (buffer_processed != buffer.size() && !error_) {
     buffer.WalkInternalChunk(
         [this, &buffer_processed](const void* data, size_t len, void* context) {
           (void)context;
@@ -101,7 +138,7 @@ void TlsTunnel::WriteCipherTextData(utils::Buffer&& buffer) {
 
           if (n <= 0) {  // error happened
             if (!BIO_should_retry(cipher_bio_.get())) {
-              errored_ = true;
+              error_ = TlsTunnelErrorCategory::FromSslError(ERR_get_error());
               return false;
             }
             return false;
@@ -116,21 +153,27 @@ void TlsTunnel::WriteCipherTextData(utils::Buffer&& buffer) {
         },
         buffer_processed, nullptr);
 
-    if (!errored_) {
+    if (!error_) {
       FlushBuffer();
     }
   }
+
+  return;
 }
 
 bool TlsTunnel::NeedCipherInput() const { return need_cipher_input_; }
 
-void TlsTunnel::SetDomain(const std::string& domain) {
+utils::Result<void> TlsTunnel::SetDomain(const std::string& domain) {
   SSL_set_hostflags(ssl_.get(), X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
-  ENSURE_VALID(SSL_set1_host(ssl_.get(), domain.c_str()));
+  if (!SSL_set1_host(ssl_.get(), domain.c_str())) {
+    return utils::MakeErrorResult(
+        TlsTunnelErrorCategory::FromSslError(ERR_get_error()));
+  }
   SSL_set_verify(ssl_.get(), SSL_VERIFY_PEER, nullptr);
+  return {};
 }
 
-TlsTunnel::HandShakeAction TlsTunnel::HandShake() {
+utils::Result<TlsTunnel::HandShakeAction> TlsTunnel::HandShake() {
   int n =
       mode_ == Mode::Server ? SSL_accept(ssl_.get()) : SSL_connect(ssl_.get());
   switch (SSL_get_error(ssl_.get(), n)) {
@@ -141,7 +184,8 @@ TlsTunnel::HandShakeAction TlsTunnel::HandShake() {
     case SSL_ERROR_NONE:
       return HandShakeAction::Success;
     default:
-      return HandShakeAction::Error;
+      return utils::MakeErrorResult(
+          TlsTunnelErrorCategory::FromSslError(ERR_get_error()));
   }
 }
 
@@ -173,7 +217,7 @@ void TlsTunnel::InternalPlainWrite() {
             closed_ = true;
             return false;
           default:
-            errored_ = true;
+            error_ = TlsTunnelErrorCategory::FromSslError(ERR_get_error());
             return false;
         }
       },
@@ -183,7 +227,7 @@ void TlsTunnel::InternalPlainWrite() {
 
   FlushCipherBuffer();
 
-  if (pending_write_plain_ && !need_cipher_input_ && !closed_ && !errored_) {
+  if (pending_write_plain_ && !need_cipher_input_ && !closed_ && !error_) {
     InternalPlainWrite();
   }
 }
@@ -192,7 +236,7 @@ void TlsTunnel::FlushPlainBuffer() {
   size_t offset = pending_read_plain_.size();
   bool stop = false;
   do {
-    pending_read_plain_.InsertBack(SSL_READ_SIZE);
+    pending_read_plain_.InsertBack(NEKIT_TLS_READ_SIZE);
     pending_read_plain_.WalkInternalChunk(
         [this, &offset, &stop](void* data, size_t len, void* context) {
           (void)context;
@@ -204,8 +248,11 @@ void TlsTunnel::FlushPlainBuffer() {
               case SSL_ERROR_WANT_READ:
               case SSL_ERROR_WANT_WRITE:
                 return false;
+              case SSL_ERROR_ZERO_RETURN:
+                closed_ = true;
+                return false;
               default:
-                errored_ = true;
+                error_ = TlsTunnelErrorCategory::FromSslError(ERR_get_error());
                 return false;
             }
           } else if ((size_t)l < len) {
@@ -216,8 +263,7 @@ void TlsTunnel::FlushPlainBuffer() {
             offset += l;
             return true;
           } else {
-            BOOST_ASSERT(false);
-            return false;
+            HEDLEY_UNREACHABLE_RETURN(false);
           }
         },
         offset, nullptr);
@@ -256,8 +302,6 @@ void TlsTunnel::FlushBuffer() {
 }
 
 bool TlsTunnel::Closed() const { return closed_; }
-
-bool TlsTunnel::Errored() const { return errored_; }
 
 }  // namespace crypto
 }  // namespace nekit

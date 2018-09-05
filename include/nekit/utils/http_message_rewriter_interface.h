@@ -23,12 +23,13 @@
 #pragma once
 
 #include "buffer.h"
+#include "result.h"
 
 namespace nekit {
 namespace utils {
 class HttpMessageRewriterInterface {
  public:
-  virtual bool RewriteBuffer(Buffer* buffer) = 0;
+  virtual utils::Result<void> RewriteBuffer(Buffer* buffer) = 0;
 };
 }  // namespace utils
 }  // namespace nekit

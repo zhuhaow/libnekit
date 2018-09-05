@@ -35,7 +35,7 @@ namespace utils {
 struct Buf {
   friend class Buffer;
 
-  std::unique_ptr<int8_t[]> data_;
+  std::unique_ptr<uint8_t[]> data_;
 
   size_t capacity_;
   size_t offset_;
@@ -44,7 +44,7 @@ struct Buf {
   std::unique_ptr<Buf> next_buf_;
 
   Buf(size_t size)
-      : data_{std::make_unique<int8_t[]>(size)},
+      : data_{std::make_unique<uint8_t[]>(size)},
         capacity_{size},
         offset_{0},
         size_{size},
@@ -114,6 +114,32 @@ Buffer& Buffer::operator=(Buffer&& buffer) {
 Buffer::~Buffer() = default;
 
 Buffer::operator bool() const { return size_ != 0; }
+
+uint8_t& Buffer::operator[](size_t index) {
+  BOOST_ASSERT(index < size());
+
+  auto current = head_.get();
+
+  while (index >= current->size_) {
+    index -= current->size_;
+    current = current->next_buf_.get();
+  }
+
+  return *(current->data_.get() + index);
+}
+
+const uint8_t& Buffer::operator[](size_t index) const {
+  BOOST_ASSERT(index < size());
+
+  auto current = head_.get();
+
+  while (index >= current->size_) {
+    index -= current->size_;
+    current = current->next_buf_.get();
+  }
+
+  return *(current->data_.get() + index);
+}
 
 void Buffer::Insert(nekit::utils::Buffer&& buffer, size_t pos) {
   BOOST_ASSERT(pos <= size());
@@ -297,19 +323,6 @@ void Buffer::ShrinkBack(size_t size) {
   Shrink(this->size() - size, size);
 }
 
-uint8_t Buffer::GetByte(size_t skip) const {
-  BOOST_ASSERT(skip < size());
-
-  auto current = head_.get();
-
-  while (skip >= current->size_) {
-    skip -= current->size_;
-    current = current->next_buf_.get();
-  }
-
-  return *(current->data_.get() + skip);
-}
-
 void Buffer::GetData(size_t skip, size_t len, void* target) const {
   BOOST_ASSERT(skip <= size());
   BOOST_ASSERT(len <= size());
@@ -378,19 +391,6 @@ void Buffer::GetData(size_t skip, size_t len, nekit::utils::Buffer* target,
   }
 }
 
-void Buffer::SetByte(size_t skip, uint8_t data) {
-  BOOST_ASSERT(skip < size());
-
-  auto current = head_.get();
-
-  while (skip >= current->size_) {
-    skip -= current->size_;
-    current = current->next_buf_.get();
-  }
-
-  *(current->data_.get() + skip) = data;
-}
-
 void Buffer::SetData(size_t skip, size_t len, const void* source) {
   BOOST_ASSERT(skip < size());
   BOOST_ASSERT(len <= size());
@@ -419,6 +419,33 @@ void Buffer::SetData(size_t skip, size_t len, const void* source) {
 void Buffer::SetData(size_t skip, size_t len,
                      const nekit::utils::Buffer& source, size_t offset) {
   source.GetData(offset, len, this, skip);
+}
+
+Buffer Buffer::Break(size_t skip) {
+  Buf* current = head_.get();
+
+  size_t rs = skip;
+  while (rs > current->size_) {
+    rs -= current->size_;
+    current = current->next_buf_.get();
+  }
+
+  std::unique_ptr<Buf> buf;
+  if (rs == current->size_) {
+    buf = std::move(current->next_buf_);
+  } else {
+    buf = current->Break(rs);
+  }
+
+  Buffer b;
+  b.head_ = std::move(buf);
+  b.size_ = size_ - skip;
+  b.ResetTail();
+
+  size_ = skip;
+  ResetTail();
+
+  return b;
 }
 
 void Buffer::WalkInternalChunk(
@@ -511,6 +538,14 @@ void Buffer::InsertBufAt(Buf* buf, Buffer&& buffer, size_t pos) {
     }
   }
   size_ += buffer.size();
+}
+
+void Buffer::ResetTail() {
+  auto current = head_.get();
+  while (current->next_buf_) {
+    current = current->next_buf_.get();
+  }
+  tail_ = current;
 }
 }  // namespace utils
 }  // namespace nekit

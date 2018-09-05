@@ -37,47 +37,57 @@ TcpListener::TcpListener(utils::Runloop *runloop, DataFlowHandler handler)
       runloop_{runloop},
       handler_{handler} {}
 
-std::error_code TcpListener::Bind(std::string ip, uint16_t port) {
+utils::Result<void> TcpListener::Bind(std::string ip, uint16_t port) {
   return Bind(boost::asio::ip::address::from_string(ip), port);
 }
 
-std::error_code TcpListener::Bind(boost::asio::ip::address ip, uint16_t port) {
+utils::Result<void> TcpListener::Bind(boost::asio::ip::address ip,
+                                      uint16_t port) {
   boost::system::error_code ec;
-  std::error_code sec;
+  utils::Error error;
   boost::asio::ip::tcp::endpoint endpoint(ip, port);
 
   NEDEBUG << "Trying to bind listener to " << endpoint << ".";
 
   acceptor_.open(endpoint.protocol(), ec);
   if (ec) {
-    return std::make_error_code(ec);
+    error = utils::BoostErrorCategory::FromBoostError(ec);
+    NEERROR << "Failed to open listener due to " << ec << ".";
+    return utils::MakeErrorResult(std::move(error));
   }
 
   acceptor_.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true), ec);
   if (ec) {
-    sec = std::make_error_code(ec);
-    NEERROR << "Failed to set listener to reuse address due to " << sec << ".";
-    return sec;
+    error = utils::BoostErrorCategory::FromBoostError(ec);
+    NEERROR << "Failed to set listener to reuse address due to " << error
+            << ".";
+    return utils::MakeErrorResult(std::move(error));
   }
 
   acceptor_.bind(endpoint, ec);
   if (ec) {
-    sec = std::make_error_code(ec);
-    NEERROR << "Failed to bind listener to " << endpoint << " due to " << sec
+    utils::Error error;
+    if (ec.value() == boost::system::errc::address_in_use) {
+      error = utils::Error(ListenerErrorCategory::GlobalListenerErrorCategory(),
+                           (int)ListenerErrorCode::AddressInUse);
+    } else {
+      error = utils::BoostErrorCategory::FromBoostError(ec);
+    }
+    NEERROR << "Failed to bind listener to " << endpoint << " due to " << error
             << ".";
-    return sec;
+    return utils::MakeErrorResult(std::move(error));
   }
 
   acceptor_.listen(8, ec);
   if (ec) {
-    sec = std::make_error_code(ec);
-    NEERROR << "Failed to set listener to listen state due to " << sec << ".";
-    return sec;
+    error = utils::BoostErrorCategory::FromBoostError(ec);
+    NEERROR << "Failed to set listener to listen state due to " << error << ".";
+    return utils::MakeErrorResult(std::move(error));
   }
 
   NEINFO << "Successfully bind TCP listener to " << endpoint << ".";
 
-  return ErrorCode::NoError;
+  return {};
 }
 
 void TcpListener::Accept(EventHandler handler) {
@@ -90,10 +100,10 @@ void TcpListener::Accept(EventHandler handler) {
             return;
           }
 
-          std::error_code error = std::make_error_code(ec);
+          utils::Error error = utils::BoostErrorCategory::FromBoostError(ec);
           NEERROR << "Failed to accept new socket due to " << error << ".";
 
-          handler(nullptr, error);
+          handler(utils::MakeErrorResult(std::move(error)));
           return;
         }
 
@@ -103,8 +113,7 @@ void TcpListener::Accept(EventHandler handler) {
         TcpSocket *socket = new TcpSocket(
             std::move(socket_), std::make_shared<utils::Session>(runloop_));
 
-        handler(handler_(std::unique_ptr<TcpSocket>(socket)),
-                TcpListener::ErrorCode::NoError);
+        handler(handler_(std::unique_ptr<TcpSocket>(socket)));
 
         Accept(handler);
       });
@@ -114,24 +123,5 @@ void TcpListener::Close() { acceptor_.close(); }
 
 utils::Runloop *TcpListener::GetRunloop() { return runloop_; }
 
-namespace {
-struct TcpListenerErrorCategory : std::error_category {
-  const char *name() const noexcept override { return "TCP listener"; }
-
-  std::string message(int ev) const override {
-    switch (static_cast<TcpListener::ErrorCode>(ev)) {
-      case TcpListener::ErrorCode::NoError:
-        return "no error";
-    }
-  }
-};
-
-const TcpListenerErrorCategory tcpListenerErrorCategory{};
-
-}  // namespace
-
-std::error_code make_error_code(TcpListener::ErrorCode ec) {
-  return {static_cast<int>(ec), tcpListenerErrorCategory};
-}
 }  // namespace transport
 }  // namespace nekit

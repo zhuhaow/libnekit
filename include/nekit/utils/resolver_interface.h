@@ -26,20 +26,20 @@
 #include <memory>
 #include <system_error>
 
+#include "../hedley/hedley.h"
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
 
-#include "../hedley.h"
 #include "async_interface.h"
 #include "cancelable.h"
+#include "result.h"
 
 namespace nekit {
 namespace utils {
 class ResolverInterface : public AsyncInterface, private boost::noncopyable {
  public:
   using EventHandler = std::function<void(
-      std::shared_ptr<std::vector<boost::asio::ip::address>> addresses,
-      std::error_code)>;
+      utils::Result<std::shared_ptr<std::vector<boost::asio::ip::address>>>&&)>;
 
   enum class AddressPreference { IPv4Only, IPv6Only, IPv4, IPv6, Any };
 

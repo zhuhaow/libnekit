@@ -25,11 +25,10 @@
 #include <boost/asio.hpp>
 #include <boost/assert.hpp>
 
-#include "nekit/transport/error_code.h"
+#include "nekit/config.h"
+#include "nekit/utils/common_error.h"
 #include "nekit/utils/error.h"
 #include "nekit/utils/log.h"
-
-#define AUTH_READ_BUFFER_SIZE 512
 
 #undef NECHANNEL
 #define NECHANNEL "SOCKS5 Server"
@@ -50,30 +49,27 @@ Socks5ServerDataFlow::~Socks5ServerDataFlow() {
   write_cancelable_.Cancel();
 }
 
-utils::Cancelable Socks5ServerDataFlow::Read(utils::Buffer&& buffer,
-                                             DataEventHandler handler) {
+utils::Cancelable Socks5ServerDataFlow::Read(DataEventHandler handler) {
   state_machine_.ReadBegin();
 
-  read_cancelable_ = data_flow_->Read(
-      std::move(buffer),
-      [this, handler](utils::Buffer&& buffer, std::error_code ec) {
+  read_cancelable_ =
+      data_flow_->Read([this, handler](utils::Result<utils::Buffer>&& buffer) {
         state_machine_.ReadEnd();
 
-        if (ec) {
-          if (ec == transport::ErrorCode::EndOfFile) {
+        if (!buffer) {
+          if (utils::CommonErrorCategory::IsEof(buffer.error())) {
             state_machine_.ReadClosed();
             NEDEBUG << "Data flow got EOF.";
           } else {
-            NEERROR << "Reading from data flow failed due to " << ec << ".";
+            NEERROR << "Reading from data flow failed due to " << buffer.error()
+                    << ".";
             state_machine_.Errored();
             // report and connect cancelable should not be in use.
             write_cancelable_.Cancel();
           }
-          handler(std::move(buffer), ec);
-          return;
         }
 
-        handler(std::move(buffer), ec);
+        handler(std::move(buffer));
       });
 
   return read_cancelable_;
@@ -83,18 +79,20 @@ utils::Cancelable Socks5ServerDataFlow::Write(utils::Buffer&& buffer,
                                               EventHandler handler) {
   state_machine_.WriteBegin();
 
-  write_cancelable_ =
-      data_flow_->Write(std::move(buffer), [this, handler](std::error_code ec) {
+  write_cancelable_ = data_flow_->Write(
+      std::move(buffer), [this, handler](utils::Result<void>&& result) {
         state_machine_.WriteEnd();
 
-        if (ec) {
-          NEERROR << "Write to data flow failed due to " << ec << ".";
+        if (!result) {
+          NEERROR << "Write to data flow failed due to " << result.error()
+                  << ".";
 
           state_machine_.Errored();
           // report and connect cancelable should not be in use.
           read_cancelable_.Cancel();
         }
-        handler(ec);
+
+        handler(std::move(result));
       });
 
   return write_cancelable_;
@@ -104,14 +102,14 @@ utils::Cancelable Socks5ServerDataFlow::CloseWrite(EventHandler handler) {
   state_machine_.WriteCloseBegin();
 
   write_cancelable_ =
-      data_flow_->CloseWrite([this, handler](std::error_code ec) {
+      data_flow_->CloseWrite([this, handler](utils::Result<void>&& result) {
         state_machine_.WriteCloseEnd();
 
-        if (ec) {
+        if (!result) {
           state_machine_.Errored();
         }
 
-        handler(ec);
+        handler(std::move(result));
       });
 
   return write_cancelable_;
@@ -140,26 +138,30 @@ utils::Cancelable Socks5ServerDataFlow::Open(EventHandler handler) {
 
   NEDEBUG << "Getting next hop ready.";
 
-  open_cancelable_ = data_flow_->Open([this, handler](std::error_code ec) {
-    if (ec) {
+  open_cancelable_ = data_flow_->Open([this,
+                                       handler](utils::Result<void>&& result) {
+    if (!result) {
       NEERROR << "Error happened when SOCKS5 server data flow read from next "
                  "hop, error code is "
-              << ec;
+              << result.error();
 
       state_machine_.Errored();
 
-      handler(ec);
+      handler(std::move(result));
       return;
     }
 
     NEDEBUG << "Start SOCKS5 negotiation.";
-    NegotiateRead(handler);
+    handler_ = handler;
+    NegotiateRead();
   });
 
   return open_cancelable_;
 }
 
 utils::Cancelable Socks5ServerDataFlow::Continue(EventHandler handler) {
+  handler_ = handler;
+
   std::size_t len;
   uint8_t type;
   switch (session_->endpoint()->type()) {
@@ -179,32 +181,33 @@ utils::Cancelable Socks5ServerDataFlow::Continue(EventHandler handler) {
   }
 
   auto buffer = utils::Buffer(len);
-  buffer.SetByte(0, 5);
-  buffer.SetByte(1, 0);
-  buffer.SetByte(2, 0);
-  buffer.SetByte(3, type);
+  buffer[0] = 5;
+  buffer[1] = 0;
+  buffer[2] = 0;
+  buffer[3] = type;
 
   for (size_t i = 4; i < len - 4; i++) {
-    buffer.SetByte(i, 0);
+    buffer[i] = 0;
   }
 
-  open_cancelable_ =
-      data_flow_->Write(std::move(buffer), [this, handler](std::error_code ec) {
-        if (ec) {
+  open_cancelable_ = data_flow_->Write(
+      std::move(buffer), [this](utils::Result<void>&& result) {
+        if (!result) {
           state_machine_.Errored();
-          handler(ec);
+          handler_(utils::MakeErrorResult(std::move(result).error()));
           return;
         }
 
         write_cancelable_ = data_flow_->Continue(
-            [this, handler, cancelable{open_cancelable_}](std::error_code ec) {
+            [this, cancelable{open_cancelable_}](utils::Result<void>&& result) {
               if (cancelable.canceled()) return;
-              if (ec) {
+              if (!result) {
                 state_machine_.Errored();
+                handler_(utils::MakeErrorResult(std::move(result).error()));
               } else {
                 state_machine_.Connected();
+                handler_({});
               }
-              handler(ec);
             });
       });
 
@@ -213,13 +216,15 @@ utils::Cancelable Socks5ServerDataFlow::Continue(EventHandler handler) {
 
 void Socks5ServerDataFlow::EnsurePendingAuthBuffer() {
   if (!pending_auth_) {
-    pending_auth_ = std::make_unique<uint8_t[]>(512);
+    pending_auth_ =
+        std::make_unique<uint8_t[]>(NEKIT_SOCKS5_SERVER_BUFFER_SIZE);
   }
 }
 
 void Socks5ServerDataFlow::AppendToAuthBuffer(const utils::Buffer& buffer) {
   BOOST_ASSERT(pending_auth_);
-  BOOST_ASSERT(pending_auth_length_ + buffer.size() <= AUTH_READ_BUFFER_SIZE);
+  BOOST_ASSERT(pending_auth_length_ + buffer.size() <=
+               NEKIT_SOCKS5_SERVER_BUFFER_SIZE);
 
   buffer.WalkInternalChunk(
       [this](const void* data, size_t len, void* context) {
@@ -231,258 +236,254 @@ void Socks5ServerDataFlow::AppendToAuthBuffer(const utils::Buffer& buffer) {
       0, nullptr);
 }
 
-void Socks5ServerDataFlow::NegotiateRead(EventHandler handler) {
-  read_cancelable_ = data_flow_->Read(
-      utils::Buffer(AUTH_READ_BUFFER_SIZE),
-      [this, handler](utils::Buffer&& buffer, std::error_code ec) mutable {
-        if (ec) {
-          NEERROR << "Error happened when reading hello from SOCKS5 client, "
-                     "error code is:"
-                  << ec;
+void Socks5ServerDataFlow::NegotiateRead() {
+  read_cancelable_ = data_flow_->Read([this](utils::Result<utils::Buffer>&&
+                                                 buffer) {
+    if (!buffer) {
+      NEERROR << "Error happened when reading hello from SOCKS5 client, "
+                 "error is:"
+              << buffer.error();
 
-          state_machine_.Errored();
+      state_machine_.Errored();
 
-          handler(ec);
+      handler_(utils::MakeErrorResult(std::move(buffer).error()));
+      return;
+    }
+
+    EnsurePendingAuthBuffer();
+
+    if (pending_auth_length_ + buffer->size() >
+        NEKIT_SOCKS5_SERVER_BUFFER_SIZE) {
+      NEERROR << "Hello request from client is too long";
+
+      state_machine_.Errored();
+
+      handler_(utils::MakeErrorResult(Socks5ServerErrorCode::IllegalRequest));
+      return;
+    }
+
+    AppendToAuthBuffer(*std::move(buffer));
+
+    switch (negotiation_state_) {
+      case NegotiateState::ReadingVersion: {
+        if (pending_auth_length_ < 3) {
+          NEDEBUG << "Read partial hello data with length "
+                  << pending_auth_length_ << " from client. Reading more.";
+
+          NegotiateRead();
           return;
         }
 
-        EnsurePendingAuthBuffer();
+        if (pending_auth_[0] != 5) {
+          NEERROR << "Client send wrong socks version " << pending_auth_[0]
+                  << ", only 5 is suppoted.";
 
-        if (pending_auth_length_ + buffer.size() > AUTH_READ_BUFFER_SIZE) {
+          state_machine_.Errored();
+
+          handler_(utils::MakeErrorResult(
+              Socks5ServerErrorCode::UnsupportedVersion));
+
+          return;
+        }
+
+        uint8_t len = pending_auth_[1];
+        if (pending_auth_length_ < len + 2) {
+          NEDEBUG << "Read partial hello data with length "
+                  << pending_auth_length_ << " from client. Reading more.";
+
+          NegotiateRead();
+          return;
+        }
+
+        if (pending_auth_length_ > len + 2) {
           NEERROR << "Hello request from client is too long";
 
           state_machine_.Errored();
 
-          handler(ErrorCode::IllegalRequest);
+          handler_(
+              utils::MakeErrorResult(Socks5ServerErrorCode::IllegalRequest));
           return;
         }
-        AppendToAuthBuffer(buffer);
 
-        switch (negotiation_state_) {
-          case NegotiateState::ReadingVersion: {
-            if (pending_auth_length_ < 3) {
-              NEDEBUG << "Read partial hello data with length "
-                      << pending_auth_length_ << " from client. Reading more.";
-
-              NegotiateRead(handler);
-              return;
-            }
-
-            if (pending_auth_[0] != 5) {
-              NEERROR << "Client send wrong socks version " << pending_auth_[0]
-                      << ", only 5 is suppoted.";
-
-              state_machine_.Errored();
-
-              handler(ErrorCode::UnsupportedVersion);
-              return;
-            }
-
-            uint8_t len = pending_auth_[1];
-            if (pending_auth_length_ < len + 2) {
-              NEDEBUG << "Read partial hello data with length "
-                      << pending_auth_length_ << " from client. Reading more.";
-
-              NegotiateRead(handler);
-              return;
-            }
-
-            if (pending_auth_length_ > len + 2) {
-              NEERROR << "Hello request from client is too long";
-
-              state_machine_.Errored();
-
-              handler(ErrorCode::IllegalRequest);
-              return;
-            }
-
-            bool noauth_present = false;
-            // Only support no auth now
-            for (int i = 0; i < len; i++) {
-              if (pending_auth_[i + 2] == 0) {
-                noauth_present = true;
-                break;
-              }
-            }
-
-            if (!noauth_present) {
-              state_machine_.Errored();
-
-              handler(ErrorCode::UnsupportedAuthenticationMethod);
-              return;
-            }
-
-            buffer.ShrinkBack(buffer.size() - 2);
-            buffer.SetByte(1, 0);
-
-            pending_auth_length_ = 0;
-
-            write_cancelable_ = data_flow_->Write(
-                std::move(buffer), [this, handler](std::error_code ec) mutable {
-                  if (ec) {
-                    state_machine_.Errored();
-
-                    handler(ec);
-                    return;
-                  }
-
-                  negotiation_state_ = NegotiateState::ReadingRequest;
-
-                  NegotiateRead(handler);
-                });
-
-            return;
+        bool noauth_present = false;
+        // Only support no auth now
+        for (int i = 0; i < len; i++) {
+          if (pending_auth_[i + 2] == 0) {
+            noauth_present = true;
+            break;
           }
-          case NegotiateState::ReadingRequest: {
-            if (pending_auth_length_ < 10) {
-              NegotiateRead(handler);
-              return;
-            }
+        }
 
-            if (pending_auth_[0] != 5) {
-              state_machine_.Errored();
+        if (!noauth_present) {
+          state_machine_.Errored();
 
-              handler(ErrorCode::UnsupportedVersion);
-              return;
-            }
+          handler_(utils::MakeErrorResult(
+              Socks5ServerErrorCode::UnsupportedAuthenticationMethod));
+          return;
+        }
 
-            if (pending_auth_[1] != 1) {
-              state_machine_.Errored();
+        buffer->ShrinkBack(buffer->size() - 2);
+        (*buffer)[1] = 0;
 
-              handler(ErrorCode::UnsupportedCommand);
-              return;
-            }
+        pending_auth_length_ = 0;
 
-            if (pending_auth_[2] != 0) {
-              state_machine_.Errored();
-
-              handler(ErrorCode::IllegalRequest);
-              return;
-            }
-
-            size_t offset = 4;
-            switch (pending_auth_[3]) {
-              case 1: {
-                if (pending_auth_length_ != 10) {
-                  state_machine_.Errored();
-
-                  handler(ErrorCode::IllegalRequest);
-                  return;
-                }
-
-                auto bytes = boost::asio::ip::address_v4::bytes_type();
-                BOOST_ASSERT(bytes.size() == 4);
-                std::memcpy(bytes.data(), pending_auth_.get() + offset,
-                            bytes.size());
-                session_->set_endpoint(std::make_shared<utils::Endpoint>(
-                    boost::asio::ip::address(
-                        boost::asio::ip::address_v4(bytes)),
-                    0));
-                offset += bytes.size();
-
-              } break;
-              case 3: {
-                uint8_t len = pending_auth_[offset];
-                if (pending_auth_length_ < offset + 1 + len + 2) {
-                  NegotiateRead(handler);
-                  return;
-                }
-
-                if (pending_auth_length_ > offset + 1 + len + 2) {
-                  state_machine_.Errored();
-
-                  handler(ErrorCode::IllegalRequest);
-                  return;
-                }
-
-                offset++;
-                std::string host(
-                    reinterpret_cast<char*>(pending_auth_.get()) + offset, len);
-
-                session_->set_endpoint(
-                    std::make_shared<utils::Endpoint>(host, 0));
-
-                offset += len;
-              } break;
-              case 4: {
-                if (pending_auth_length_ < 22) {
-                  NegotiateRead(handler);
-                  return;
-                }
-
-                if (pending_auth_length_ > 22) {
-                  state_machine_.Errored();
-
-                  handler(ErrorCode::IllegalRequest);
-                  return;
-                }
-
-                auto bytes = boost::asio::ip::address_v6::bytes_type();
-                BOOST_ASSERT(bytes.size() == 16);
-                std::memcpy(bytes.data(), pending_auth_.get() + offset,
-                            bytes.size());
-                session_->set_endpoint(std::make_shared<utils::Endpoint>(
-                    boost::asio::ip::address(
-                        boost::asio::ip::address_v6(bytes)),
-                    0));
-                offset += bytes.size();
-              } break;
-              default: {
-                NEERROR << "Unsupported domain type "
-                        << (int32_t)pending_auth_[3] << ".";
+        write_cancelable_ = data_flow_->Write(
+            *std::move(buffer), [this](utils::Result<void>&& result) mutable {
+              if (!result) {
                 state_machine_.Errored();
 
-                handler(ErrorCode::IllegalRequest);
+                handler_(std::move(result));
                 return;
               }
+
+              negotiation_state_ = NegotiateState::ReadingRequest;
+
+              NegotiateRead();
+            });
+
+        return;
+      }
+      case NegotiateState::ReadingRequest: {
+        if (pending_auth_length_ < 10) {
+          NegotiateRead();
+          return;
+        }
+
+        if (pending_auth_[0] != 5) {
+          state_machine_.Errored();
+
+          handler_(utils::MakeErrorResult(
+              Socks5ServerErrorCode::UnsupportedVersion));
+          return;
+        }
+
+        if (pending_auth_[1] != 1) {
+          state_machine_.Errored();
+
+          handler_(utils::MakeErrorResult(
+              Socks5ServerErrorCode::UnsupportedCommand));
+          return;
+        }
+
+        if (pending_auth_[2] != 0) {
+          state_machine_.Errored();
+
+          handler_(
+              utils::MakeErrorResult(Socks5ServerErrorCode::IllegalRequest));
+          return;
+        }
+
+        size_t offset = 4;
+        switch (pending_auth_[3]) {
+          case 1: {
+            if (pending_auth_length_ != 10) {
+              state_machine_.Errored();
+
+              handler_(utils::MakeErrorResult(
+                  Socks5ServerErrorCode::IllegalRequest));
+              return;
             }
 
-            uint16_t port =
-                *reinterpret_cast<uint16_t*>(pending_auth_.get() + offset);
-            session_->endpoint()->set_port(ntohs(port));
+            auto bytes = boost::asio::ip::address_v4::bytes_type();
+            BOOST_ASSERT(bytes.size() == 4);
+            std::memcpy(bytes.data(), pending_auth_.get() + offset,
+                        bytes.size());
+            session_->set_endpoint(std::make_shared<utils::Endpoint>(
+                boost::asio::ip::address(boost::asio::ip::address_v4(bytes)),
+                0));
+            offset += bytes.size();
 
-            state_machine_.Connected();
-
-            handler(ErrorCode::NoError);
           } break;
+          case 3: {
+            uint8_t len = pending_auth_[offset];
+            if (pending_auth_length_ < offset + 1 + len + 2) {
+              NegotiateRead();
+              return;
+            }
+
+            if (pending_auth_length_ > offset + 1 + len + 2) {
+              state_machine_.Errored();
+
+              handler_(utils::MakeErrorResult(
+                  Socks5ServerErrorCode::IllegalRequest));
+              return;
+            }
+
+            offset++;
+            std::string host(
+                reinterpret_cast<char*>(pending_auth_.get()) + offset, len);
+
+            session_->set_endpoint(std::make_shared<utils::Endpoint>(host, 0));
+
+            offset += len;
+          } break;
+          case 4: {
+            if (pending_auth_length_ < 22) {
+              NegotiateRead();
+              return;
+            }
+
+            if (pending_auth_length_ > 22) {
+              state_machine_.Errored();
+
+              handler_(utils::MakeErrorResult(
+                  Socks5ServerErrorCode::IllegalRequest));
+              return;
+            }
+
+            auto bytes = boost::asio::ip::address_v6::bytes_type();
+            BOOST_ASSERT(bytes.size() == 16);
+            std::memcpy(bytes.data(), pending_auth_.get() + offset,
+                        bytes.size());
+            session_->set_endpoint(std::make_shared<utils::Endpoint>(
+                boost::asio::ip::address(boost::asio::ip::address_v6(bytes)),
+                0));
+            offset += bytes.size();
+          } break;
+          default: {
+            NEERROR << "Unsupported domain type " << (int32_t)pending_auth_[3]
+                    << ".";
+            state_machine_.Errored();
+
+            handler_(
+                utils::MakeErrorResult(Socks5ServerErrorCode::IllegalRequest));
+            return;
+          }
         }
-      });
+
+        uint16_t port =
+            *reinterpret_cast<uint16_t*>(pending_auth_.get() + offset);
+        session_->endpoint()->set_port(ntohs(port));
+
+        state_machine_.Connected();
+
+        handler_({});
+      } break;
+    }
+  });
 }
 
-namespace {
-struct Socks5ServerDataFlowErrorCategory : std::error_category {
-  const char* name() const noexcept override;
-  std::string message(int) const override;
-};
-
-const char* Socks5ServerDataFlowErrorCategory::name() const BOOST_NOEXCEPT {
-  return "SOCKS5 server stream coder";
-}
-
-std::string Socks5ServerDataFlowErrorCategory::message(int error_code) const {
-  switch (static_cast<Socks5ServerDataFlow::ErrorCode>(error_code)) {
-    case Socks5ServerDataFlow::ErrorCode::NoError:
-      return "no error";
-    case Socks5ServerDataFlow::ErrorCode::IllegalRequest:
+std::string Socks5ServerErrorCategory::Description(
+    const utils::Error& error) const {
+  switch ((Socks5ServerErrorCode)error.ErrorCode()) {
+    case Socks5ServerErrorCode::IllegalRequest:
       return "client send illegal request";
-    case Socks5ServerDataFlow::ErrorCode::UnsupportedAuthenticationMethod:
+    case Socks5ServerErrorCode::UnsupportedAuthenticationMethod:
       return "all client requested authentication methods are not "
              "supported";
-    case Socks5ServerDataFlow::ErrorCode::UnsupportedCommand:
+    case Socks5ServerErrorCode::UnsupportedCommand:
       return "unknown command";
-    case Socks5ServerDataFlow::ErrorCode::UnsupportedAddressType:
+    case Socks5ServerErrorCode::UnsupportedAddressType:
       return "unknown address type";
-    case Socks5ServerDataFlow::ErrorCode::UnsupportedVersion:
+    case Socks5ServerErrorCode::UnsupportedVersion:
       return "SOCKS version is not supported";
   }
 }
 
-const Socks5ServerDataFlowErrorCategory socks5ServerDataFlowErrorCategory{};
-
-}  // namespace
-
-std::error_code make_error_code(Socks5ServerDataFlow::ErrorCode ec) {
-  return {static_cast<int>(ec), socks5ServerDataFlowErrorCategory};
+std::string Socks5ServerErrorCategory::DebugDescription(
+    const utils::Error& error) const {
+  return Description(error);
 }
+
 }  // namespace data_flow
 }  // namespace nekit

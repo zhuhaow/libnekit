@@ -27,24 +27,34 @@
 
 #include <boost/noncopyable.hpp>
 
+#include "../utils/result.h"
+
 namespace nekit {
 namespace crypto {
 
 enum class Action { Decryption = 0, Encryption = 1 };
 
+enum class StreamCipherErrorCode { ValidationFailed = 1, UnknownError };
+
+class StreamCipherErrorCategory : public utils::ErrorCategory {
+ public:
+  NE_DEFINE_STATIC_ERROR_CATEGORY(StreamCipherErrorCategory)
+
+  std::string Description(const utils::Error &error) const override;
+  std::string DebugDescription(const utils::Error &error) const override;
+};
+
 // This class provide support for stream cipher or block cipher in stream mode.
 class StreamCipherInterface : private boost::noncopyable {
  public:
-  enum class ErrorCode { NoError, ValidationFailed, UnknownError };
-
   virtual ~StreamCipherInterface() = default;
 
   virtual void SetKey(const void *data) = 0;
   virtual void SetIv(const void *data) = 0;
 
-  virtual ErrorCode Process(const void *input, size_t len,
-                            const void *input_tag, void *output,
-                            void *output_tag) = 0;
+  virtual utils::Result<void> Process(const void *input, size_t len,
+                                      const void *input_tag, void *output,
+                                      void *output_tag) = 0;
 
   virtual void Reset() = 0;
 
@@ -54,8 +64,6 @@ class StreamCipherInterface : private boost::noncopyable {
   virtual size_t tag_size() = 0;
 };
 
-std::error_code make_error_code(StreamCipherInterface::ErrorCode ec);
-
 template <typename Cipher>
 struct is_aead_cipher : std::false_type {};
 
@@ -64,8 +72,4 @@ struct is_block_cipher : std::false_type {};
 }  // namespace crypto
 }  // namespace nekit
 
-namespace std {
-template <>
-struct is_error_code_enum<nekit::crypto::StreamCipherInterface::ErrorCode>
-    : true_type {};
-}  // namespace std
+NE_DEFINE_NEW_ERROR_CODE(StreamCipher, nekit, crypto)

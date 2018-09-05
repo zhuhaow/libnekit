@@ -30,34 +30,39 @@
 #include <maxminddb.h>
 
 #include "country_iso_code.h"
+#include "result.h"
 
 namespace nekit {
 namespace utils {
 
+class MaxmindErrorCategory : public ErrorCategory {
+ public:
+  NE_DEFINE_STATIC_ERROR_CATEGORY(MaxmindErrorCategory)
+
+  std::string Description(const utils::Error &error) const override;
+  std::string DebugDescription(const utils::Error &error) const override;
+};
+
 class MaxmindLookupResult {
  public:
   MaxmindLookupResult(MMDB_lookup_result_s result);
-  MaxmindLookupResult(int error);
-
-  bool error() const;
-  bool found() const;
 
   CountryIsoCode country_iso_code();
 
  private:
   MMDB_lookup_result_s result_;
-  int mmdb_error_{MMDB_SUCCESS};
 };
 
 class Maxmind {
  public:
   static bool Initalize(std::string db_file);
 
-  static MaxmindLookupResult Lookup(const std::string &ip);
-  static MaxmindLookupResult Lookup(const boost::asio::ip::address &ip);
+  static utils::Result<MaxmindLookupResult> Lookup(const std::string &ip);
+  static utils::Result<MaxmindLookupResult> Lookup(
+      const boost::asio::ip::address &ip);
 
   template <typename Protocol>
-  static MaxmindLookupResult Lookup(
+  static utils::Result<MaxmindLookupResult> Lookup(
       const boost::asio::ip::basic_endpoint<Protocol> &ip);
 
  private:

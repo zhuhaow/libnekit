@@ -34,8 +34,7 @@ class TlsDataFlow final : public data_flow::RemoteDataFlowInterface {
       std::unique_ptr<data_flow::RemoteDataFlowInterface>&& data_flow);
   ~TlsDataFlow();
 
-  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Read(utils::Buffer&&,
-                                                   DataEventHandler) override;
+  HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Read(DataEventHandler) override;
   HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Write(utils::Buffer&&,
                                                     EventHandler) override;
 
@@ -66,9 +65,9 @@ class TlsDataFlow final : public data_flow::RemoteDataFlowInterface {
   void TryReadNextHop();
   void TryWriteNextHop();
 
-  bool ReportError(utils::Error error, bool try_read_first);
-  bool ReadReportError(utils::Error error);
-  bool WriteReportError(utils::Error error);
+  bool ReportError(utils::Error &&error, bool try_read_first);
+  bool ReadReportError(utils::Error&& error);
+  bool WriteReportError(utils::Error&& error);
 
   std::shared_ptr<utils::Session> session_;
   std::shared_ptr<utils::Endpoint> connect_to_;

@@ -25,14 +25,17 @@
 namespace nekit {
 namespace utils {
 
+std::string MaxmindErrorCategory::Description(const utils::Error& error) const {
+  return MMDB_strerror(error.ErrorCode());
+}
+
+std::string MaxmindErrorCategory::DebugDescription(
+    const utils::Error& error) const {
+  return Description(error);
+}
+
 MaxmindLookupResult::MaxmindLookupResult(MMDB_lookup_result_s result)
     : result_{result} {};
-
-MaxmindLookupResult::MaxmindLookupResult(int error) : mmdb_error_{error} {}
-
-bool MaxmindLookupResult::error() const { return mmdb_error_ != MMDB_SUCCESS; }
-
-bool MaxmindLookupResult::found() const { return result_.found_entry; }
 
 CountryIsoCode MaxmindLookupResult::country_iso_code() {
   if (!result_.found_entry) {
@@ -61,32 +64,35 @@ bool Maxmind::Initalize(std::string db_file) {
   return MMDB_open(db_file.c_str(), 0, &GetMmdb()) == MMDB_SUCCESS;
 }
 
-MaxmindLookupResult Maxmind::Lookup(const std::string& ip) {
+utils::Result<MaxmindLookupResult> Maxmind::Lookup(const std::string& ip) {
   int gai_error, mmdb_error;
   MMDB_lookup_result_s result =
       MMDB_lookup_string(&GetMmdb(), ip.c_str(), &gai_error, &mmdb_error);
 
   assert(gai_error == MMDB_SUCCESS);
   if (mmdb_error != MMDB_SUCCESS) {
-    return mmdb_error;
+    return MakeErrorResult(
+        Error(MaxmindErrorCategory::GlobalMaxmindErrorCategory(), mmdb_error));
   }
 
   return result;
 }
 
-MaxmindLookupResult Maxmind::Lookup(const boost::asio::ip::address& ip) {
+utils::Result<MaxmindLookupResult> Maxmind::Lookup(
+    const boost::asio::ip::address& ip) {
   return Lookup(boost::asio::ip::tcp::endpoint(ip, 0));
 }
 
 template <typename Protocol>
-MaxmindLookupResult Maxmind::Lookup(
+utils::Result<MaxmindLookupResult> Maxmind::Lookup(
     const boost::asio::ip::basic_endpoint<Protocol>& endpoint) {
   int mmdb_error;
   MMDB_lookup_result_s result =
       MMDB_lookup_sockaddr(&GetMmdb(), endpoint.data(), &mmdb_error);
 
   if (mmdb_error != MMDB_SUCCESS) {
-    return mmdb_error;
+    return MakeErrorResult(
+        Error(MaxmindErrorCategory::GlobalMaxmindErrorCategory(), mmdb_error));
   }
 
   return result;

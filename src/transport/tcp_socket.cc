@@ -22,10 +22,10 @@
 
 #include <boost/assert.hpp>
 
-#include "nekit/transport/error_code.h"
+#include "nekit/config.h"
 #include "nekit/transport/tcp_socket.h"
-#include "nekit/utils/auto.h"
 #include "nekit/utils/boost_error.h"
+#include "nekit/utils/common_error.h"
 #include "nekit/utils/error.h"
 #include "nekit/utils/log.h"
 
@@ -34,6 +34,30 @@
 
 namespace nekit {
 namespace transport {
+
+std::string TcpErrorCategory::Description(const utils::Error &error) const {
+  switch ((TcpErrorCode)error.ErrorCode()) {
+    case TcpErrorCode::ConnectionAborted:
+      return "connection aborted";
+    case TcpErrorCode::ConnectionReset:
+      return "connection reset";
+    case TcpErrorCode::HostUnreachable:
+      return "host unreachable";
+    case TcpErrorCode::NetworkDown:
+      return "network down";
+    case TcpErrorCode::NetworkReset:
+      return "network reset";
+    case TcpErrorCode::NetworkUnreachable:
+      return "network unreachable";
+    case TcpErrorCode::TimedOut:
+      return "timeout";
+  }
+}
+
+std::string TcpErrorCategory::DebugDescription(
+    const utils::Error &error) const {
+  return Description(error);
+}
 
 TcpSocket::TcpSocket(boost::asio::ip::tcp::socket &&socket,
                      std::shared_ptr<utils::Session> session)
@@ -64,12 +88,12 @@ TcpSocket::~TcpSocket() {
   connect_cancelable_.Cancel();
 }
 
-utils::Cancelable TcpSocket::Read(utils::Buffer &&buffer,
-                                  DataEventHandler handler) {
+utils::Cancelable TcpSocket::Read(DataEventHandler handler) {
   NETRACE << "Start reading data.";
 
   read_cancelable_ = utils::Cancelable();
 
+  utils::Buffer buffer{NEKIT_TCP_SOCKET_READ_SIZE};
   buffer.WalkInternalChunk(
       [this](void *d, size_t s, void *c) {
         (void)c;
@@ -94,7 +118,7 @@ utils::Cancelable TcpSocket::Read(utils::Buffer &&buffer,
         if (ec) {
           auto error = ConvertBoostError(ec);
 
-          if (error == ErrorCode::EndOfFile) {
+          if (utils::CommonErrorCategory::IsEof(error)) {
             state_machine_.ReadClosed();
             NEDEBUG << "Socket got EOF.";
           } else {
@@ -104,7 +128,7 @@ utils::Cancelable TcpSocket::Read(utils::Buffer &&buffer,
             write_cancelable_.Cancel();
           }
 
-          handler(std::move(buffer), error);
+          handler(utils::MakeErrorResult(std::move(error)));
           return;
         }
 
@@ -118,7 +142,7 @@ utils::Cancelable TcpSocket::Read(utils::Buffer &&buffer,
         read_buffer_ = std::move(buffer_wrapper);
         read_buffer_->clear();
 
-        handler(std::move(buffer), ErrorCode::NoError);
+        handler(std::move(buffer));
         return;
       });
   return read_cancelable_;
@@ -159,7 +183,7 @@ utils::Cancelable TcpSocket::Write(utils::Buffer &&buffer,
           // report and connect cancelable should not be in use.
           read_cancelable_.Cancel();
 
-          handler(error);
+          handler(utils::MakeErrorResult(std::move(error)));
           return;
         }
 
@@ -170,7 +194,7 @@ utils::Cancelable TcpSocket::Write(utils::Buffer &&buffer,
 
         write_buffer_->clear();
 
-        handler(ErrorCode::NoError);
+        handler({});
         return;
       });
   return write_cancelable_;
@@ -178,8 +202,6 @@ utils::Cancelable TcpSocket::Write(utils::Buffer &&buffer,
 
 utils::Cancelable TcpSocket::CloseWrite(EventHandler handler) {
   NEDEBUG << "Closing socket writing.";
-
-  std::error_code error;
 
   boost::system::error_code ec;
   socket_.shutdown(socket_.shutdown_send, ec);
@@ -189,20 +211,25 @@ utils::Cancelable TcpSocket::CloseWrite(EventHandler handler) {
 
   NEDEBUG << "Socket writing closed.";
 
-  error = ConvertBoostError(ec);
+  auto error = ConvertBoostError(ec);
 
   write_cancelable_ = utils::Cancelable();
 
   state_machine_.WriteCloseBegin();
 
-  GetRunloop()->Post([this, handler, cancelable{write_cancelable_}, error]() {
+  GetRunloop()->Post([this, handler, cancelable{write_cancelable_},
+                      error{std::move(error)}]() mutable {
     if (cancelable.canceled()) {
       return;
     }
 
     state_machine_.WriteCloseEnd();
 
-    handler(error);
+    if (error) {
+      handler(utils::MakeErrorResult(std::move(error)));
+    } else {
+      handler({});
+    }
   });
 
   return write_cancelable_;
@@ -230,9 +257,9 @@ utils::Cancelable TcpSocket::Open(EventHandler handler) {
   state_machine_.ConnectBegin();
 
   report_cancelable_ =
-      utils::Cancelable();  // Report error request will invalid this callback,
-                            // so we just use report cancelable to guard the
-                            // lifetime here.
+      utils::Cancelable();  // Report error request will invalid this
+                            // callback, so we just use report cancelable to
+                            // guard the lifetime here.
 
   NETRACE << "Open TCP socket that is already connected, do nothing.";
 
@@ -243,7 +270,7 @@ utils::Cancelable TcpSocket::Open(EventHandler handler) {
 
     NETRACE << "Opened callback called.";
 
-    handler(ErrorCode::NoError);
+    handler({});
   });
 
   return report_cancelable_;
@@ -263,7 +290,7 @@ utils::Cancelable TcpSocket::Continue(EventHandler handler) {
 
     NETRACE << "Connection is established.";
 
-    handler(ErrorCode::NoError);
+    handler({});
   });
   return report_cancelable_;
 }
@@ -280,57 +307,60 @@ utils::Cancelable TcpSocket::Connect(std::shared_ptr<utils::Endpoint> endpoint,
 
   connect_cancelable_ = connector_->Connect(
       [this, handler, cancelable{connect_cancelable_}](
-          boost::asio::ip::tcp::socket &&socket, std::error_code ec) {
+          utils::Result<boost::asio::ip::tcp::socket> &&result) {
         if (cancelable.canceled()) {
           return;
         }
 
-        if (ec) {
+        if (result) {
+          state_machine_.Connected();
+          socket_ = std::move(*result);
+          handler({});
+          return;
+        } else {
           state_machine_.Errored();
-          handler(ec);
+          handler(utils::MakeErrorResult(std::move(result).error()));
           return;
         }
-
-        state_machine_.Connected();
-        socket_ = std::move(socket);
-        handler(ec);
-        return;
       });
 
   return connect_cancelable_;
 }
 
-std::error_code TcpSocket::ConvertBoostError(
+utils::Error TcpSocket::ConvertBoostError(
     const boost::system::error_code &ec) const {
+  if (!ec) {
+    return utils::Error();
+  }
+
   if (ec.category() == boost::asio::error::system_category) {
     switch (ec.value()) {
       case boost::asio::error::basic_errors::operation_aborted:
-        return nekit::utils::NEKitErrorCode::Canceled;
+        return utils::Error(
+            utils::CommonErrorCategory::GlobalCommonErrorCategory(),
+            (int)utils::CommonErrorCode::Cancelled);
       case boost::asio::error::basic_errors::connection_aborted:
-        return ErrorCode::ConnectionAborted;
+        return TcpErrorCode::ConnectionAborted;
       case boost::asio::error::basic_errors::connection_reset:
-        return ErrorCode::ConnectionReset;
+        return TcpErrorCode::ConnectionReset;
       case boost::asio::error::basic_errors::host_unreachable:
-        return ErrorCode::HostUnreachable;
+        return TcpErrorCode::HostUnreachable;
       case boost::asio::error::basic_errors::network_down:
-        return ErrorCode::NetworkDown;
+        return TcpErrorCode::NetworkDown;
       case boost::asio::error::basic_errors::network_reset:
-        return ErrorCode::NetworkReset;
+        return TcpErrorCode::NetworkReset;
       case boost::asio::error::basic_errors::network_unreachable:
-        return ErrorCode::NetworkUnreachable;
+        return TcpErrorCode::NetworkUnreachable;
       case boost::asio::error::basic_errors::timed_out:
-        return ErrorCode::TimedOut;
+        return TcpErrorCode::TimedOut;
     }
   } else if (ec.category() == boost::asio::error::misc_category) {
     if (ec.value() == boost::asio::error::misc_errors::eof) {
-      return ErrorCode::EndOfFile;
+      return utils::CommonErrorCode::EndOfFile;
     }
   }
 
-  // Semantically we should return UnknownError, but ideally, UnknownError
-  // should never occur, we should treat every error carefully, and this
-  // provides us the necessary information to handle the origin error.
-  return std::make_error_code(ec);
+  return utils::BoostErrorCategory::FromBoostError(ec);
 }
 }  // namespace transport
 }  // namespace nekit

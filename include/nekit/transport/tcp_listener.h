@@ -34,12 +34,10 @@ namespace transport {
 
 class TcpListener : public ListenerInterface, private boost::noncopyable {
  public:
-  enum class ErrorCode { NoError = 0 };
-
   TcpListener(utils::Runloop* runloop, DataFlowHandler handler);
 
-  std::error_code Bind(std::string ip, uint16_t port);
-  std::error_code Bind(boost::asio::ip::address ip, uint16_t port);
+  utils::Result<void> Bind(std::string ip, uint16_t port);
+  utils::Result<void> Bind(boost::asio::ip::address ip, uint16_t port);
 
   void Accept(EventHandler handler) override;
 
@@ -54,14 +52,5 @@ class TcpListener : public ListenerInterface, private boost::noncopyable {
 
   DataFlowHandler handler_;
 };
-
-std::error_code make_error_code(TcpListener::ErrorCode ec);
-
 }  // namespace transport
 }  // namespace nekit
-
-namespace std {
-template <>
-struct is_error_code_enum<nekit::transport::TcpListener::ErrorCode>
-    : public true_type {};
-}  // namespace std

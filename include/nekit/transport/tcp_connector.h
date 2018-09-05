@@ -24,12 +24,13 @@
 
 #include <vector>
 
+#include "../hedley/hedley.h"
 #include <boost/asio.hpp>
 
-#include "../hedley.h"
 #include "../utils/cancelable.h"
 #include "../utils/device.h"
 #include "../utils/endpoint.h"
+#include "../utils/result.h"
 
 namespace nekit {
 namespace transport {
@@ -37,7 +38,7 @@ namespace transport {
 class TcpConnector : public utils::AsyncInterface {
  public:
   using EventHandler =
-      std::function<void(boost::asio::ip::tcp::socket&&, std::error_code)>;
+      std::function<void(utils::Result<boost::asio::ip::tcp::socket>&&)>;
 
   TcpConnector(utils::Runloop* runloop, const boost::asio::ip::address& address,
                uint16_t port);
@@ -70,7 +71,7 @@ class TcpConnector : public utils::AsyncInterface {
 
   utils::Runloop* runloop_;
 
-  std::error_code last_error_;
+  boost::system::error_code last_error_;
 
   std::size_t current_ind_{0};
 

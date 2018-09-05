@@ -29,6 +29,16 @@ namespace nekit {
 namespace data_flow {
 class HttpHeaderRewriterDelegate;
 
+enum class HttpErrorCode { InvalidResponse = 1, ConnectError };
+
+class HttpErrorCategory : public utils::ErrorCategory {
+ public:
+  NE_DEFINE_STATIC_ERROR_CATEGORY(HttpErrorCategory)
+
+  std::string Description(const utils::Error& error) const override;
+  std::string DebugDescription(const utils::Error& error) const override;
+};
+
 class HttpDataFlow : public RemoteDataFlowInterface {
  public:
   class Credential {
@@ -40,8 +50,6 @@ class HttpDataFlow : public RemoteDataFlowInterface {
     std::string password_;
   };
 
-  enum class ErrorCode { NoError = 0, InvalidResponse, ConnectError };
-
   HttpDataFlow(std::shared_ptr<utils::Endpoint> server_endpoint,
                std::shared_ptr<utils::Session> session,
                std::unique_ptr<RemoteDataFlowInterface>&& data_flow,
@@ -50,7 +58,7 @@ class HttpDataFlow : public RemoteDataFlowInterface {
   ~HttpDataFlow();
 
   HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Read(
-      utils::Buffer&& buffer, DataEventHandler handler) override;
+      DataEventHandler handler) override;
 
   HEDLEY_WARN_UNUSED_RESULT utils::Cancelable Write(
       utils::Buffer&& buffer, EventHandler handler) override;
@@ -105,12 +113,7 @@ class HttpDataFlow : public RemoteDataFlowInterface {
   utils::Buffer pending_payload_;
 };
 
-std::error_code make_error_code(HttpDataFlow::ErrorCode ec);
 }  // namespace data_flow
 }  // namespace nekit
 
-namespace std {
-template <>
-struct is_error_code_enum<nekit::data_flow::HttpDataFlow::ErrorCode>
-    : true_type {};
-}  // namespace std
+NE_DEFINE_NEW_ERROR_CODE(Http, nekit, data_flow)

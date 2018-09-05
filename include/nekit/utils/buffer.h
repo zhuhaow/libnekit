@@ -46,6 +46,9 @@ class Buffer final : private boost::noncopyable {
 
   explicit operator bool() const;
 
+  uint8_t& operator[](size_t index);
+  const uint8_t& operator[](size_t index) const;
+
   void Insert(Buffer&& buffer, size_t pos);
   void Insert(size_t skip, size_t len);
 
@@ -59,13 +62,13 @@ class Buffer final : private boost::noncopyable {
   void ShrinkFront(size_t size);
   void ShrinkBack(size_t size);
 
-  uint8_t GetByte(size_t skip) const;
   void GetData(size_t skip, size_t len, void* target) const;
   void GetData(size_t skip, size_t len, Buffer* target, size_t offset) const;
 
-  void SetByte(size_t skip, uint8_t data);
   void SetData(size_t skip, size_t len, const void* source);
   void SetData(size_t skip, size_t len, const Buffer& source, size_t offset);
+
+  Buffer Break(size_t skip);
 
   void WalkInternalChunk(
       const std::function<bool(void* data, size_t len, void* context)>& walker,
@@ -80,6 +83,7 @@ class Buffer final : private boost::noncopyable {
 
  private:
   void InsertBufAt(Buf* buf, Buffer&& buffer, size_t pos);
+  void ResetTail();
 
   std::unique_ptr<Buf> head_;
   Buf* tail_;

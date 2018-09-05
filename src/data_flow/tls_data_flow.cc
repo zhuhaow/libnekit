@@ -22,10 +22,6 @@
 
 #include "nekit/data_flow/tls_data_flow.h"
 
-#include "nekit/utils/error.h"
-
-#define NE_TLS_TUNNEL_CHECK_ERROR(tunnel__) assert(!tunnel__.Errored())
-
 namespace nekit {
 namespace data_flow {
 TlsDataFlow::TlsDataFlow(std::shared_ptr<utils::Session> session,
@@ -43,9 +39,7 @@ TlsDataFlow::~TlsDataFlow() {
   next_write_cancelable_.Cancel();
 }
 
-utils::Cancelable TlsDataFlow::Read(utils::Buffer&& buffer,
-                                    DataEventHandler handler) {
-  (void)buffer;
+utils::Cancelable TlsDataFlow::Read(DataEventHandler handler) {
   BOOST_ASSERT(!error_reported_);
 
   read_cancelable_ = utils::Cancelable();
@@ -108,19 +102,19 @@ utils::Cancelable TlsDataFlow::Connect(
 
   connect_handler_ = handler;
   state_machine_.ConnectBegin();
-  (void)data_flow_->Connect(
-      endpoint, [this, cancelable{connect_cancelable_}](utils::Error error) {
-        if (cancelable.canceled()) {
-          return;
-        }
+  (void)data_flow_->Connect(endpoint, [this, cancelable{connect_cancelable_}](
+                                          utils::Result<void>&& result) {
+    if (cancelable.canceled()) {
+      return;
+    }
 
-        if (error) {
-          connect_handler_(error);
-          return;
-        }
+    if (!result) {
+      connect_handler_(std::move(result));
+      return;
+    }
 
-        HandShake();
-      });
+    HandShake();
+  });
 
   return connect_cancelable_;
 }
@@ -131,75 +125,76 @@ RemoteDataFlowInterface* TlsDataFlow::NextRemoteHop() const {
 
 void TlsDataFlow::HandShake() {
   using namespace crypto;
-  switch (tunnel_.HandShake()) {
-    case TlsTunnel::HandShakeAction::Success: {
-      if (utils::Buffer b = tunnel_.ReadCipherTextData()) {
-        write_cancelable_ = data_flow_->Write(
-            std::move(b),
-            [this, cancelable{connect_cancelable_}](utils::Error error) {
-              if (cancelable.canceled()) {
-                return;
-              }
+  auto action = tunnel_.HandShake();
+  if (action) {
+    switch (*action) {
+      case TlsTunnel::HandShakeAction::Success: {
+        if (utils::Buffer b = tunnel_.ReadCipherTextData()) {
+          write_cancelable_ = data_flow_->Write(
+              std::move(b), [this, cancelable{connect_cancelable_}](
+                                utils::Result<void>&& result) {
+                if (cancelable.canceled()) {
+                  return;
+                }
 
-              if (error) {
-                state_machine_.Errored();
-                connect_handler_(error);
+                if (!result) {
+                  state_machine_.Errored();
+                  connect_handler_(std::move(result));
+                  return;
+                }
+                HandShake();
                 return;
-              }
-              HandShake();
-              return;
-            });
+              });
+          return;
+        }
+        state_machine_.Connected();
+        connect_handler_({});
+        connect_handler_ = nullptr;
         return;
       }
-      state_machine_.Connected();
-      connect_handler_({});
-      connect_handler_ = nullptr;
-      return;
-    }
-    case TlsTunnel::HandShakeAction::WantIo: {
-      if (utils::Buffer b = tunnel_.ReadCipherTextData()) {
-        write_cancelable_ = data_flow_->Write(
-            std::move(b),
-            [this, cancelable{connect_cancelable_}](utils::Error error) {
-              if (cancelable.canceled()) {
-                return;
-              }
+      case TlsTunnel::HandShakeAction::WantIo: {
+        if (utils::Buffer b = tunnel_.ReadCipherTextData()) {
+          write_cancelable_ = data_flow_->Write(
+              std::move(b), [this, cancelable{connect_cancelable_}](
+                                utils::Result<void>&& result) {
+                if (cancelable.canceled()) {
+                  return;
+                }
 
-              if (error) {
-                state_machine_.Errored();
-                connect_handler_(error);
+                if (!result) {
+                  state_machine_.Errored();
+                  connect_handler_(std::move(result));
+                  return;
+                }
+                HandShake();
                 return;
-              }
-              HandShake();
-              return;
-            });
-      } else {
-        read_cancelable_ =
-            data_flow_->Read(utils::Buffer(8192),
-                             [this, cancelable{connect_cancelable_}](
-                                 utils::Buffer&& buffer, utils::Error error) {
-                               if (cancelable.canceled()) {
-                                 return;
-                               }
+              });
+        } else {
+          read_cancelable_ =
+              data_flow_->Read([this, cancelable{connect_cancelable_}](
+                                   utils::Result<utils::Buffer>&& buffer) {
+                if (cancelable.canceled()) {
+                  return;
+                }
 
-                               if (error) {
-                                 state_machine_.Errored();
-                                 connect_handler_(error);
-                                 return;
-                               }
-                               tunnel_.WriteCipherTextData(std::move(buffer));
-                               NE_TLS_TUNNEL_CHECK_ERROR(tunnel_);
-                               HandShake();
-                               return;
-                             });
+                if (!buffer) {
+                  state_machine_.Errored();
+                  connect_handler_(
+                      utils::MakeErrorResult(std::move(buffer).error()));
+                  return;
+                }
+                tunnel_.WriteCipherTextData(*std::move(buffer));
+                HandShake();
+                return;
+              });
+        }
+        return;
       }
-      return;
     }
-    case TlsTunnel::HandShakeAction::Error: {
-      state_machine_.Errored();
-      connect_handler_(utils::NEKitErrorCode::GeneralError);
-      return;
-    }
+  } else {
+    state_machine_.Errored();
+    connect_handler_(utils::MakeErrorResult(std::move(action).error()));
+    return;
   }
 }
 
@@ -209,7 +204,7 @@ void TlsDataFlow::Process() {
   }
 
   if (pending_error_) {
-    if (ReportError(pending_error_, true)) {
+    if (ReportError(std::move(pending_error_), true)) {
       error_reported_ = true;
     }
     return;
@@ -231,7 +226,11 @@ void TlsDataFlow::TryRead() {
 
         state_machine_.ReadEnd();
 
-        handler(std::move(buffer), {});
+        if (!buffer) {
+          state_machine_.Errored();
+        }
+
+        handler(std::move(buffer));
       });
 
       read_handler_ = nullptr;
@@ -279,24 +278,23 @@ void TlsDataFlow::TryReadNextHop() {
     return;
   }
 
-  utils::Buffer b(8192);
-  next_read_cancelable_ = data_flow_->Read(
-      std::move(b), [this, cancelable{read_cancelable_}](utils::Buffer&& buffer,
-                                                         utils::Error error) {
+  next_read_cancelable_ =
+      data_flow_->Read([this, cancelable{read_cancelable_}](
+                           utils::Result<utils::Buffer>&& buffer) {
         if (cancelable.canceled()) {
           return;
         }
 
-        if (error) {
-          if (!ReportError(error, true)) {
-            pending_error_ = error;
+        if (!buffer) {
+          if (!ReportError(std::move(buffer).error(), true)) {
+            pending_error_ = std::move(buffer).error();
           } else {
             error_reported_ = true;
           }
           return;
         }
 
-        tunnel_.WriteCipherTextData(std::move(buffer));
+        tunnel_.WriteCipherTextData(*std::move(buffer));
         Process();
       });
 }
@@ -312,14 +310,14 @@ void TlsDataFlow::TryWriteNextHop() {
 
   next_write_cancelable_ = data_flow_->Write(
       tunnel_.ReadCipherTextData(),
-      [this, cancelable{write_cancelable_}](utils::Error error) {
+      [this, cancelable{write_cancelable_}](utils::Result<void>&& result) {
         if (cancelable.canceled()) {
           return;
         }
 
-        if (error) {
-          if (!ReportError(error, false)) {
-            pending_error_ = error;
+        if (!result) {
+          if (!ReportError(std::move(result).error(), false)) {
+            pending_error_ = std::move(result).error();
           } else {
             error_reported_ = true;
           }
@@ -330,29 +328,31 @@ void TlsDataFlow::TryWriteNextHop() {
       });
 }
 
-bool TlsDataFlow::ReportError(utils::Error error, bool try_read_first) {
-  if (try_read_first ? ReadReportError(error) : WriteReportError(error)) {
+bool TlsDataFlow::ReportError(utils::Error&& error, bool try_read_first) {
+  if (try_read_first ? ReadReportError(std::move(error))
+                     : WriteReportError(std::move(error))) {
     return true;
   }
 
-  return try_read_first ? WriteReportError(error) : ReadReportError(error);
+  return try_read_first ? WriteReportError(std::move(error))
+                        : ReadReportError(std::move(error));
 }
 
-bool TlsDataFlow::ReadReportError(utils::Error error) {
+bool TlsDataFlow::ReadReportError(utils::Error&& error) {
   if (read_handler_) {
     // should we update error_reported here?
     auto handler = read_handler_;
-    handler(utils::Buffer(), error);
+    handler(utils::MakeErrorResult(std::move(error)));
     read_handler_ = nullptr;
     return true;
   }
   return false;
 }
 
-bool TlsDataFlow::WriteReportError(utils::Error error) {
+bool TlsDataFlow::WriteReportError(utils::Error&& error) {
   if (write_handler_) {
     auto handler = write_handler_;
-    handler(error);
+    handler(utils::MakeErrorResult(std::move(error)));
     write_handler_ = nullptr;
     return true;
   }

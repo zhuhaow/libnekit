@@ -25,6 +25,17 @@
 namespace nekit {
 namespace rule {
 
+std::string RuleManagerErrorCategory::Description(
+    const utils::Error& error) const {
+  (void)error;
+  return "no match";
+}
+
+std::string RuleManagerErrorCategory::DebugDescription(
+    const utils::Error& error) const {
+  return Description(error);
+}
+
 RuleManager::RuleManager(utils::Runloop* runloop) : runloop_{runloop} {}
 
 RuleManager::~RuleManager() { lifetime_.Cancel(); }
@@ -58,7 +69,7 @@ void RuleManager::MatchIterator(
   while (iter != rules_.cend()) {
     switch ((*iter)->Match(session)) {
       case MatchResult::Match:
-        handler(*iter, ErrorCode::NoError);
+        handler(*iter);
         return;
       case MatchResult::NotMatch:
         iter++;
@@ -67,46 +78,29 @@ void RuleManager::MatchIterator(
         // The lifetime of callback block is already bound to the caller of
         // `Match` and `this`. There is no need to guard the lifetime of the
         // callback in another `Cancelable`.
-        (void)session->endpoint()->Resolve([this, handler, cancelable,
-                                            lifetime{lifetime_}, session,
-                                            iter](std::error_code ec) mutable {
-          // Resolve failure should be handled by rules.
-          (void)ec;
+        (void)session->endpoint()->Resolve(
+            [this, handler, cancelable, lifetime{lifetime_}, session,
+             iter](utils::Result<void>&& result) mutable {
+              // Resolve failure should be handled by rules.
+              (void)result;
 
-          if (cancelable.canceled() || lifetime.canceled()) {
-            return;
-          }
+              if (cancelable.canceled() || lifetime.canceled()) {
+                return;
+              }
 
-          MatchIterator(iter, session, cancelable, handler);
-        });
+              MatchIterator(iter, session, cancelable, handler);
+            });
         return;
       }
     }
   }
-  handler(nullptr, ErrorCode::NoMatch);
+
+  handler(utils::MakeErrorResult(
+      utils::Error(RuleManagerErrorCategory::GlobalRuleManagerErrorCategory(),
+                   (int)RuleManagerErrorCode::NoMatch)));
 }
 
 utils::Runloop* RuleManager::GetRunloop() { return runloop_; }
 
-namespace {
-struct RuleManagerErrorCategory : std::error_category {
-  const char* name() const noexcept override { return "Rule manager"; }
-
-  std::string message(int error_code) const override {
-    switch (static_cast<RuleManager::ErrorCode>(error_code)) {
-      case RuleManager::ErrorCode::NoError:
-        return "no error";
-      case RuleManager::ErrorCode::NoMatch:
-        return "there is no rule match";
-    }
-  }
-};
-
-const RuleManagerErrorCategory ruleSetErrorCategory{};
-}  // namespace
-
-std::error_code make_error_code(RuleManager::ErrorCode ec) {
-  return {static_cast<int>(ec), ruleSetErrorCategory};
-}
 }  // namespace rule
 }  // namespace nekit

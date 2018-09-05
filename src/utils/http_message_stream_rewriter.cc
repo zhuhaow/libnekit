@@ -35,6 +35,32 @@
 namespace nekit {
 namespace utils {
 
+std::string HttpMessageStreamRewriterErrorCategory::Description(
+    const Error& error) const {
+  switch ((HttpMessageStreamRewriterErrorCode)error.ErrorCode()) {
+    case HttpMessageStreamRewriterErrorCode::ParserError:
+      return http_errno_description(error.GetInfo<http_errno>(
+          NE_HTTP_MESSAGE_STREAM_PARSE_ERROR_INFO_KEY));
+    case HttpMessageStreamRewriterErrorCode::BlockTooLong:
+      return "block too long";
+    case HttpMessageStreamRewriterErrorCode::UserError:
+      return "user error";
+  }
+}
+
+std::string HttpMessageStreamRewriterErrorCategory::DebugDescription(
+    const Error& error) const {
+  return Description(error);
+}
+
+Error HttpMessageStreamRewriterErrorCategory::FromParserError(
+    decltype(http_parser::http_errno) error) {
+  Error e = HttpMessageStreamRewriterErrorCode::ParserError;
+  e.CreateInfoDict();
+  e.AddInfo(NE_HTTP_MESSAGE_STREAM_PARSE_ERROR_INFO_KEY, error);
+  return e;
+}
+
 class HttpMessageStreamRewriterImpl {
  public:
   enum class State {
@@ -64,7 +90,7 @@ class HttpMessageStreamRewriterImpl {
 
   ~HttpMessageStreamRewriterImpl() { free(pending_previous_buffer_); }
 
-  bool RewriteBuffer(Buffer* buffer) {
+  utils::Result<void> RewriteBuffer(Buffer* buffer) {
     if (pending_buffer_length_) {
       buffer->InsertFront(pending_buffer_length_);
       buffer->SetData(0, pending_buffer_length_, pending_previous_buffer_);
@@ -193,14 +219,23 @@ class HttpMessageStreamRewriterImpl {
     }
 
     if (errored_) {
-      return false;
+      if (HTTP_PARSER_ERRNO(&parser_) == HPE_OK ||
+          HTTP_PARSER_ERRNO(&parser_) == HPE_PAUSED) {
+        return utils::MakeErrorResult(
+            HttpMessageStreamRewriterErrorCode::UserError);
+      } else {
+        return utils::MakeErrorResult(
+            HttpMessageStreamRewriterErrorCategory::FromParserError(
+                HTTP_PARSER_ERRNO(&parser_)));
+      }
     }
 
     if (current_token_offset_ != buffer->size()) {
       pending_buffer_length_ = buffer->size() - current_token_offset_;
 
       if (pending_buffer_length_ > NEKIT_HTTP_STREAM_REWRITER_MAX_BUFFER_SIZE) {
-        return false;
+        return utils::MakeErrorResult(
+            HttpMessageStreamRewriterErrorCode::BlockTooLong);
       }
 
       pending_previous_buffer_ = malloc(pending_buffer_length_);
@@ -216,7 +251,7 @@ class HttpMessageStreamRewriterImpl {
       current_token_offset_ = 0;
     }
 
-    return true;
+    return {};
   }
 
   const HttpMessageStreamRewriter::Header& CurrentHeader() {
@@ -252,8 +287,8 @@ class HttpMessageStreamRewriterImpl {
     current_buffer_->Insert(current_token_offset_, len + 2);
     current_buffer_->SetData(current_token_offset_, header.size(),
                              header.c_str());
-    current_buffer_->SetByte(current_token_offset_ + header.size(), '\r');
-    current_buffer_->SetByte(current_token_offset_ + header.size() + 1, '\n');
+    (*current_buffer_)[current_token_offset_ + header.size()] = '\r';
+    (*current_buffer_)[current_token_offset_ + header.size() + 1] = '\n';
 
     current_buffer_offset_ += (len + 2);
     current_token_offset_ += (len + 2);
@@ -655,7 +690,7 @@ HttpMessageStreamRewriter::HttpMessageStreamRewriter(
 
 HttpMessageStreamRewriter::~HttpMessageStreamRewriter() { delete pimp_; }
 
-bool HttpMessageStreamRewriter::RewriteBuffer(Buffer* buffer) {
+utils::Result<void> HttpMessageStreamRewriter::RewriteBuffer(Buffer* buffer) {
   return pimp_->RewriteBuffer(buffer);
 }
 

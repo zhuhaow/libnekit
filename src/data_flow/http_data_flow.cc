@@ -24,8 +24,8 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include "nekit/transport/error_code.h"
 #include "nekit/utils/base64.h"
+#include "nekit/utils/common_error.h"
 
 namespace nekit {
 namespace data_flow {
@@ -97,9 +97,8 @@ HttpDataFlow::~HttpDataFlow() {
   connect_action_cancelable_.Cancel();
 }
 
-utils::Cancelable HttpDataFlow::Read(utils::Buffer&& buffer,
-                                     DataEventHandler handler) {
-  return data_flow_->Read(std::move(buffer), handler);
+utils::Cancelable HttpDataFlow::Read(DataEventHandler handler) {
+  return data_flow_->Read(handler);
 }
 
 utils::Cancelable HttpDataFlow::Write(utils::Buffer&& buffer,
@@ -138,15 +137,15 @@ utils::Cancelable HttpDataFlow::Connect(
 
   connect_cancelable_ = utils::Cancelable();
   connect_action_cancelable_ = data_flow_->Connect(
-      server_endpoint_,
-      [this, handler, cancelable{connect_cancelable_}](std::error_code ec) {
+      server_endpoint_, [this, handler, cancelable{connect_cancelable_}](
+                            utils::Result<void>&& result) {
         if (cancelable.canceled()) {
           return;
         }
 
-        if (ec) {
+        if (!result) {
           state_machine_.Errored();
-          handler(ec);
+          handler(std::move(result));
           return;
         };
 
@@ -167,15 +166,15 @@ utils::Cancelable HttpDataFlow::Connect(
         buffer.SetData(0, request.size(), request.c_str());
 
         connect_action_cancelable_ = data_flow_->Write(
-            std::move(buffer),
-            [this, handler, cancelable{cancelable}](std::error_code ec) {
+            std::move(buffer), [this, handler, cancelable{cancelable}](
+                                   utils::Result<void>&& result) {
               if (cancelable.canceled()) {
                 return;
               }
 
-              if (ec) {
+              if (!result) {
                 state_machine_.Errored();
-                handler(ec);
+                handler(std::move(result));
                 return;
               }
 
@@ -195,42 +194,42 @@ std::shared_ptr<utils::Endpoint> HttpDataFlow::ConnectingTo() {
 }
 
 void HttpDataFlow::ReadResponse(EventHandler handler) {
-  auto buffer = utils::Buffer(96);
-  connect_action_cancelable_ = data_flow_->Read(
-      std::move(buffer), [this, handler, cancelable{connect_cancelable_}](
-                             utils::Buffer&& buffer, std::error_code ec) {
+  connect_action_cancelable_ =
+      data_flow_->Read([this, handler, cancelable{connect_cancelable_}](
+                           utils::Result<utils::Buffer>&& buffer) {
         if (cancelable.canceled()) {
           return;
         }
 
-        if (ec) {
+        if (!buffer) {
           state_machine_.Errored();
-          if (ec == nekit::transport::ErrorCode::EndOfFile) {
-            handler(ErrorCode::InvalidResponse);
+          if (utils::CommonErrorCategory::IsEof(buffer.error())) {
+            handler(utils::MakeErrorResult(HttpErrorCode::InvalidResponse));
           } else {
-            handler(ec);
+            handler(utils::MakeErrorResult(std::move(buffer).error()));
           }
           return;
         }
 
-        if (!rewriter_.RewriteBuffer(&buffer)) {
+        auto result = rewriter_.RewriteBuffer(&*buffer);
+        if (!result) {
           state_machine_.Errored();
-          handler(ErrorCode::InvalidResponse);
+          handler(std::move(result));
           return;
         }
 
         if (finish_response_) {
           if (success_response_) {
-            buffer.ShrinkFront(header_offset_);
-            if (buffer) {
-              pending_payload_ = std::move(buffer);
+            buffer->ShrinkFront(header_offset_);
+            if (*buffer) {
+              pending_payload_ = *std::move(buffer);
             }
 
             state_machine_.Connected();
-            handler(ErrorCode::NoError);
+            handler({});
           } else {
             state_machine_.Errored();
-            handler(ErrorCode::ConnectError);
+            handler(utils::MakeErrorResult(HttpErrorCode::ConnectError));
           }
           return;
         }
@@ -261,32 +260,20 @@ bool HttpDataFlow::OnMessageComplete(size_t buffer_offset, bool upgrade) {
   finish_response_ = true;
   return true;
 }
-namespace {
-struct HttpDataFlowErrorCategory : std::error_category {
-  const char* name() const noexcept override;
-  std::string message(int) const override;
-};
 
-const char* HttpDataFlowErrorCategory::name() const BOOST_NOEXCEPT {
-  return "HTTP stream coder";
-}
-
-std::string HttpDataFlowErrorCategory::message(int error_code) const {
-  switch (static_cast<HttpDataFlow::ErrorCode>(error_code)) {
-    case HttpDataFlow::ErrorCode::NoError:
-      return "no error";
-    case HttpDataFlow::ErrorCode::InvalidResponse:
+std::string HttpErrorCategory::Description(const utils::Error& error) const {
+  switch ((HttpErrorCode)error.ErrorCode()) {
+    case HttpErrorCode::InvalidResponse:
       return "server send an invalid response";
-    case HttpDataFlow::ErrorCode::ConnectError:
+    case HttpErrorCode::ConnectError:
       return "connect failed since the server returns a non 200 response";
   }
 }
 
-const HttpDataFlowErrorCategory httpDataFlowErrorCategory{};
-}  // namespace
-
-std::error_code make_error_code(HttpDataFlow::ErrorCode ec) {
-  return {static_cast<int>(ec), httpDataFlowErrorCategory};
+std::string HttpErrorCategory::DebugDescription(
+    const utils::Error& error) const {
+  return Description(error);
 }
+
 }  // namespace data_flow
 }  // namespace nekit

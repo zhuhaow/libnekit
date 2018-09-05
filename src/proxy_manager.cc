@@ -55,16 +55,20 @@ void ProxyManager::Run() {
   BOOST_ASSERT(listeners_.size());
 
   auto handler =
-      [this](std::unique_ptr<data_flow::LocalDataFlowInterface> &&data_flow,
-             std::error_code ec) {
-        if (ec) {
-          NEERROR << "Error happened when accepting new socket " << ec;
-          exit(1);
-        }
+      [this](utils::Result<std::unique_ptr<data_flow::LocalDataFlowInterface>>
+                 &&data_flow) {
+        std::move(data_flow)
+            .map([this](auto data_flow) {
+              data_flow->Session()->set_resolver(resolver_.get());
 
-        data_flow->Session()->set_resolver(resolver_.get());
-
-        tunnel_manager_.Build(std::move(data_flow), rule_manager_.get()).Open();
+              tunnel_manager_.Build(std::move(data_flow), rule_manager_.get())
+                  .Open();
+            })
+            .map_error([](auto error) {
+              NEERROR << "Error happened when accepting new socket " << error
+                      << ".";
+              // TODO: Notify global handler
+            });
       };
 
   for (auto &listener : listeners_) {

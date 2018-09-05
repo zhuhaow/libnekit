@@ -77,15 +77,16 @@ Cancelable SystemResolver::Resolve(std::string domain,
     auto result = resolver.resolve(domain, "", ec);
 
     if (ec) {
-      auto error = ConvertBoostError(ec);
+      auto error = BoostErrorCategory::FromBoostError(ec);
       NEERROR << "Failed to resolve " << domain << " due to " << error << ".";
 
-      runloop_->Post([handler, error, cancelable, life_time{lifetime_}]() {
+      runloop_->Post([handler, error{std::move(error)}, cancelable,
+                      life_time{lifetime_}]() mutable {
         if (cancelable.canceled() || life_time.canceled()) {
           return;
         }
 
-        handler(nullptr, error);
+        handler(utils::MakeErrorResult(std::move(error)));
       });
       return;
     }
@@ -103,7 +104,7 @@ Cancelable SystemResolver::Resolve(std::string domain,
         return;
       }
 
-      handler(addresses, NEKitErrorCode::NoError);
+      handler(addresses);
     });
   });
 
@@ -118,17 +119,6 @@ void SystemResolver::Stop() {
 SystemResolver::~SystemResolver() {
   Stop();
   lifetime_.Cancel();
-}
-
-std::error_code SystemResolver::ConvertBoostError(
-    const boost::system::error_code& ec) {
-  if (ec.category() == boost::asio::error::system_category) {
-    switch (ec.value()) {
-      case boost::asio::error::basic_errors::operation_aborted:
-        return NEKitErrorCode::Canceled;
-    }
-  }
-  return std::make_error_code(ec);
 }
 
 utils::Runloop* SystemResolver::GetRunloop() { return runloop_; }
