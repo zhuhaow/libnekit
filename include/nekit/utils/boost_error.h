@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2017 Zhuhao Wang
+// Copyright (c) 2018 Zhuhao Wang
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,13 +22,44 @@
 
 #pragma once
 
-#include <system_error>
+#include <boost/system/error_code.hpp>
 
-#include <boost/asio.hpp>
+#include "error.h"
 
-namespace std {
-template <>
-struct is_error_code_enum<boost::system::error_code> : public true_type {};
+#define NE_BOOST_ERROR_INFO_KEY 1
 
-std::error_code make_error_code(boost::system::error_code ec);
-}  // namespace std
+namespace nekit {
+namespace utils {
+enum class BoostErrorCode { Error = 1 };
+
+class BoostErrorCategory : public ErrorCategory {
+ public:
+  NE_DEFINE_STATIC_ERROR_CATEGORY(BoostErrorCategory)
+
+  static utils::Error FromBoostError(const boost::system::error_code& ec) {
+    utils::Error e{BoostErrorCategory::GlobalBoostErrorCategory(),
+                   (int)BoostErrorCode::Error};
+    e.CreateInfoDict();
+    e.AddInfo(NE_BOOST_ERROR_INFO_KEY, ec);
+    return e;
+  }
+
+  static boost::system::error_code ToBoostError(const utils::Error& error) {
+    return error.GetInfo<boost::system::error_code>(NE_BOOST_ERROR_INFO_KEY);
+  }
+
+  std::string Description(const utils::Error& error) const override {
+    return "boost error: " +
+           error.GetInfo<boost::system::error_code>(NE_BOOST_ERROR_INFO_KEY)
+               .message();
+  }
+
+  std::string DebugDescription(const utils::Error& error) const override {
+    return Description(error);
+  }
+};
+
+}  // namespace utils
+}  // namespace nekit
+
+NE_DEFINE_NEW_ERROR_CODE(Boost, nekit, utils)

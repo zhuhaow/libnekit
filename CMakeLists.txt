@@ -67,8 +67,6 @@ target_sources(nekit PRIVATE
   src/transport/tcp_listener.cc
   src/transport/tunnel.cc
   src/transport/tcp_connector.cc
-  src/transport/error_code.cc
-  src/utils/boost_error.cc
   src/utils/system_resolver.cc
   src/utils/timer.cc
   src/utils/logger.cc

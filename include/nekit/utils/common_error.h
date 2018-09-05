@@ -22,40 +22,30 @@
 
 #pragma once
 
-#include <hedley/hedley.h>
+#include "../hedley/hedley.h"
 
 #include "error.h"
 
 namespace nekit {
 namespace utils {
-enum class CommonErrorCode : int { EndOfFile = 1, UnknownError };
+enum class CommonErrorCode : int { EndOfFile = 1, Cancelled, UnknownError };
 
 class CommonErrorCategory : public ErrorCategory {
  public:
-  static CommonErrorCategory& GlobalCommonErrorCategory() {
-    static CommonErrorCategory common_error_category;
-    return common_error_category;
-  }
+  NE_DEFINE_STATIC_ERROR_CATEGORY(CommonErrorCategory)
 
-  bool IsEof(const Error& error) const {
+  static bool IsEof(const Error& error) {
     return &error.Category() == &GlobalCommonErrorCategory() &&
            (CommonErrorCode)error.ErrorCode() == CommonErrorCode::EndOfFile;
   }
 
-  Error Eof() const {
-    return Error(GlobalCommonErrorCategory(), (int)CommonErrorCode::EndOfFile);
-  }
-
-  Error UnknownError() const {
-    return Error(GlobalCommonErrorCategory(),
-                 (int)CommonErrorCode::UnknownError);
-  }
-
  protected:
-  std::string Description(const Error& error) const {
+  std::string Description(const Error& error) const override {
     switch ((CommonErrorCode)error.ErrorCode()) {
       case CommonErrorCode::EndOfFile:
         return "end of file";
+      case CommonErrorCode::Cancelled:
+        return "cancelled";
       case CommonErrorCode::UnknownError:
         return "unknown error";
       default:
@@ -63,9 +53,12 @@ class CommonErrorCategory : public ErrorCategory {
     }
   }
 
-  std::string DebugDescription(const Error& error) const {
+  std::string DebugDescription(const Error& error) const override {
     return Description(error);
   }
 };
+
 }  // namespace utils
 }  // namespace nekit
+
+NE_DEFINE_NEW_ERROR_CODE(Common, nekit, utils)
