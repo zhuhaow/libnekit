@@ -70,7 +70,6 @@ target_sources(nekit PRIVATE
   src/transport/error_code.cc
   src/utils/boost_error.cc
   src/utils/system_resolver.cc
-  src/utils/error.cc
   src/utils/timer.cc
   src/utils/logger.cc
   src/utils/cancelable.cc

@@ -24,21 +24,48 @@
 
 #include <map>
 #include <memory>
+#include <ostream>
 
 #include <boost/any.hpp>
 #include <boost/assert.hpp>
+
+#define NE_DEFINE_STATIC_ERROR_CATEGORY(CATEGORY) \
+  static CATEGORY& Global##CATEGORY() {           \
+    static CATEGORY category;                     \
+    return category;                              \
+  }
+
+#define NE_DEFINE_NEW_ERROR_CODE(TYPE, NAMESPACE1, NAMESPACE2)        \
+  namespace nekit {                                                   \
+  namespace utils {                                                   \
+  template <>                                                         \
+  struct IsErrorCode<::NAMESPACE1::NAMESPACE2::TYPE##ErrorCode>       \
+      : public std::true_type {};                                     \
+  }                                                                   \
+  }                                                                   \
+  namespace NAMESPACE1 {                                              \
+  namespace NAMESPACE2 {                                              \
+  inline ::nekit::utils::Error MakeErrorCode(TYPE##ErrorCode ec) {    \
+    return ::nekit::utils::Error(                                     \
+        TYPE##ErrorCategory::Global##TYPE##ErrorCategory(), (int)ec); \
+  }                                                                   \
+  }                                                                   \
+  }
 
 namespace nekit {
 namespace utils {
 
 class Error;
 
+template <typename EC>
+struct IsErrorCode : public std::false_type {};
+
+template <typename EC, typename = std::enable_if_t<IsErrorCode<EC>::value>>
+Error MakeErrorCode(EC);
+
 class ErrorCategory {
  public:
-  static ErrorCategory& GlobalDefaultErrorCategory() {
-    static ErrorCategory default_error_category;
-    return default_error_category;
-  }
+  NE_DEFINE_STATIC_ERROR_CATEGORY(ErrorCategory)
 
   friend class Error;
 
@@ -53,22 +80,36 @@ class ErrorCategory {
     return "no error";
   };
 
-  ErrorCategory();
+  ErrorCategory() = default;
 };
 
 class Error final {
  public:
-  Error() : Error(ErrorCategory::GlobalDefaultErrorCategory(), 0, false) {}
+  Error() : Error(ErrorCategory::GlobalErrorCategory(), 0) {}
 
-  Error(const ErrorCategory& category, int error_code,
-        bool has_error_info = false)
-      : category_{&category}, error_code_{error_code} {
-    if (has_error_info) {
-      info_ = std::make_unique<std::map<int, boost::any>>();
-    }
-  };
+  Error(const ErrorCategory& category, int error_code)
+      : category_{&category}, error_code_{error_code} {};
+
+  template <typename EC, typename = std::enable_if_t<IsErrorCode<EC>::value>>
+  Error(EC error_code) {
+    *this = MakeErrorCode(error_code);
+  }
 
   explicit operator bool() const { return error_code_; }
+
+  utils::Error Dup() const {
+    utils::Error error{*category_, error_code_};
+
+    if (info_) {
+      error.info_ = std::make_unique<std::map<int, boost::any>>(*info_);
+    }
+
+    return error;
+  }
+
+  void CreateInfoDict() {
+    info_ = std::make_unique<std::map<int, boost::any>>();
+  }
 
   template <typename T>
   void AddInfo(int key, T value) {
@@ -84,12 +125,14 @@ class Error final {
   template <typename T>
   const T& GetInfo(int key) const {
     BOOST_ASSERT(info_);
-    return boost::any_cast<T>(info_->at(key));
+    return boost::any_cast<const T&>(info_->at(key));
   }
 
-  std::string Description() { return category_->Description(*this); };
+  std::string Description() const { return category_->Description(*this); };
 
-  std::string DebugDescription() { return category_->DebugDescription(*this); };
+  std::string DebugDescription() const {
+    return category_->DebugDescription(*this);
+  };
 
   const ErrorCategory& Category() const { return *category_; }
 
@@ -102,10 +145,14 @@ class Error final {
   int error_code_;
 };
 
-bool operator==(const Error& err1, const Error& err2) {
+inline bool operator==(const Error& err1, const Error& err2) {
   return &err1.Category() == &err2.Category() &&
          err1.ErrorCode() == err2.ErrorCode();
 }
 
+inline std::ostream& operator<<(std::ostream& oss, const utils::Error& error) {
+  oss << error.Description();
+  return oss;
+}
 }  // namespace utils
 }  // namespace nekit
