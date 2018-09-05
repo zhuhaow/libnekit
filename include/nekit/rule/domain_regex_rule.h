@@ -25,6 +25,7 @@
 #include <regex>
 #include <vector>
 
+#include "../utils/result.h"
 #include "rule_interface.h"
 
 namespace nekit {
@@ -33,7 +34,7 @@ class DomainRegexRule : public RuleInterface {
  public:
   explicit DomainRegexRule(RuleHandler handler);
 
-  bool AddRegex(const std::string &expression);
+  utils::Result<void> AddRegex(const std::string &expression);
 
   MatchResult Match(std::shared_ptr<utils::Session> session) override;
   std::unique_ptr<data_flow::RemoteDataFlowInterface> GetDataFlow(

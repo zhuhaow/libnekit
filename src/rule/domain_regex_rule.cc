@@ -24,19 +24,22 @@
 
 #include <boost/assert.hpp>
 
+#include "nekit/utils/regex_error.h"
+
 namespace nekit {
 namespace rule {
 DomainRegexRule::DomainRegexRule(RuleHandler handler) : handler_{handler} {}
 
-bool DomainRegexRule::AddRegex(const std::string &expression) {
+utils::Result<void> DomainRegexRule::AddRegex(const std::string &expression) {
   try {
     regex_list_.emplace_back(expression,
                              std::regex::ECMAScript | std::regex::nosubs |
                                  std::regex::icase | std::regex::optimize);
-  } catch (...) {
-    return false;
+  } catch (const std::regex_error &error) {
+    return utils::MakeErrorResult(
+        utils::RegexErrorCategory::FromRegexError(error));
   }
-  return true;
+  return {};
 }
 
 MatchResult DomainRegexRule::Match(std::shared_ptr<utils::Session> session) {
