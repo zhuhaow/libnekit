@@ -30,10 +30,10 @@ namespace nekit {
 namespace utils {
 
 template <typename T>
-using Result = tl::expected<T, Error>;
+using Result = nonstd::expected<T, Error>;
 
 inline auto MakeErrorResult(Error&& e) {
-  return tl::make_unexpected(std::move(e));
+  return nonstd::unexpected_type<Error>(std::move(e));
 }
 
 }  // namespace utils
