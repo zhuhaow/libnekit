@@ -103,17 +103,16 @@ utils::Cancelable TcpConnector::Connect(EventHandler handler) {
             return;
           }
 
-          std::move(result)
-              .map([&]() {
-                NEDEBUG << "Domain resolved, connect now.";
-                addresses_ = endpoint_->resolved_addresses();
-                DoConnect(handler);
-              })
-              .or_else([&](auto error) {
-                NEERROR << "Can not connect since resolve is failed due to "
-                        << error << ".";
-                handler(utils::MakeErrorResult(std::move(error)));
-              });
+          if (!result) {
+            NEERROR << "Can not connect since resolve is failed due to "
+                    << result.error() << ".";
+            handler(utils::MakeErrorResult(std::move(result).error()));
+            return;
+          }
+
+          NEDEBUG << "Domain resolved, connect now.";
+          addresses_ = endpoint_->resolved_addresses();
+          DoConnect(handler);
         });
         return cancelable_;
       }

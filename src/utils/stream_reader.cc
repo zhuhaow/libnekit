@@ -71,13 +71,13 @@ void StreamReader::DoReadLength() {
         return;
       }
 
-      std::move(buffer)
-          .map([&](auto buffer) {
-            buffer_.InsertBack(std::move(buffer));
-            DoReadLength();
-          })
-          .or_else(
-              [&](auto error) { handler_(MakeErrorResult(std::move(error))); });
+      if (!buffer) {
+        handler_(MakeErrorResult(std::move(buffer).error()));
+        return;
+      }
+
+      buffer_.InsertBack(*std::move(buffer));
+      DoReadLength();
     });
   }
 }
@@ -121,13 +121,12 @@ void StreamReader::DoReadPattern() {
         return;
       }
 
-      std::move(buffer)
-          .map([&](auto buffer) {
-            buffer_.InsertBack(std::move(buffer));
-            DoReadPattern();
-          })
-          .or_else(
-              [&](auto error) { handler_(MakeErrorResult(std::move(error))); });
+      if (!buffer) {
+        handler_(MakeErrorResult(std::move(buffer).error()));
+        return;
+      }
+      buffer_.InsertBack(*std::move(buffer));
+      DoReadPattern();
     });
   } else {
     size_t len = std::distance(boost::asio::buffers_begin(buffers), result) +

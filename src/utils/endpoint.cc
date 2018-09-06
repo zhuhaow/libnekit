@@ -79,20 +79,19 @@ Cancelable Endpoint::ForceResolve(EventHandler handler) {
         resolving_ = false;
         resolved_ = true;
 
-        std::move(addresses)
-            .map([&](auto addresses) {
-              NEINFO << "Successfully resolved domain " << domain_ << ".";
+        if (!addresses) {
+          NEERROR << "Failed to resolve " << domain_ << " due to "
+                  << addresses.error() << ".";
+          error_ = addresses.error().Dup();
+          resolved_addresses_ = nullptr;
+          handler(utils::MakeErrorResult(std::move(addresses).error()));
+          return;
+        }
 
-              resolved_addresses_ = addresses;
-              handler({});
-            })
-            .map_error([&](auto error) {
-              NEERROR << "Failed to resolve " << domain_ << " due to " << error
-                      << ".";
-              error_ = error.Dup();
-              resolved_addresses_ = nullptr;
-              handler(utils::MakeErrorResult(std::move(error)));
-            });
+        NEINFO << "Successfully resolved domain " << domain_ << ".";
+
+        resolved_addresses_ = *addresses;
+        handler({});
       });
 
   return resolve_cancelable_;
