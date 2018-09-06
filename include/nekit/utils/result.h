@@ -36,9 +36,5 @@ inline auto MakeErrorResult(Error&& e) {
   return tl::make_unexpected(std::move(e));
 }
 
-inline auto MakeErrorResult(const ErrorCategory& category, int error_code) {
-  return MakeErrorResult(Error(category, error_code));
-}
-
 }  // namespace utils
 }  // namespace nekit
