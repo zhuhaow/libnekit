@@ -39,7 +39,7 @@ class NullLogger {
   template <typename Val>
   NullLogger& operator<<(const Val&) {
     return *this;
-  };
+  }
 };
 
 #define NENOLOG \
