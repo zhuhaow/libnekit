@@ -51,6 +51,8 @@ std::string TcpErrorCategory::Description(const utils::Error &error) const {
       return "network unreachable";
     case TcpErrorCode::TimedOut:
       return "timeout";
+    default:
+      HEDLEY_UNREACHABLE_RETURN("");
   }
 }
 

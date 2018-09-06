@@ -35,7 +35,7 @@ std::string MaxmindErrorCategory::DebugDescription(
 }
 
 MaxmindLookupResult::MaxmindLookupResult(MMDB_lookup_result_s result)
-    : result_{result} {};
+    : result_{result} {}
 
 CountryIsoCode MaxmindLookupResult::country_iso_code() {
   if (!result_.found_entry) {
