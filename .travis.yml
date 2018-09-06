@@ -40,6 +40,7 @@ osx_default: &osx_default
 
 ios_default: &ios_default
   os: osx
+  language: objective-c
   env: PLATFORM=ios
 
 matrix:
