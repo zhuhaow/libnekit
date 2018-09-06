@@ -101,7 +101,6 @@ class HttpServerDataFlow : public LocalDataFlowInterface {
   EventHandler handler_;
 };
 
+NE_DEFINE_NEW_ERROR_CODE(HttpServer)
 }  // namespace data_flow
 }  // namespace nekit
-
-NE_DEFINE_NEW_ERROR_CODE(HttpServer, nekit, data_flow)

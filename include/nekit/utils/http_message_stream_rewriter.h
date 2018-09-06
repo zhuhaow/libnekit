@@ -124,7 +124,7 @@ class HttpMessageStreamRewriter : public HttpMessageRewriterInterface {
  private:
   HttpMessageStreamRewriterImpl* pimp_;
 };
+
+NE_DEFINE_NEW_ERROR_CODE(HttpMessageStreamRewriter)
 }  // namespace utils
 }  // namespace nekit
-
-NE_DEFINE_NEW_ERROR_CODE(HttpMessageStreamRewriter, nekit, utils)

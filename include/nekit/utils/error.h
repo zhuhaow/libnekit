@@ -35,21 +35,10 @@
     return category;                              \
   }
 
-#define NE_DEFINE_NEW_ERROR_CODE(TYPE, NAMESPACE1, NAMESPACE2)        \
-  namespace nekit {                                                   \
-  namespace utils {                                                   \
-  template <>                                                         \
-  struct IsErrorCode<::NAMESPACE1::NAMESPACE2::TYPE##ErrorCode>       \
-      : public std::true_type {};                                     \
-  }                                                                   \
-  }                                                                   \
-  namespace NAMESPACE1 {                                              \
-  namespace NAMESPACE2 {                                              \
+#define NE_DEFINE_NEW_ERROR_CODE(TYPE)                                \
   inline ::nekit::utils::Error MakeErrorCode(TYPE##ErrorCode ec) {    \
     return ::nekit::utils::Error(                                     \
         TYPE##ErrorCategory::Global##TYPE##ErrorCategory(), (int)ec); \
-  }                                                                   \
-  }                                                                   \
   }
 
 namespace nekit {
@@ -58,9 +47,6 @@ namespace utils {
 class Error;
 
 template <typename EC>
-struct IsErrorCode : public std::false_type {};
-
-template <typename EC, typename = std::enable_if_t<IsErrorCode<EC>::value>>
 Error MakeErrorCode(EC);
 
 class ErrorCategory {
@@ -87,7 +73,7 @@ class Error final {
   Error(const ErrorCategory& category, int error_code)
       : category_{&category}, error_code_{error_code} {};
 
-  template <typename EC, typename = std::enable_if_t<IsErrorCode<EC>::value>>
+  template <typename EC>
   Error(EC error_code) {
     *this = MakeErrorCode(error_code);
   }

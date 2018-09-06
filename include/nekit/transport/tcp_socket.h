@@ -58,6 +58,8 @@ class TcpErrorCategory : public utils::ErrorCategory {
   std::string DebugDescription(const utils::Error& error) const override;
 };
 
+NE_DEFINE_NEW_ERROR_CODE(Tcp)
+
 class TcpSocket final : public data_flow::LocalDataFlowInterface,
                         public data_flow::RemoteDataFlowInterface {
  public:
@@ -110,5 +112,3 @@ class TcpSocket final : public data_flow::LocalDataFlowInterface,
 };
 }  // namespace transport
 }  // namespace nekit
-
-NE_DEFINE_NEW_ERROR_CODE(Tcp, nekit, transport)

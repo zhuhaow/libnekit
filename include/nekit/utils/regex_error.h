@@ -58,7 +58,6 @@ class RegexErrorCategory : public ErrorCategory {
   }
 };
 
+NE_DEFINE_NEW_ERROR_CODE(Regex)
 }  // namespace utils
 }  // namespace nekit
-
-NE_DEFINE_NEW_ERROR_CODE(Regex, nekit, utils)

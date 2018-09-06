@@ -90,7 +90,7 @@ class Socks5DataFlow : public RemoteDataFlowInterface {
 
   utils::StreamReader stream_reader_;
 };
+
+NE_DEFINE_NEW_ERROR_CODE(Socks5)
 }  // namespace data_flow
 }  // namespace nekit
-
-NE_DEFINE_NEW_ERROR_CODE(Socks5, nekit, data_flow)

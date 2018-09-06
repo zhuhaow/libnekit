@@ -57,7 +57,6 @@ class CommonErrorCategory : public ErrorCategory {
   }
 };
 
+NE_DEFINE_NEW_ERROR_CODE(Common)
 }  // namespace utils
 }  // namespace nekit
-
-NE_DEFINE_NEW_ERROR_CODE(Common, nekit, utils)

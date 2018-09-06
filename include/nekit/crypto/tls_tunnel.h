@@ -49,6 +49,8 @@ class TlsTunnelErrorCategory : public utils::ErrorCategory {
   static utils::Error FromSslError(SslErrorCode error_code);
 };
 
+NE_DEFINE_NEW_ERROR_CODE(TlsTunnel)
+
 class TlsTunnel : private boost::noncopyable {
  public:
   enum class Mode { Server, Client };
@@ -95,5 +97,3 @@ class TlsTunnel : private boost::noncopyable {
 };
 }  // namespace crypto
 }  // namespace nekit
-
-NE_DEFINE_NEW_ERROR_CODE(TlsTunnel, nekit, crypto)

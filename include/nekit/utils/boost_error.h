@@ -59,7 +59,6 @@ class BoostErrorCategory : public ErrorCategory {
   }
 };
 
+NE_DEFINE_NEW_ERROR_CODE(Boost)
 }  // namespace utils
 }  // namespace nekit
-
-NE_DEFINE_NEW_ERROR_CODE(Boost, nekit, utils)

@@ -44,6 +44,8 @@ class StreamCipherErrorCategory : public utils::ErrorCategory {
   std::string DebugDescription(const utils::Error &error) const override;
 };
 
+NE_DEFINE_NEW_ERROR_CODE(StreamCipher)
+
 // This class provide support for stream cipher or block cipher in stream mode.
 class StreamCipherInterface : private boost::noncopyable {
  public:
@@ -71,5 +73,3 @@ template <typename Cipher>
 struct is_block_cipher : std::false_type {};
 }  // namespace crypto
 }  // namespace nekit
-
-NE_DEFINE_NEW_ERROR_CODE(StreamCipher, nekit, crypto)

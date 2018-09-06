@@ -113,7 +113,6 @@ class HttpDataFlow : public RemoteDataFlowInterface {
   utils::Buffer pending_payload_;
 };
 
+NE_DEFINE_NEW_ERROR_CODE(Http)
 }  // namespace data_flow
 }  // namespace nekit
-
-NE_DEFINE_NEW_ERROR_CODE(Http, nekit, data_flow)

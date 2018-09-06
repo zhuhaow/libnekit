@@ -91,7 +91,6 @@ class Socks5ServerDataFlow final : public LocalDataFlowInterface {
   utils::Cancelable open_cancelable_, read_cancelable_, write_cancelable_;
 };
 
+NE_DEFINE_NEW_ERROR_CODE(Socks5Server)
 }  // namespace data_flow
 }  // namespace nekit
-
-NE_DEFINE_NEW_ERROR_CODE(Socks5Server, nekit, data_flow)

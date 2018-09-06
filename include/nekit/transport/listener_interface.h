@@ -49,6 +49,8 @@ class ListenerErrorCategory : public utils::ErrorCategory {
   }
 };
 
+NE_DEFINE_NEW_ERROR_CODE(Listener)
+
 class ListenerInterface : public utils::AsyncInterface {
  public:
   using EventHandler = std::function<void(
@@ -66,5 +68,3 @@ class ListenerInterface : public utils::AsyncInterface {
 };
 }  // namespace transport
 }  // namespace nekit
-
-NE_DEFINE_NEW_ERROR_CODE(Listener, nekit, transport)
