@@ -39,7 +39,6 @@ class CommonErrorCategory : public ErrorCategory {
            (CommonErrorCode)error.ErrorCode() == CommonErrorCode::EndOfFile;
   }
 
- protected:
   std::string Description(const Error& error) const override {
     switch ((CommonErrorCode)error.ErrorCode()) {
       case CommonErrorCode::EndOfFile:

@@ -26,9 +26,9 @@
 #include <system_error>
 #include <vector>
 
-#include "../hedley/hedley.h"
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
+#include "../hedley/hedley.h"
 
 #include "../data_flow/local_data_flow_interface.h"
 #include "../data_flow/remote_data_flow_interface.h"
@@ -54,7 +54,6 @@ class TcpErrorCategory : public utils::ErrorCategory {
  public:
   NE_DEFINE_STATIC_ERROR_CATEGORY(TcpErrorCategory)
 
- protected:
   std::string Description(const utils::Error& error) const override;
   std::string DebugDescription(const utils::Error& error) const override;
 };

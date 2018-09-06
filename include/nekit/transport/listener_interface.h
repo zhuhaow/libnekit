@@ -40,7 +40,6 @@ class ListenerErrorCategory : public utils::ErrorCategory {
  public:
   NE_DEFINE_STATIC_ERROR_CATEGORY(ListenerErrorCategory)
 
- protected:
   std::string Description(const utils::Error& error) const override {
     (void)error;
     return "address in use";
