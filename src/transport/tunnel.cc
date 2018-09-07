@@ -40,7 +40,14 @@ Tunnel::Tunnel(
     : session_{local_data_flow->Session()},
       rule_manager_{rule_manager},
       local_data_flow_{std::move(local_data_flow)},
-      timeout_timer_{session_->GetRunloop(), [this]() { ReleaseTunnel(); }} {}
+      timeout_timer_{session_->GetRunloop(), [this]() { ReleaseTunnel(); }} {
+  CreateTrackId();
+  auto flow = local_data_flow_.get();
+  while (flow) {
+    flow->SetTrackId(GetTrackId());
+    flow = flow->NextLocalHop();
+  }
+}
 
 Tunnel::~Tunnel() {
   open_cancelable_.Cancel();
@@ -56,26 +63,25 @@ void Tunnel::Open() {
 
   ResetTimer();
 
-  open_cancelable_ =
-      local_data_flow_->Open([this](utils::Result<void>&& result) {
-        if (!result) {
-          NEERROR << "Error happened when opening a new tunnel, error code is: "
-                  << result.error() << ".";
+  open_cancelable_ = local_data_flow_->Open([this](
+                                                utils::Result<void>&& result) {
+    if (!result) {
+      ReleaseTunnel();
+      return;
+    }
 
-          ReleaseTunnel();
-          return;
-        }
+    NEDEBUGT << "Tunnel successfully opened.";
 
-        NEDEBUG << "Tunnel successfully opened, matching rule.";
-
-        ResetTimer();
-        MatchRule();
-      });
+    ResetTimer();
+    MatchRule();
+  });
 }
 
 utils::Runloop* Tunnel::GetRunloop() { return session_->GetRunloop(); }
 
 void Tunnel::MatchRule() {
+  NEDEBUGT << "Matching rules.";
+
   rule_cancelable_ = rule_manager_->Match(
       session_,
       [this](utils::Result<std::shared_ptr<rule::RuleInterface>>&& rule) {
@@ -85,12 +91,19 @@ void Tunnel::MatchRule() {
         }
 
         remote_data_flow_ = (**rule).GetDataFlow(session_);
+        auto flow = remote_data_flow_.get();
+        while (flow) {
+          flow->SetTrackId(GetTrackId());
+          flow = flow->NextRemoteHop();
+        }
         ResetTimer();
         ConnectToRemote();
       });
 }
 
 void Tunnel::ConnectToRemote() {
+  NEDEBUGT << "Begin connect to remote.";
+
   rule_cancelable_ = remote_data_flow_->Connect(
       session_->endpoint()->Dup(), [this](utils::Result<void>&& result) {
         if (!result) {
@@ -103,6 +116,8 @@ void Tunnel::ConnectToRemote() {
 }
 
 void Tunnel::FinishLocalNegotiation() {
+  NEDEBUGT << "Continue negotiation locally.";
+
   open_cancelable_ =
       local_data_flow_->Continue([this](utils::Result<void>&& result) {
         if (!result) {
@@ -124,6 +139,8 @@ void Tunnel::ForwardLocal() {
 
   BOOST_ASSERT(local_data_flow_->StateMachine().IsReadable());
   BOOST_ASSERT(remote_data_flow_->StateMachine().IsWritable());
+
+  NEDEBUGT << "Forward local data to remote.";
 
   local_read_cancelable_ =
       local_data_flow_->Read([this](utils::Result<utils::Buffer>&& buffer) {
@@ -167,6 +184,8 @@ void Tunnel::ForwardRemote() {
 
   BOOST_ASSERT(local_data_flow_->StateMachine().IsWritable());
   BOOST_ASSERT(remote_data_flow_->StateMachine().IsReadable());
+
+  NEDEBUGT << "Forward remote data to local.";
 
   remote_read_cancelable_ =
       remote_data_flow_->Read([this](utils::Result<utils::Buffer>&& buffer) {
@@ -213,7 +232,10 @@ void Tunnel::CheckTunnelStatus() {
   }
 }
 
-void Tunnel::ReleaseTunnel() { tunnel_manager_->NotifyClosed(this); }
+void Tunnel::ReleaseTunnel() {
+  NEDEBUGT << "Closing the tunnel.";
+
+  tunnel_manager_->NotifyClosed(this); }
 
 void Tunnel::ResetTimer() { timeout_timer_.Wait(TIMEOUT_INTERVAL); }
 

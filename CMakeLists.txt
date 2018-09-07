@@ -92,6 +92,7 @@ target_sources(nekit PRIVATE
   src/utils/buffer.cc
   src/utils/endpoint.cc
   src/utils/stream_reader.cc
+  src/utils/track_id_generator.cc
   src/data_flow/socks5_server_data_flow.cc
   src/data_flow/http_server_data_flow.cc
   src/data_flow/http_data_flow.cc

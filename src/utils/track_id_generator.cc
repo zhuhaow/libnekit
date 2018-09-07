@@ -20,24 +20,27 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
+#include "nekit/utils/track_id_generator.h"
 
-#include "data_flow_interface.h"
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_int_distribution.hpp>
 
 namespace nekit {
-namespace data_flow {
-class LocalDataFlowInterface : virtual public DataFlowInterface {
- public:
-  virtual ~LocalDataFlowInterface() = default;
+namespace utils {
+std::string TrackIdGenerator::Generate() {
+  std::string chars(
+      "abcdefghijklmnopqrstuvwxyz"
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+      "1234567890");
 
-  HEDLEY_WARN_UNUSED_RESULT virtual utils::Cancelable Open(EventHandler) = 0;
+  boost::random::mt19937 gen;
+  boost::random::uniform_int_distribution<> index_dist(0, chars.size() - 1);
 
-  HEDLEY_WARN_UNUSED_RESULT virtual utils::Cancelable Continue(
-      EventHandler) = 0;
-
-  virtual LocalDataFlowInterface* NextLocalHop() const {
-    return dynamic_cast<LocalDataFlowInterface*>(NextHop());
+  std::string output(8, 0);
+  for (int i = 0; i < 8; ++i) {
+    output[i] = chars[index_dist(gen)];
   }
-};
-}  // namespace data_flow
+  return output;
+}
+}  // namespace utils
 }  // namespace nekit

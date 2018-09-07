@@ -25,16 +25,22 @@
 
 #pragma once
 
+#include <boost/log/utility/manipulators/add_value.hpp>
+
+#include "../config.h"
 #include "logger.h"
 
 #define NELOGGER nekit::utils::default_logger()
 #define NECHANNEL "Default"
 
 #define NELOG(NELEVEL) NELOG_INTERNAL(NELOGGER, NECHANNEL, NELEVEL)
+#define NELOGT(NELEVEL)                                                  \
+  NELOG_INTERNAL(NELOGGER, NECHANNEL, NELEVEL) << boost::log::add_value( \
+      NEKIT_BOOST_LOG_TRACK_ID_ATTR_NAME, this->GetTrackId())
 
 class NullLogger {
  public:
-  NullLogger(){};
+  NullLogger() {}
 
   template <typename Val>
   NullLogger& operator<<(const Val&) {
@@ -51,6 +57,13 @@ class NullLogger {
 #define NEWARN NELOG(nekit::utils::LogLevel::Warning)
 #define NEERROR NELOG(nekit::utils::LogLevel::Error)
 #define NEFATAL NELOG(nekit::utils::LogLevel::Fatal)
+
+#define NETRACET NELOGT(nekit::utils::LogLevel::Trace)
+#define NEDEBUGT NELOGT(nekit::utils::LogLevel::Debug)
+#define NEINFOT NELOGT(nekit::utils::LogLevel::Info)
+#define NEWARNT NELOGT(nekit::utils::LogLevel::Warning)
+#define NEERRORT NELOGT(nekit::utils::LogLevel::Error)
+#define NEFATALT NELOGT(nekit::utils::LogLevel::Fatal)
 
 #define NELOG_INTERNAL(NELOGGER_, NECHANNEL_, NELEVEL_) \
   BOOST_LOG_CHANNEL_SEV(NELOGGER_, NECHANNEL_, NELEVEL_)

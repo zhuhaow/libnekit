@@ -22,22 +22,13 @@
 
 #pragma once
 
-#include "data_flow_interface.h"
+#include <string>
 
 namespace nekit {
-namespace data_flow {
-class LocalDataFlowInterface : virtual public DataFlowInterface {
+namespace utils {
+class TrackIdGenerator {
  public:
-  virtual ~LocalDataFlowInterface() = default;
-
-  HEDLEY_WARN_UNUSED_RESULT virtual utils::Cancelable Open(EventHandler) = 0;
-
-  HEDLEY_WARN_UNUSED_RESULT virtual utils::Cancelable Continue(
-      EventHandler) = 0;
-
-  virtual LocalDataFlowInterface* NextLocalHop() const {
-    return dynamic_cast<LocalDataFlowInterface*>(NextHop());
-  }
+  static std::string Generate();
 };
-}  // namespace data_flow
+}  // namespace utils
 }  // namespace nekit

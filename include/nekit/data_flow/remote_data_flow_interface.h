@@ -26,7 +26,7 @@
 
 namespace nekit {
 namespace data_flow {
-class RemoteDataFlowInterface : public DataFlowInterface {
+class RemoteDataFlowInterface : virtual public DataFlowInterface {
  public:
   virtual ~RemoteDataFlowInterface() = default;
 
@@ -34,7 +34,7 @@ class RemoteDataFlowInterface : public DataFlowInterface {
       std::shared_ptr<utils::Endpoint>, EventHandler) = 0;
 
   virtual RemoteDataFlowInterface* NextRemoteHop() const {
-    return static_cast<RemoteDataFlowInterface*>(NextHop());
+    return dynamic_cast<RemoteDataFlowInterface*>(NextHop());
   }
 
   virtual std::shared_ptr<utils::Endpoint> ConnectingTo() = 0;

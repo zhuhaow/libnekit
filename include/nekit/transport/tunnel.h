@@ -34,13 +34,16 @@
 #include "../utils/cancelable.h"
 #include "../utils/session.h"
 #include "../utils/timer.h"
+#include "../utils/trackable.h"
 
 namespace nekit {
 namespace transport {
 
 class TunnelManager;
 
-class Tunnel final : public utils::AsyncInterface, private boost::noncopyable {
+class Tunnel final : public utils::AsyncInterface,
+                     public utils::Trackable,
+                     private boost::noncopyable {
  public:
   Tunnel(std::unique_ptr<data_flow::LocalDataFlowInterface>&& local_data_flow,
          rule::RuleManager* rule_manager);

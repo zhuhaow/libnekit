@@ -22,22 +22,25 @@
 
 #pragma once
 
-#include "data_flow_interface.h"
+#include <string>
+
+#include "track_id_generator.h"
 
 namespace nekit {
-namespace data_flow {
-class LocalDataFlowInterface : virtual public DataFlowInterface {
+namespace utils {
+class Trackable {
  public:
-  virtual ~LocalDataFlowInterface() = default;
+  Trackable() = default;
 
-  HEDLEY_WARN_UNUSED_RESULT virtual utils::Cancelable Open(EventHandler) = 0;
+  const std::string& GetTrackId() const { return id_; }
 
-  HEDLEY_WARN_UNUSED_RESULT virtual utils::Cancelable Continue(
-      EventHandler) = 0;
+  void SetTrackId(const std::string& id) { id_ = id; }
 
-  virtual LocalDataFlowInterface* NextLocalHop() const {
-    return dynamic_cast<LocalDataFlowInterface*>(NextHop());
-  }
+  void CreateTrackId() { id_ = TrackIdGenerator::Generate(); }
+
+ private:
+  std::string id_;
 };
-}  // namespace data_flow
+
+}  // namespace utils
 }  // namespace nekit

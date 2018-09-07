@@ -26,10 +26,6 @@
 #define NEKIT_TCP_SOCKET_READ_SIZE 8192
 #endif
 
-#ifndef NEKIT_TUNNEL_MAX_BUFFER_SIZE
-#define NEKIT_TUNNEL_MAX_BUFFER_SIZE (NEKIT_TUNNEL_BUFFER_SIZE * 2)
-#endif
-
 // There is no good choice there, the server defaults (e.g., Apache, nginx) are
 // usually quite large and only define the maximum length of each line instead
 // of the whole header. In Node.js it is defined as 80 * 1024. Enlarge it if the
@@ -52,4 +48,12 @@
 
 #ifndef NEKIT_TLS_READ_SIZE
 #define NEKIT_TLS_READ_SIZE 8192
+#endif
+
+#ifndef NEKIT_BOOST_LOG_TRACK_ID_ATTR_NAME
+#define NEKIT_BOOST_LOG_TRACK_ID_ATTR_NAME "TrackId"
+#endif
+
+#ifndef NEKIT_BOOST_LOG_INSTANCE_ATTR_NAME
+#define NEKIT_BOOST_LOG_INSTANCE_ATTR_NAME "Instance"
 #endif

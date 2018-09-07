@@ -25,14 +25,15 @@
 #include <functional>
 #include <memory>
 
-#include "../hedley/hedley.h"
 #include <boost/noncopyable.hpp>
+#include "../hedley/hedley.h"
 
 #include "../utils/async_interface.h"
 #include "../utils/buffer.h"
 #include "../utils/cancelable.h"
 #include "../utils/result.h"
 #include "../utils/session.h"
+#include "../utils/trackable.h"
 #include "flow_state_machine.h"
 
 namespace nekit {
@@ -41,6 +42,7 @@ namespace data_flow {
 enum class DataType { Stream, Packet };
 
 class DataFlowInterface : public utils::AsyncInterface,
+                          public utils::Trackable,
                           // This is probably not necessary, but we enforce it
                           // here to avoid any potential error.
                           private boost::noncopyable {

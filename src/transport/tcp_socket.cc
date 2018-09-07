@@ -105,6 +105,7 @@ utils::Cancelable TcpSocket::Read(DataEventHandler handler) {
       0, nullptr);
 
   state_machine_.ReadBegin();
+
   socket_.async_read_some(
       *read_buffer_,
       [this, buffer{std::move(buffer)}, buffer_wrapper{std::move(read_buffer_)},
@@ -122,9 +123,9 @@ utils::Cancelable TcpSocket::Read(DataEventHandler handler) {
 
           if (utils::CommonErrorCategory::IsEof(error)) {
             state_machine_.ReadClosed();
-            NEDEBUG << "Socket got EOF.";
+            NEDEBUGT << "Socket got EOF.";
           } else {
-            NEERROR << "Reading from socket failed due to " << error << ".";
+            NEERRORT << "Reading from socket failed due to " << error << ".";
             state_machine_.Errored();
             // report and connect cancelable should not be in use.
             write_cancelable_.Cancel();
