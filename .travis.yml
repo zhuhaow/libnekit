@@ -124,7 +124,7 @@ install:
 
 before_script:
   - scripts/travis_check_deps.sh
-  - eval "pipenv run conan install .. $CONAN_CONFIG"
+  - eval "pipenv run conan install . -if build/ $CONAN_CONFIG"
 
 script:
   - set -e
