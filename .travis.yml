@@ -119,12 +119,12 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pip install --user pipenv urllib3[secure]; fi
 
 install:
-  - pipenv install --pre
+  - pipenv install --deploy
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then ./scripts/install_cmake.sh; export PATH=`pwd`/deps/cmake/bin:$PATH; cmake --version; fi
 
 before_script:
   - scripts/travis_check_deps.sh
-  - eval "conan install .. $CONAN_CONFIG"
+  - eval "pipenv run conan install .. $CONAN_CONFIG"
 
 script:
   - set -e
