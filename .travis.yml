@@ -70,7 +70,7 @@ matrix:
       osx_image: xcode8.3
 
     - os: linux
-      env: PLATFORM=linux COVERAGE=ON GCC_VERSION=5 MATRIX_EVAL="CC=gcc-${GCC_VERSION} && CXX=g++-${GCC_VERSION}" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output" CONAN_CONFIG="-s cppstd=14 --build=missing"
+      env: PLATFORM=linux COVERAGE=ON GCC_VERSION=5 MATRIX_EVAL="CC=gcc-${GCC_VERSION} && CXX=g++-${GCC_VERSION}" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output" CONAN_CONFIG="-s cppstd=14 compiler.libcxx=libstdc++11 --build=missing"
       addons:
         <<: *linux_addons_default
         apt:
@@ -81,7 +81,7 @@ matrix:
             - g++-5
 
     - os: linux
-      env: PLATFORM=linux COVERAGE=ON GCC_VERSION=6 MATRIX_EVAL="CC=gcc-${GCC_VERSION} && CXX=g++-${GCC_VERSION}" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output" CONAN_CONFIG="-s cppstd=14 --build=missing"
+      env: PLATFORM=linux COVERAGE=ON GCC_VERSION=6 MATRIX_EVAL="CC=gcc-${GCC_VERSION} && CXX=g++-${GCC_VERSION}" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output" CONAN_CONFIG="-s cppstd=14 compiler.libcxx=libstdc++11 --build=missing"
       addons:
         <<: *linux_addons_default
         apt:
@@ -92,7 +92,7 @@ matrix:
             - g++-6
 
     - os: linux
-      env: PLATFORM=linux COVERAGE=ON GCC_VERSION=7 MATRIX_EVAL="CC=gcc-${GCC_VERSION} && CXX=g++-${GCC_VERSION}" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output" CONAN_CONFIG="-s cppstd=14 --build=missing"
+      env: PLATFORM=linux COVERAGE=ON GCC_VERSION=7 MATRIX_EVAL="CC=gcc-${GCC_VERSION} && CXX=g++-${GCC_VERSION}" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output" CONAN_CONFIG="-s cppstd=14 compiler.libcxx=libstdc++11 --build=missing"
       addons:
         <<: *linux_addons_default
         apt:
@@ -103,7 +103,7 @@ matrix:
             - g++-7
 
     - os: linux
-      env: PLATFORM=linux COVERAGE=ON GCC_VERSION=8 MATRIX_EVAL="CC=gcc-${GCC_VERSION} && CXX=g++-${GCC_VERSION}" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output" CONAN_CONFIG="-s cppstd=14 --build=missing"
+      env: PLATFORM=linux COVERAGE=ON GCC_VERSION=8 MATRIX_EVAL="CC=gcc-${GCC_VERSION} && CXX=g++-${GCC_VERSION}" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output" CONAN_CONFIG="-s cppstd=14 compiler.libcxx=libstdc++11 --build=missing"
       addons:
         <<: *linux_addons_default
         apt:
