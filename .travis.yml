@@ -124,6 +124,8 @@ install:
 
 before_script:
   - scripts/travis_check_deps.sh
+  - pipenv run conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan
+  - pipenv run conan remote add libnekit https://api.bintray.com/conan/zhuhaow/libnekit
   - eval "pipenv run conan install . -if build/ $CONAN_CONFIG"
 
 script:

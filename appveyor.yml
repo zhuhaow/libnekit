@@ -22,6 +22,8 @@ before_build:
   - if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2015" call "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x64
   - if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2015" call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86_amd64
   - pipenv run scripts/build_deps.py windows
+  - pipenv run conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan
+  - pipenv run conan remote add libnekit https://api.bintray.com/conan/zhuhaow/libnekit
   - pipenv run conan install . -s cppstd=14 --build=missing
 
 build_script:
