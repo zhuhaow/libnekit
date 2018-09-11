@@ -11,6 +11,7 @@ cache:
   directories:
     - deps
     - '$HOME/.sonar/cache'
+    - '$HOME/.conan'
 
 linux_addons_default: &linux_addons_default
   coverity_scan:
@@ -29,12 +30,12 @@ linux_addons_default: &linux_addons_default
 
 osx_default: &osx_default
   os: osx
-  env: PLATFORM=mac COVERAGE=ON
+  env: PLATFORM=mac COVERAGE=ON CONAN_CONFIG="-s cppstd=14 --build=missing"
 
 ios_default: &ios_default
   os: osx
   language: objective-c
-  env: PLATFORM=ios
+  env: PLATFORM=ios CONAN_CONFIG="-s cppstd=14 --build=missing --profile=$TRAVIS_BUILD_DIR/conan/ios_profile"
 
 matrix:
   include:
@@ -69,7 +70,7 @@ matrix:
       osx_image: xcode8.3
 
     - os: linux
-      env: PLATFORM=linux COVERAGE=ON GCC_VERSION=5 MATRIX_EVAL="CC=gcc-${GCC_VERSION} && CXX=g++-${GCC_VERSION}" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output"
+      env: PLATFORM=linux COVERAGE=ON GCC_VERSION=5 MATRIX_EVAL="CC=gcc-${GCC_VERSION} && CXX=g++-${GCC_VERSION}" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output" CONAN_CONFIG="-s cppstd=14 --build=missing"
       addons:
         <<: *linux_addons_default
         apt:
@@ -80,7 +81,7 @@ matrix:
             - g++-5
 
     - os: linux
-      env: PLATFORM=linux COVERAGE=ON GCC_VERSION=6 MATRIX_EVAL="CC=gcc-${GCC_VERSION} && CXX=g++-${GCC_VERSION}" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output"
+      env: PLATFORM=linux COVERAGE=ON GCC_VERSION=6 MATRIX_EVAL="CC=gcc-${GCC_VERSION} && CXX=g++-${GCC_VERSION}" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output" CONAN_CONFIG="-s cppstd=14 --build=missing"
       addons:
         <<: *linux_addons_default
         apt:
@@ -91,7 +92,7 @@ matrix:
             - g++-6
 
     - os: linux
-      env: PLATFORM=linux COVERAGE=ON GCC_VERSION=7 MATRIX_EVAL="CC=gcc-${GCC_VERSION} && CXX=g++-${GCC_VERSION}" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output"
+      env: PLATFORM=linux COVERAGE=ON GCC_VERSION=7 MATRIX_EVAL="CC=gcc-${GCC_VERSION} && CXX=g++-${GCC_VERSION}" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output" CONAN_CONFIG="-s cppstd=14 --build=missing"
       addons:
         <<: *linux_addons_default
         apt:
@@ -102,7 +103,7 @@ matrix:
             - g++-7
 
     - os: linux
-      env: PLATFORM=linux COVERAGE=ON GCC_VERSION=8 MATRIX_EVAL="CC=gcc-${GCC_VERSION} && CXX=g++-${GCC_VERSION}" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output"
+      env: PLATFORM=linux COVERAGE=ON GCC_VERSION=8 MATRIX_EVAL="CC=gcc-${GCC_VERSION} && CXX=g++-${GCC_VERSION}" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output" CONAN_CONFIG="-s cppstd=14 --build=missing"
       addons:
         <<: *linux_addons_default
         apt:
@@ -123,6 +124,7 @@ install:
 
 before_script:
   - scripts/travis_check_deps.sh
+  - eval "conan install .. $CONAN_CONFIG"
 
 script:
   - set -e

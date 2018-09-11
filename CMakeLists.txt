@@ -107,29 +107,8 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/contrib" AND IS_DIRECTORY "${CMAKE_CURREN
   add_subdirectory("contrib")
 endif()
 
-find_library(BOOST boost NO_SYSTEM_ENVIRONMENT_PATH CMAKE_FIND_ROOT_PATH_BOTH)
-if(NOT BOOST)
-  message(FATAL_ERROR "Boost not found. Build dependency first.")
-endif()
-set(LIBS ${LIBS} ${BOOST})
-
-find_library(OPENSSL_CRYPTO crypto NO_SYSTEM_ENVIRONMENT_PATH CMAKE_FIND_ROOT_PATH_BOTH)
-if(NOT OPENSSL_CRYPTO)
-  message(FATAL_ERROR "OpenSSL not found. Build dependency first.")
-endif()
-set(LIBS ${LIBS} ${OPENSSL_CRYPTO})
-
-find_library(OPENSSL_SSL ssl NO_SYSTEM_ENVIRONMENT_PATH CMAKE_FIND_ROOT_PATH_BOTH)
-if(NOT OPENSSL_SSL)
-  message(FATAL_ERROR "OpenSSL not found. Build dependency first.")
-endif()
-set(LIBS ${LIBS} ${OPENSSL_SSL})
-
-find_library(SODIUM sodium NO_SYSTEM_ENVIRONMENT_PATH CMAKE_FIND_ROOT_PATH_BOTH)
-if(NOT SODIUM)
-  message(FATAL_ERROR "libsodium not found. Build dependency first.")
-endif()
-set(LIBS ${LIBS} ${SODIUM})
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup(NO_OUTPUT_DIRS)
 
 find_library(MAXMINDDB maxminddb NO_SYSTEM_ENVIRONMENT_PATH CMAKE_FIND_ROOT_PATH_BOTH)
 if(NOT MAXMINDDB)
@@ -137,6 +116,7 @@ if(NOT MAXMINDDB)
 endif()
 set(LIBS ${LIBS} ${MAXMINDDB})
 
+set(LIBS ${CONAN_LIBS} ${LIBS})
 target_link_libraries(nekit ${LIBS})
 
 if (NOT IOS AND NOT ANDROID)
@@ -147,6 +127,3 @@ if (NOT IOS AND NOT ANDROID)
   endif()
 endif()
 
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/app" AND IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/app" AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/app/CMakeLists.txt")
-  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/app")
-endif()

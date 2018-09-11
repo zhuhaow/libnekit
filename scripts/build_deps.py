@@ -43,24 +43,6 @@ LIBRARIES = [
     ("zhuhaow/libmaxminddb", "master", "libmaxminddb"),
 ]
 
-OPENSSL_IOS = ("x2on/OpenSSL-for-iPhone", "master", "openssl")
-OPENSSL_LIB = ("openssl/openssl", "OpenSSL_1_1_0h", "openssl")
-
-LIBSODIUM_WIN_BINARY = ("https://download.libsodium.org/libsodium/releases/libsodium-1.0.16-msvc.zip",
-                        "libsodium",
-                        "")
-LIBSODIUM_REPO = ("jedisct1/libsodium", "1.0.16", "libsodium")
-
-NASM_WIN_BINARY = ("https://www.nasm.us/pub/nasm/releasebuilds/2.13.03/win64/nasm-2.13.03-win64.zip",
-                   "nasm",
-                   "nasm-2.13.03")
-
-DOWNLOAD_LIBRARIES = [(
-    "https://dl.bintray.com/boostorg/release/1.67.0/source/boost_1_67_0.tar.gz",
-    "boost",
-    "boost_1_67_0",
-)]
-
 source_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 install_dir = os.path.abspath(os.path.join(source_dir, "deps"))
 
@@ -222,166 +204,6 @@ def cmake_compile(source_dir,
             cmake["--build", tempd, "--target", "install", "--config", "Release"] & FG
 
 
-def build_boost(boost_dir, install_prefix, target_platform):
-    boost_build_module = "log,system,thread"
-    boost_module = (
-        "archive,core,boost/asio.hpp,system,log,phoenix,endian,range,assert,pool,thread,algorithm,random"
-    )
-
-    if Platform.current_platform() != Platform.Windows:
-        bootstrapscript = "bootstrap.sh"
-    else:
-        bootstrapscript = "bootstrap.bat"
-
-    if Platform.current_platform() in [Platform.OSX, Platform.Linux, Platform.Windows]:
-        with local.cwd(boost_dir):
-            local.env.path.insert(0, local.cwd)
-            # build bcp first
-            local[bootstrapscript] & FG
-            local["b2"]["-j4", "tools/bcp"] & FG
-            local.env.path.insert(0, local.cwd / "dist" / "bin")
-            # copy headers
-            args = boost_module.split(",")
-            args.append(os.path.join(install_prefix, "include"))
-            ensure_path_exist(os.path.join(install_prefix, "include"))
-            local["bcp"][args] & FG
-
-    if target_platform == Platform.iOS:
-        # The script will convert the space delimiter back to comma.
-        with local.env(
-                BOOST_SRC=boost_dir,
-                BOOST_LIBS=boost_build_module.replace(",", " "),
-                OUTPUT_DIR=install_prefix,
-        ):
-            with local.cwd(os.path.join(source_dir, "scripts")):
-                local[local.cwd / "build_boost_ios.sh"] & FG
-
-    elif target_platform in [Platform.OSX, Platform.Linux, Platform.Windows]:
-        with local.cwd(boost_dir):
-            with temp_dir() as tempd:
-                local.env.path.insert(0, local.cwd)
-
-                local[bootstrapscript]["--with-libraries={}".format(
-                        boost_build_module)] & FG
-
-                args = [
-                    "--stagedir={}".format(os.path.join(tempd, "boost_tmp")),
-                    "link=static",
-                    "variant=release",
-                    "address-model=64",
-                    "threading=multi"
-                ]
-                if target_platform == Platform.OSX:
-                    args.extend([
-                        "cxxflags=-isysroot {} -mmacosx-version-min=10.10 -fvisibility=hidden -fvisibility-inlines-hidden -fembed-bitcode".
-                        format(mac_sdk_path()),
-                        "linkflags=-isysroot {} -mmacosx-version-min=10.10 -fvisibility=hidden -fvisibility-inlines-hidden -fembed-bitcode".
-                        format(mac_sdk_path()),
-                    ])
-                args.extend(["-j4", "stage"])
-
-                local["b2"][args] & FG
-
-                # Linking all modules into one binary file
-                if target_platform in [Platform.OSX, Platform.Linux]:
-                    with local.cwd(os.path.join(tempd, "boost_tmp", "lib")):
-                        lib_dir = local.path(
-                            os.path.join(tempd, "boost_tmp", "lib"))
-                        libs = lib_dir // "libboost_*.a"
-                        for lib in libs:
-                            local["ar"]["-x", lib] & FG
-                        object_files = lib_dir // "*.o"
-                        for ofile in object_files:
-                            local["ar"]["crus", "libboost.a", ofile] & FG
-
-                        lib_install_dir = os.path.join(install_prefix, "lib")
-                        ensure_path_exist(lib_install_dir)
-                        shutil.copy("libboost.a", lib_install_dir)
-                else:
-                    with local.cwd(os.path.join(tempd, "boost_tmp", "lib")):
-                        lib_dir = local.path(
-                            os.path.join(tempd, "boost_tmp", "lib"))
-                        libs = lib_dir // "libboost_*.lib"
-                        first = True
-                        for lib in libs:
-                            if first:
-                                first = False
-                                local["LIB"]["/OUT:libboost.lib", lib] & FG
-                            else:
-                                local["LIB"]["/OUT:libboost.lib", "libboost.lib", lib] & FG
-
-
-                        lib_install_dir = os.path.join(install_prefix, "lib")
-                        ensure_path_exist(lib_install_dir)
-                        shutil.copy("libboost.lib", lib_install_dir)
-
-
-def build_openssl(openssl_dir, install_prefix, target_platform, nasm_dir=""):
-    if target_platform == Platform.iOS:
-        with local.cwd(openssl_dir):
-            local[local.cwd / "build-libssl.sh"][
-                "--version=1.1.0f", "--verbose-on-error",
-                "--ec-nistp-64-gcc-128",
-                "--targets=ios64-cross-arm64",
-            ] & FG
-            copytree("lib", os.path.join(install_prefix, "lib"))
-            copytree("include", os.path.join(install_prefix, "include"))
-
-    elif target_platform in [Platform.OSX]:
-        with local.cwd(openssl_dir):
-            local[local.cwd /
-                  "Configure"]["darwin64-x86_64-cc", "no-shared",
-                               "enable-ec_nistp_64_gcc_128", "no-comp",
-                               "--prefix={}".format(install_prefix), ] & FG
-            local["sed"][
-                "-ie",
-                "s!^CFLAGS=!CFLAGS=-isysroot {} -mmacosx-version-min=10.10 !".
-                format(mac_sdk_path()), "Makefile",
-            ] & FG
-            local["make"]["install_sw"] & FG
-
-    elif target_platform in [Platform.Linux]:
-        with local.cwd(openssl_dir):
-            local[local.cwd /
-                  "Configure"]["linux-x86_64", "no-shared",
-                               "enable-ec_nistp_64_gcc_128", "no-comp",
-                               "--prefix={}".format(install_prefix), ] & FG
-            local["make"]["install_sw"] & FG
-
-    elif target_platform in [Platform.Windows]:
-        with local.cwd(openssl_dir):
-            local.env.path.insert(0, nasm_dir)
-            local["perl"]["Configure", "VC-WIN64A", "--prefix={}".format(install_prefix), ] & FG
-            local["nmake"]["install_sw"] & FG
-
-
-def build_libsodium(libsodium_dir, install_prefix, target_platform):
-    if target_platform == Platform.Windows:
-        with local.cwd(libsodium_dir):
-            shutil.copy("include/sodium.h", os.path.join(install_prefix, "include"))
-            shutil.copytree("include/sodium", os.path.join(install_prefix, "include", "sodium"))
-            shutil.copy("x64/Release/v141/static/libsodium.lib", os.path.join(install_prefix, "lib/"))
-    else:
-        with local.cwd(libsodium_dir):
-            with local.env(PREFIX=install_prefix):
-                local["autoreconf"]["-i"] & FG
-
-                if target_platform == Platform.iOS:
-                    local["sed"]["-i", "''", "s/^export PREFIX.*$//g", "dist-build/ios.sh"] & FG
-                    local["sed"]["-i", "''", "s/^rm -fr --.*$//g", "dist-build/ios.sh"] & FG
-                    local["sed"]["-i", "''", "s/\$IOS32_PREFIX\/include/\$IOS64_PREFIX\/include/g", "dist-build/ios.sh"] & FG
-                    (local["awk"]["BEGIN{f=1};/Build for the simulator/{f=0};/Build for iOS/{f=1}; /32-bit iOS/{f=0};/64-bit iOS/{f=1};/IOS32/{next};/SIMULATOR/{next};f"]["dist-build/ios.sh"] | local["sponge"]["dist-build/ios.sh"])()
-                    local["cat"]["dist-build/ios.sh"] & FG
-                    local["dist-build/ios.sh"] & FG
-                elif target_platform == Platform.OSX:
-                    local["sed"]["-i", "''", "s/^export PREFIX.*$//g", "dist-build/osx.sh"] & FG
-                    local["cat"]["dist-build/osx.sh"] & FG
-                    local["dist-build/osx.sh"] & FG
-                elif target_platform == Platform.Linux:
-                    local["./configure"]["--prefix={}".format(install_prefix)] & FG
-                    local["make"] & FG
-                    local["make"]["install"] & FG
-
 
 def main():
     logging.getLogger().setLevel(logging.DEBUG)
@@ -403,17 +225,6 @@ def main():
     ), "Can't compile dependency for target platform on current platform."
 
     with temp_dir() as tempd:
-        if target_platform == Platform.iOS:
-            LIBRARIES.append(OPENSSL_IOS)
-        else:
-            LIBRARIES.append(OPENSSL_LIB)
-
-        if target_platform == Platform.Windows:
-            DOWNLOAD_LIBRARIES.append(LIBSODIUM_WIN_BINARY)
-            DOWNLOAD_LIBRARIES.append(NASM_WIN_BINARY)
-        else:
-            LIBRARIES.append(LIBSODIUM_REPO)
-
         for library in LIBRARIES:
             download_repo(
                 tempd,
@@ -421,9 +232,6 @@ def main():
                 library[2],
                 library[1],
             )
-
-        for library in DOWNLOAD_LIBRARIES:
-            download_library(tempd, library[0], library[1], library[2])
 
         # Remove built binaries and headers.
         shutil.rmtree(install_path(target_platform), True)
@@ -434,24 +242,6 @@ def main():
             install_path(target_platform),
             target_platform,
         )
-
-        build_openssl(
-            os.path.join(tempd, "openssl"),
-            install_path(target_platform),
-            target_platform,
-            os.path.join(tempd, "nasm") if target_platform == Platform.Windows else ""
-        )
-
-        build_libsodium(
-            os.path.join(tempd, "libsodium"),
-            install_path(target_platform),
-            target_platform,
-        )
-
-        # Compile boost
-        build_boost(
-            os.path.join(tempd, "boost"), install_path(target_platform),
-            target_platform)
 
         if target_platform not in [Platform.iOS, Platform.Android]:
             # Compile GoogleTest
