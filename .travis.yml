@@ -119,7 +119,7 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pip install --user pipenv urllib3[secure]; fi
 
 install:
-  - pipenv install
+  - pipenv install --pre
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then ./scripts/install_cmake.sh; export PATH=`pwd`/deps/cmake/bin:$PATH; cmake --version; fi
 
 before_script:
