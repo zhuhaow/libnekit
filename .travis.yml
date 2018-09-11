@@ -31,6 +31,7 @@ linux_addons_default: &linux_addons_default
 osx_default: &osx_default
   os: osx
   env: PLATFORM=mac COVERAGE=ON CONAN_CONFIG="-s cppstd=14 --build=missing"
+  language: objective-c
 
 ios_default: &ios_default
   os: osx
