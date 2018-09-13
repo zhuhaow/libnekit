@@ -30,55 +30,60 @@ using namespace nekit::utils;
 using namespace boost::asio::ip;
 
 TEST(SubnetUnitTest, Ipv4AddressTest) {
-  Subnet subnet{address::from_string("127.0.0.1"), 32};
-  ASSERT_TRUE(subnet.Contains(address::from_string("127.0.0.1")));
-  ASSERT_FALSE(subnet.Contains(address::from_string("127.0.0.0")));
-  ASSERT_FALSE(subnet.Contains(address::from_string("127.0.0.2")));
-  ASSERT_FALSE(subnet.Contains(address::from_string("fe80::1")));
+  boost::system::error_code ec;
+  Subnet subnet{address::from_string("127.0.0.1", ec), 32};
+  ASSERT_TRUE(subnet.Contains(address::from_string("127.0.0.1", ec)));
+  ASSERT_FALSE(subnet.Contains(address::from_string("127.0.0.0", ec)));
+  ASSERT_FALSE(subnet.Contains(address::from_string("127.0.0.2", ec)));
+  ASSERT_FALSE(subnet.Contains(address::from_string("fe80::1", ec)));
 }
 
 TEST(SubnetUnitTest, Ipv4SubnetTest) {
-  Subnet subnet{address::from_string("127.0.0.1"), 20};
-  ASSERT_TRUE(subnet.Contains(address::from_string("127.0.0.0")));
-  ASSERT_TRUE(subnet.Contains(address::from_string("127.0.0.1")));
-  ASSERT_TRUE(subnet.Contains(address::from_string("127.0.0.2")));
-  ASSERT_TRUE(subnet.Contains(address::from_string("127.0.1.1")));
-  ASSERT_TRUE(subnet.Contains(address::from_string("127.0.15.1")));
-  ASSERT_FALSE(subnet.Contains(address::from_string("127.0.16.1")));
-  ASSERT_FALSE(subnet.Contains(address::from_string("127.1.0.1")));
-  ASSERT_FALSE(subnet.Contains(address::from_string("fe80::1")));
+  boost::system::error_code ec;
+  Subnet subnet{address::from_string("127.0.0.1", ec), 20};
+  ASSERT_TRUE(subnet.Contains(address::from_string("127.0.0.0", ec)));
+  ASSERT_TRUE(subnet.Contains(address::from_string("127.0.0.1", ec)));
+  ASSERT_TRUE(subnet.Contains(address::from_string("127.0.0.2", ec)));
+  ASSERT_TRUE(subnet.Contains(address::from_string("127.0.1.1", ec)));
+  ASSERT_TRUE(subnet.Contains(address::from_string("127.0.15.1", ec)));
+  ASSERT_FALSE(subnet.Contains(address::from_string("127.0.16.1", ec)));
+  ASSERT_FALSE(subnet.Contains(address::from_string("127.1.0.1", ec)));
+  ASSERT_FALSE(subnet.Contains(address::from_string("fe80::1", ec)));
 }
 
 TEST(SubnetUnitTest, Ipv6AddressTest) {
-  Subnet subnet{address::from_string("fe80::"), 128};
-  ASSERT_TRUE(subnet.Contains(address::from_string("fe80::")));
-  ASSERT_FALSE(subnet.Contains(address::from_string("fe80::1")));
-  ASSERT_FALSE(subnet.Contains(address::from_string("::")));
-  ASSERT_FALSE(subnet.Contains(address::from_string("127.0.0.0")));
+  boost::system::error_code ec;
+  Subnet subnet{address::from_string("fe80::", ec), 128};
+  ASSERT_TRUE(subnet.Contains(address::from_string("fe80::", ec)));
+  ASSERT_FALSE(subnet.Contains(address::from_string("fe80::1", ec)));
+  ASSERT_FALSE(subnet.Contains(address::from_string("::", ec)));
+  ASSERT_FALSE(subnet.Contains(address::from_string("127.0.0.0", ec)));
 }
 
 TEST(SubnetUnitTest, Ipv6SubnetTest) {
-  Subnet subnet{address::from_string("fe80::"), 60};
-  ASSERT_TRUE(subnet.Contains(address::from_string("fe80::")));
-  ASSERT_TRUE(subnet.Contains(address::from_string("fe80::1")));
+  boost::system::error_code ec;
+  Subnet subnet{address::from_string("fe80::", ec), 60};
+  ASSERT_TRUE(subnet.Contains(address::from_string("fe80::", ec)));
+  ASSERT_TRUE(subnet.Contains(address::from_string("fe80::1", ec)));
   ASSERT_TRUE(
-      subnet.Contains(address::from_string("fe80::ffff:ffff:ffff:ffff")));
+      subnet.Contains(address::from_string("fe80::ffff:ffff:ffff:ffff", ec)));
   ASSERT_TRUE(
-      subnet.Contains(address::from_string("fe80::f:ffff:ffff:ffff:ffff")));
-  ASSERT_FALSE(
-      subnet.Contains(address::from_string("fe80::1f:ffff:ffff:ffff:ffff")));
-  ASSERT_FALSE(subnet.Contains(address::from_string("127.0.0.1")));
+      subnet.Contains(address::from_string("fe80::f:ffff:ffff:ffff:ffff", ec)));
+  ASSERT_FALSE(subnet.Contains(
+      address::from_string("fe80::1f:ffff:ffff:ffff:ffff", ec)));
+  ASSERT_FALSE(subnet.Contains(address::from_string("127.0.0.1", ec)));
 }
 
 TEST(SubnetUnitTest, Ipv6AlignedSubnetTest) {
-  Subnet subnet{address::from_string("fe80::"), 64};
-  ASSERT_TRUE(subnet.Contains(address::from_string("fe80::")));
-  ASSERT_TRUE(subnet.Contains(address::from_string("fe80::1")));
+  boost::system::error_code ec;
+  Subnet subnet{address::from_string("fe80::", ec), 64};
+  ASSERT_TRUE(subnet.Contains(address::from_string("fe80::", ec)));
+  ASSERT_TRUE(subnet.Contains(address::from_string("fe80::1", ec)));
   ASSERT_TRUE(
-      subnet.Contains(address::from_string("fe80::ffff:ffff:ffff:ffff")));
+      subnet.Contains(address::from_string("fe80::ffff:ffff:ffff:ffff", ec)));
   ASSERT_FALSE(
-      subnet.Contains(address::from_string("fe80::f:ffff:ffff:ffff:ffff")));
-  ASSERT_FALSE(
-      subnet.Contains(address::from_string("fe80::1f:ffff:ffff:ffff:ffff")));
-  ASSERT_FALSE(subnet.Contains(address::from_string("127.0.0.1")));
+      subnet.Contains(address::from_string("fe80::f:ffff:ffff:ffff:ffff", ec)));
+  ASSERT_FALSE(subnet.Contains(
+      address::from_string("fe80::1f:ffff:ffff:ffff:ffff", ec)));
+  ASSERT_FALSE(subnet.Contains(address::from_string("127.0.0.1", ec)));
 }
