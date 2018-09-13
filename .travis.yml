@@ -123,8 +123,8 @@ install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then ./scripts/install_cmake.sh; export PATH=`pwd`/deps/cmake/bin:$PATH; cmake --version; fi
 
 before_script:
-  - pipenv run conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan
-  - pipenv run conan remote add libnekit https://api.bintray.com/conan/zhuhaow/libnekit
+  - pipenv run conan remote add -f bincrafters https://api.bintray.com/conan/bincrafters/public-conan
+  - pipenv run conan remote add -f libnekit https://api.bintray.com/conan/zhuhaow/libnekit
   - eval "pipenv run conan install . -if build/ $CONAN_CONFIG"
 
 script:
