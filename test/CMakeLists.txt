@@ -1,9 +1,8 @@
 find_package(Threads REQUIRED)
 
 list(APPEND CMAKE_PREFIX_PATH ${DEPENDENCY_ROOT})
-find_package(GTest REQUIRED NO_SYSTEM_ENVIRONMENT_PATH)
 
-set(LIBS GTest::gmock_main ${CMAKE_THREAD_LIBS_INIT})
+set(LIBS CONAN_PKG::gtest ${CMAKE_THREAD_LIBS_INIT})
 
 option(NE_ENABLE_MEMCHECK "Enable valgrind when running tests." ON)
 find_program(CTEST_MEMORYCHECK_COMMAND valgrind)

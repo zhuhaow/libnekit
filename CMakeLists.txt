@@ -44,17 +44,13 @@ if(COVERAGE)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -coverage")
 endif()
 
-target_compile_options(nekit PRIVATE $<$<CONFIG:DEBUG>:-g -O0>)
+target_compile_options(nekit PRIVATE $<$<CONFIG:DEBUG>:-g -O0>) 
 target_compile_options(nekit PRIVATE $<$<CONFIG:RELEASE>:-O3>)
 
 set(DEPENDENCY_ROOT "${PROJECT_SOURCE_DIR}/deps/${PLATFORM}")
 
 target_include_directories(nekit PUBLIC "include")
 target_include_directories(nekit PRIVATE "modules")
-target_include_directories(nekit SYSTEM PUBLIC "${DEPENDENCY_ROOT}/include")
-
-list(APPEND CMAKE_LIBRARY_PATH "${DEPENDENCY_ROOT}/lib")
-list(APPEND CMAKE_FIND_LIBRARY_PREFIXES "" "lib")
 
 if(WIN32)
   target_compile_definitions(nekit PUBLIC -DELPP_WINSOCK2 -DWIN32_LEAN_AND_MEAN)
@@ -108,16 +104,9 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/contrib" AND IS_DIRECTORY "${CMAKE_CURREN
 endif()
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup(NO_OUTPUT_DIRS)
+conan_basic_setup(TARGETS NO_OUTPUT_DIRS)
 
-find_library(MAXMINDDB maxminddb NO_SYSTEM_ENVIRONMENT_PATH CMAKE_FIND_ROOT_PATH_BOTH)
-if(NOT MAXMINDDB)
-  message(FATAL_ERROR "maxminddb not found. Build dependency first.")
-endif()
-set(LIBS ${LIBS} ${MAXMINDDB})
-
-set(LIBS ${CONAN_LIBS} ${LIBS})
-target_link_libraries(nekit ${LIBS})
+target_link_libraries(nekit CONAN_PKG::libmaxminddb CONAN_PKG::libsodium CONAN_PKG::OpenSSL CONAN_PKG::boost)
 
 if (NOT IOS AND NOT ANDROID)
   enable_testing()
