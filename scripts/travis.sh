@@ -15,7 +15,8 @@ set +e
 eval "pipenv run conan install . -u -if build/ $CONAN_CONFIG"
             && compile
             || eval "pipenv run conan install . -u -if build/ $CONAN_CONFIG --build=\"*\""
-            && compile || exit 1
+            && compile
+            || exit 1
 set -e
 
 # Test on iOS is still unsupported.
