@@ -113,11 +113,8 @@ install:
 before_script:
   - pipenv run conan remote add -f bincrafters https://api.bintray.com/conan/bincrafters/public-conan
   - pipenv run conan remote add -f libnekit https://api.bintray.com/conan/zhuhaow/libnekit
-  # Try to build from source if prebuild binary fails to build since the prebuild package may use newer ld which is supported on current platform
-  - eval "pipenv run conan install . -u -if build/ $CONAN_CONFIG || pipenv run conan install . -u -if build/ $CONAN_CONFIG --build=\"*\""
 
 script:
-  - set -e
   - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then scripts/travis.sh; fi
 
 after_success:
