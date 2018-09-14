@@ -12,11 +12,11 @@ compile() {
 
 set +e
 # Try to build from source if prebuild binary fails to build since the prebuild package may use newer ld which is supported on current platform
-eval "pipenv run conan install . -u -if build/ $CONAN_CONFIG"
-            && compile
-            || eval "pipenv run conan install . -u -if build/ $CONAN_CONFIG --build=\"*\""
-            && compile
-            || exit 1
+eval "pipenv run conan install . -u -if build/ $CONAN_CONFIG" \
+    && compile \
+    || eval "pipenv run conan install . -u -if build/ $CONAN_CONFIG --build=\"*\"" \
+    && compile \
+    || exit 1
 set -e
 
 # Test on iOS is still unsupported.
