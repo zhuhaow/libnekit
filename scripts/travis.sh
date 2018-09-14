@@ -7,7 +7,14 @@ set -euo pipefail
 
 compile() {
     cmake -H. -Bbuild -DPLATFORM=$PLATFORM -DCOVERAGE=$COVERAGE -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${PLATFORM}.cmake
-    return $((eval "$COMPILE_PREFIX cmake --build build"))
+    local comm
+    comm="$COMPILE_PREFIX cmake --build build"
+    # remove leading whitespace characters
+    comm="${comm#"${comm%%[![:space:]]*}"}"
+    # remove trailing whitespace characters
+    comm="${comm%"${comm##*[![:space:]]}"}" 
+    eval "$comm"
+    return $?
 }
 
 set +e
