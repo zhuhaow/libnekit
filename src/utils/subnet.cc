@@ -87,8 +87,8 @@ bool Subnet::Contains(const boost::asio::ip::address& address) const {
     int n = 4;
     uint32_t* mask = mask_data_.get();
     uint32_t* network = network_address_data_.get();
-    uint32_t* addr =
-        reinterpret_cast<uint32_t*>(address.to_v6().to_bytes().data());
+    auto v6_address_bytes = address.to_v6().to_bytes();
+    uint32_t* addr = reinterpret_cast<uint32_t*>(v6_address_bytes.data());
     while (n--) {
       if ((*mask++ & *addr++) != *network++) {
         return false;

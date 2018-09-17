@@ -28,7 +28,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
-#include "../hedley/hedley.h"
+#include "../third_party/hedley/hedley.h"
 
 #include "../data_flow/local_data_flow_interface.h"
 #include "../data_flow/remote_data_flow_interface.h"

@@ -24,7 +24,7 @@
 
 #include <vector>
 
-#include "../hedley/hedley.h"
+#include "../third_party/hedley/hedley.h"
 #include <boost/asio.hpp>
 
 #include "../utils/cancelable.h"

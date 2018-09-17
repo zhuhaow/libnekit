@@ -26,7 +26,7 @@
 #include <memory>
 #include <system_error>
 
-#include "../hedley/hedley.h"
+#include "../third_party/hedley/hedley.h"
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
 

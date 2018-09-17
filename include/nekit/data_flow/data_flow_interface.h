@@ -26,7 +26,7 @@
 #include <memory>
 
 #include <boost/noncopyable.hpp>
-#include "../hedley/hedley.h"
+#include "../third_party/hedley/hedley.h"
 
 #include "../utils/async_interface.h"
 #include "../utils/buffer.h"

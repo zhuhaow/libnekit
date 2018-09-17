@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "../hedley/hedley.h"
+#include "../third_party/hedley/hedley.h"
 
 #include "error.h"
 

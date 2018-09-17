@@ -25,7 +25,7 @@
 #include <string>
 #include <utility>
 
-#include "../modules/http_parser/http_parser.h"
+#include "../third_party/http_parser/http_parser.h"
 #include "http_message_rewriter_interface.h"
 #include "result.h"
 

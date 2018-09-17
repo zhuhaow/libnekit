@@ -25,7 +25,7 @@
 #include <memory>
 #include <vector>
 
-#include "../hedley/hedley.h"
+#include "../third_party/hedley/hedley.h"
 #include <boost/asio/ip/address.hpp>
 #include <boost/noncopyable.hpp>
 

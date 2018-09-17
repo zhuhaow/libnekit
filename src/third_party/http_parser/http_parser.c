@@ -18,12 +18,13 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#include "http_parser.h"
 #include <assert.h>
 #include <ctype.h>
 #include <limits.h>
 #include <stddef.h>
 #include <string.h>
+
+#include "nekit/third_party/http_parser/http_parser.h"
 
 #ifndef ULLONG_MAX
 #define ULLONG_MAX ((uint64_t)-1) /* 2^64-1 */

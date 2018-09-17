@@ -52,7 +52,7 @@ class LibnekitConan(ConanFile):
         for m in exclude_module:
             self.options["boost"].add_option("without_%s" % m, True)
 
-        if self.settings.os not in ["iOS"]:
+        if tools.get_env("CONAN_RUN_TESTS", True):
             self.requires("gtest/1.8.1@bincrafters/stable")
 
 
@@ -60,14 +60,13 @@ class LibnekitConan(ConanFile):
         cmake = CMake(self)
         cmake.configure(source_folder="libnekit")
         cmake.build()
+        if tools.get_env("CONAN_RUN_TESTS", True):
+            with tools.environment_append({"CTEST_OUTPUT_ON_FAILURE": "1"}):
+                cmake.test()
 
     def package(self):
-        self.copy("*.h", dst="include", src="libnekit/include/")
-        self.copy("*libnekit.lib", dst="lib", keep_path=False)
-        self.copy("*.dll", dst="bin", keep_path=False)
-        self.copy("*.so", dst="lib", keep_path=False)
-        self.copy("*.dylib", dst="lib", keep_path=False)
-        self.copy("*.a", dst="lib", keep_path=False)
+        cmake = CMake(self)
+        cmake.install()
 
     def package_info(self):
-        self.cpp_info.libs = ["libnekit"]
+        self.cpp_info.libs = ["nekit"]

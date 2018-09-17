@@ -26,7 +26,7 @@
 #include <openssl/x509v3.h>
 #include <boost/assert.hpp>
 
-#include "nekit/hedley/hedley.h"
+#include "nekit/third_party/hedley/hedley.h"
 
 #include "nekit/config.h"
 
