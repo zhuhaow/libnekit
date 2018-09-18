@@ -10,7 +10,10 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     pyenv activate conan
 fi
 
-conan profile new default --detect
+if [[ ! -f ~/.conan/profiles/default ]]; then
+   conan profile new default --detect
+fi
+
 cp conan/ios ~/.conan/profiles
 
 python build.py
