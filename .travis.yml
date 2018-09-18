@@ -2,6 +2,7 @@ cache:
   directories:
     - '$HOME/.sonar/cache'
     - '$HOME/.conan'
+    - '$HOME/.pyenv'
 
 env:
   global:
