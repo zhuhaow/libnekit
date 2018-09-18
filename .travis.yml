@@ -1,16 +1,25 @@
-language:
-  - cpp
-
-sudo:
-  - false
-
-dist:
-  - trusty
+linux: &linux
+   os: linux
+   sudo: required
+   language: python
+   python: "3.6"
+   services:
+     - docker
 
 cache:
   directories:
     - '$HOME/.sonar/cache'
     - '$HOME/.conan'
+
+env:
+   global:
+     - CONAN_USERNAME: "zhuhaow" # ADJUST WITH YOUR REFERENCE USERNAME!
+     - CONAN_LOGIN_USERNAME: "zhuhaow" # ADJUST WITH YOUR LOGIN USERNAME!
+     - CONAN_CHANNEL: "stable" # ADJUST WITH YOUR CHANNEL!
+     - CONAN_UPLOAD: "https://api.bintray.com/conan/zhuhaow/libnekit" # ADJUST WITH YOUR REMOTE!
+     - CONAN_STABLE_BRANCH_PATTERN: "release/*"
+     - CONAN_UPLOAD_ONLY_WHEN_STABLE: 1 # Will only upload when the branch matches "release/*"
+     - CONAN_REMOTES: "https://api.bintray.com/conan/bincrafters/public-conan,https://api.bintray.com/conan/zhuhaow/libnekit"
 
 linux_addons_default: &linux_addons_default
   coverity_scan:
@@ -27,95 +36,105 @@ linux_addons_default: &linux_addons_default
     token:
       secure: "PvuwWq/PWiRBSlaVvJSoa6Q9xZeQntRkA6x0rMQvApago+MsfquYekHMZpN6Wpk4bb5PswDYVmZdgqt9D8vFDieEIAlJ9Zr/CD/YZ1FTvWuL3fzVqM3WFJLaujrpS0jxWV6mx4qfmkU+po5s/z5l3XopxAoabmON/CuyJn3as/PR4xI50bDCqeYO3JHGllHyv9VFlqX0SQ2q45k2Ky9nU+m6oEJlkkmpudDpXHGjn4hECr6fTICkfVsgEWUJBPpTd96ve4cAdOxhHwoK1uhU2bwNrqAUuu8SdE0BR8iUhZjVm7Ha/IK6F0aIIUXdSXiVxDkgKT7VoPT9EddNGh3qLBoFnUwAezEl47y5uaJzeFQpN9EhEnh+Dqdn/3bCVBmpLn3+7toI2QlIYCRRgE/9semV83yILP4TBJmtyvruE7gWV7HB/AANe4/F6oU1TaoS3Lis868Sh2lczusQNkDo1pr8uZo1Pzjoe46IoLrGo/mhDA3cmTYsbqasOQ/7q3hOgWX7DjR2yV3p9ne+/eHlGyOe6N+dMod2ZeLFKLFa0yeXQB1zpW9ADpaXMu0LP/G1YRd7ams7auHmksths0vzzPEivoI8QXhaQYRZGts3vsNbplondrQkHEaTwIIcBVVff2BUzV3k4XW5eeP57Bzx9MkryJXPXvkRFjpxfi4bO5w="
 
-osx_default: &osx_default
-  os: osx
-  env: PLATFORM=mac COVERAGE=ON CONAN_CONFIG="-s cppstd=14 --build=missing"
-  language: objective-c
+osx: &osx
+   os: osx
+   language: objective-c
 
-ios_default: &ios_default
+ios_default: &ios
   os: osx
   language: objective-c
-  env: PLATFORM=ios CONAN_CONFIG="-s cppstd=14 --build=missing --profile=conan/ios_profile" CONAN_RUN_TESTS=0
+  env: CONAN_BASE_PROFILE="`pwd`/conan/ios_profile" CONAN_RUN_TESTS=0
 
 matrix:
   include:
-    - <<: *osx_default
-      osx_image: xcode10
-    - <<: *osx_default
-      osx_image: xcode9.3
-    - <<: *osx_default
-      osx_image: xcode9
-    - <<: *osx_default
+    - <<: *osx
+      osx_image: xcode7.3
+      env: CONAN_APPLE_CLANG_VERSIONS=7.3 CONAN_BUILD=1
+    - <<: *osx
       osx_image: xcode8.3
-
-    - <<: *ios_default
-      osx_image: xcode10
-    - <<: *ios_default
-      osx_image: xcode9.3
-    - <<: *ios_default
+      env: CONAN_APPLE_CLANG_VERSIONS=8.1 CONAN_BUILD=1
+    - <<: *osx
       osx_image: xcode9
-    - <<: *ios_default
+      env: CONAN_APPLE_CLANG_VERSIONS=9.0 CONAN_BUILD=1
+    - <<: *osx
+      osx_image: xcode9.3
+      env: CONAN_APPLE_CLANG_VERSIONS=9.1 CONAN_BUILD=1
+    - <<: *osx
+      osx_image: xcode10
+      env: CONAN_APPLE_CLANG_VERSIONS=10.0 CONAN_BUILD=1
+
+    - <<: *ios
+      osx_image: xcode7.3
+      env: CONAN_APPLE_CLANG_VERSIONS=7.3 CONAN_BUILD=1
+    - <<: *ios
       osx_image: xcode8.3
+      env: CONAN_APPLE_CLANG_VERSIONS=8.1 CONAN_BUILD=1
+    - <<: *ios
+      osx_image: xcode9
+      env: CONAN_APPLE_CLANG_VERSIONS=9.0 CONAN_BUILD=1
+    - <<: *ios
+      osx_image: xcode9.3
+      env: CONAN_APPLE_CLANG_VERSIONS=9.1 CONAN_BUILD=1
+    - <<: *ios
+      osx_image: xcode10
+      env: CONAN_APPLE_CLANG_VERSIONS=10.0 CONAN_BUILD=1
 
-    - os: linux
-      env: PLATFORM=linux COVERAGE=ON GCC_VERSION=5 MATRIX_EVAL="CC=gcc-${GCC_VERSION} && CXX=g++-${GCC_VERSION}" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output" CONAN_CONFIG="-s cppstd=14 -s compiler.libcxx=libstdc++11 --build=missing" CONAN_CPU_COUNT=4
-      addons:
-        <<: *linux_addons_default
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - valgrind
-            - g++-5
-
-    - os: linux
-      env: PLATFORM=linux COVERAGE=ON GCC_VERSION=6 MATRIX_EVAL="CC=gcc-${GCC_VERSION} && CXX=g++-${GCC_VERSION}" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output" CONAN_CONFIG="-s cppstd=14 -s compiler.libcxx=libstdc++11 --build=missing" CONAN_CPU_COUNT=4
-      addons:
-        <<: *linux_addons_default
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - valgrind
-            - g++-6
-
-    - os: linux
-      env: PLATFORM=linux COVERAGE=ON GCC_VERSION=7 MATRIX_EVAL="CC=gcc-${GCC_VERSION} && CXX=g++-${GCC_VERSION}" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output" CONAN_CONFIG="-s cppstd=14 -s compiler.libcxx=libstdc++11 --build=missing" CONAN_CPU_COUNT=4
-      addons:
-        <<: *linux_addons_default
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - valgrind
-            - g++-7
-
-    - os: linux
-      env: PLATFORM=linux COVERAGE=ON GCC_VERSION=8 MATRIX_EVAL="CC=gcc-${GCC_VERSION} && CXX=g++-${GCC_VERSION}" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output" CONAN_CONFIG="-s cppstd=14 -s compiler.libcxx=libstdc++11 --build=missing" CONAN_CPU_COUNT=4
-      addons:
-        <<: *linux_addons_default
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - valgrind
-            - g++-8
+    - <<: *linux
+      env: CONAN_GCC_VERSIONS=4.9 CONAN_DOCKER_IMAGE=lasote/conangcc49 CONAN_BUILD=1
+    - <<: *linux
+      env: CONAN_GCC_VERSIONS=5 CONAN_DOCKER_IMAGE=lasote/conangcc5 CONAN_BUILD=1
+    - <<: *linux
+      env: CONAN_GCC_VERSIONS=6 CONAN_DOCKER_IMAGE=lasote/conangcc6 CONAN_BUILD=1
+    - <<: *linux
+      env: CONAN_GCC_VERSIONS=7 CONAN_DOCKER_IMAGE=lasote/conangcc7 CONAN_BUILD=1
+    - <<: *linux
+      env: CONAN_CLANG_VERSIONS=3.9 CONAN_DOCKER_IMAGE=lasote/conanclang39 CONAN_BUILD=1
+    - <<: *linux
+      env: CONAN_CLANG_VERSIONS=4.0 CONAN_DOCKER_IMAGE=lasote/conanclang40 CONAN_BUILD=1
+      
+    # - os: linux
+    #   env: PLATFORM=linux COVERAGE=ON GCC_VERSION=8 MATRIX_EVAL="CC=gcc-${GCC_VERSION} && CXX=g++-${GCC_VERSION}" COMPILE_PREFIX="build-wrapper-linux-x86-64 --out-dir bw-output" CONAN_CONFIG="-s cppstd=14 -s compiler.libcxx=libstdc++11 --build=gtest --build=missing" CONAN_CPU_COUNT=4
+    #   addons:
+    #     <<: *linux_addons_default
+    #     apt:
+    #       sources:
+    #         - ubuntu-toolchain-r-test
+    #       packages:
+    #         - valgrind
+    #         - g++-8
 
 before_install:
   - eval "${MATRIX_EVAL}"
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update && brew install pipenv moreutils; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pip install --user pipenv urllib3[secure]; fi
 
 install:
-  - pipenv install --deploy
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then ./scripts/install_cmake.sh; export PATH=`pwd`/deps/cmake/bin:$PATH; cmake --version; fi
+  - |
+    if [[ "${CONAN_BUILD}" == 1 ]]; then
+      chmod +x .travis/install.sh && ./.travis/install.sh
+    else
+      pip install --user pipenv urllib3[secure];
+      pipenv install --deploy 
+      if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
+        ./scripts/install_cmake.sh;
+        export PATH=`pwd`/../cmake:$PATH;
+        cmake --version;
+      fi
+    fi
 
 before_script:
-  - pipenv run conan remote add -f bincrafters https://api.bintray.com/conan/bincrafters/public-conan
-  - pipenv run conan remote add -f libnekit https://api.bintray.com/conan/zhuhaow/libnekit
+  - |
+    if [[ "$CONAN_BUILD" != 1 ]]; then
+      pipenv run conan remote add -f bincrafters https://api.bintray.com/conan/bincrafters/public-conan
+      pipenv run conan remote add -f libnekit https://api.bintray.com/conan/zhuhaow/libnekit
+    fi
 
 script:
-  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then scripts/travis.sh; fi
+  - |
+    if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then
+      if [[ "${CONAN_BUILD}" == 1 ]]; then
+        chmod +x .travis/run.sh
+        ./.travis/run.sh
+      else
+        scripts/travis.sh;
+      fi
+    fi
 
-after_success:
-  - if [ "$COVERAGE" == "ON" ]; then bash <(curl -s https://codecov.io/bash); fi
