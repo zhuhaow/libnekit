@@ -122,11 +122,15 @@ install(DIRECTORY include
   DESTINATION "."
   FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
 
-if (NOT IOS AND NOT ANDROID)
+option(NE_ENABLE_TEST "Enable tests." ON)
+if (NE_ENABLE_TEST)
   enable_testing()
   add_subdirectory(test)
+endif()
+
+option(NE_BUILD_APP "Build file in app folder." OFF)
+if (NE_BUILD_APP)
   if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/app" AND IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/app" AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/app/CMakeLists.txt")
     add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/app")
   endif()
 endif()
-

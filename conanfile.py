@@ -56,8 +56,16 @@ class LibnekitConan(ConanFile):
             self.requires("gtest/1.8.1@bincrafters/stable")
 
 
-    def build(self):
+    def _cmake(self):
         cmake = CMake(self)
+        if tools.get_env("CONAN_RUN_TESTS", True):
+            cmake.definitions["NE_ENABLE_TEST"]="ON"
+        else:
+            cmake.definitions["NE_ENABLE_TEST"]="OFF"
+        return cmake
+
+    def build(self):
+        cmake = self._cmake()
         cmake.configure(source_folder="libnekit")
         cmake.build()
         if tools.get_env("CONAN_RUN_TESTS", True):
@@ -65,7 +73,7 @@ class LibnekitConan(ConanFile):
                 cmake.test()
 
     def package(self):
-        cmake = CMake(self)
+        cmake = self._cmake();
         cmake.install()
 
     def package_info(self):
