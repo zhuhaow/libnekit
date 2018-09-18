@@ -12,14 +12,15 @@ cache:
     - '$HOME/.conan'
 
 env:
-   global:
-     - CONAN_USERNAME: "zhuhaow" # ADJUST WITH YOUR REFERENCE USERNAME!
-     - CONAN_LOGIN_USERNAME: "zhuhaow" # ADJUST WITH YOUR LOGIN USERNAME!
-     - CONAN_CHANNEL: "stable" # ADJUST WITH YOUR CHANNEL!
-     - CONAN_UPLOAD: "https://api.bintray.com/conan/zhuhaow/libnekit" # ADJUST WITH YOUR REMOTE!
-     - CONAN_STABLE_BRANCH_PATTERN: "release/*"
-     - CONAN_UPLOAD_ONLY_WHEN_STABLE: 1 # Will only upload when the branch matches "release/*"
-     - CONAN_REMOTES: "https://api.bintray.com/conan/bincrafters/public-conan,https://api.bintray.com/conan/zhuhaow/libnekit"
+  global:
+    - CONAN_USERNAME: "zhuhaow" # ADJUST WITH YOUR REFERENCE USERNAME!
+    - CONAN_LOGIN_USERNAME: "zhuhaow" # ADJUST WITH YOUR LOGIN USERNAME!
+    - CONAN_CHANNEL: "stable" # ADJUST WITH YOUR CHANNEL!
+    - CONAN_UPLOAD: "https://api.bintray.com/conan/zhuhaow/libnekit" # ADJUST WITH YOUR REMOTE!
+    - CONAN_STABLE_BRANCH_PATTERN: "release/*"
+    - CONAN_UPLOAD_ONLY_WHEN_STABLE: 1 # Will only upload when the branch matches "release/*"
+    - CONAN_REMOTES: "https://api.bintray.com/conan/bincrafters/public-conan,https://api.bintray.com/conan/zhuhaow/libnekit"
+    - CONAN_BUILD_POLICY: "outdated"
 
 linux_addons_default: &linux_addons_default
   coverity_scan:
