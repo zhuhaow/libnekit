@@ -108,7 +108,8 @@ install:
   - |
     if [[ "${CONAN_BUILD}" == 1 ]]; then
       chmod +x .travis/install.sh && ./.travis/install.sh
-      mkdir -p ~/.conan/profiles/ && cp conan/ios ~/.conan/profiles
+      conan profile new default --detect
+      cp conan/ios ~/.conan/profiles
     else
       pip install --user pipenv urllib3[secure];
       pipenv install --deploy 
