@@ -88,6 +88,7 @@ matrix:
       env: CONAN_CLANG_VERSIONS=4.0 CONAN_DOCKER_IMAGE=lasote/conanclang40 CONAN_BUILD=1
       
     - os: linux
+      language: cpp
       addons:
         coverity_scan:
           project:
@@ -111,12 +112,12 @@ matrix:
 
 before_install:
   - eval "${MATRIX_EVAL}"
-  - cp conan/ios ~/.conan/profiles/
 
 install:
   - |
     if [[ "${CONAN_BUILD}" == 1 ]]; then
       chmod +x .travis/install.sh && ./.travis/install.sh
+      cp conan/ios ~/.conan/profiles/
     else
       pip install --user pipenv urllib3[secure];
       pipenv install --deploy 
@@ -133,6 +134,7 @@ before_script:
       pipenv run conan remote add -f bincrafters https://api.bintray.com/conan/bincrafters/public-conan
       pipenv run conan remote add -f libnekit https://api.bintray.com/conan/zhuhaow/libnekit
     fi
+
 
 script:
   - |
