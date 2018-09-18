@@ -48,9 +48,6 @@ linux: &linux
 matrix:
   include:
     - <<: *osx
-      osx_image: xcode7.3
-      env: CONAN_APPLE_CLANG_VERSIONS=7.3 CONAN_BUILD=1
-    - <<: *osx
       osx_image: xcode8.3
       env: CONAN_APPLE_CLANG_VERSIONS=8.1 CONAN_BUILD=1
     - <<: *osx
@@ -63,9 +60,6 @@ matrix:
       osx_image: xcode10
       env: CONAN_APPLE_CLANG_VERSIONS=10.0 CONAN_BUILD=1
 
-    - <<: *ios
-      osx_image: xcode7.3
-      env: CONAN_APPLE_CLANG_VERSIONS=7.3 CONAN_BUILD=1 CONAN_BASE_PROFILE="`pwd`/conan/ios_profile" CONAN_RUN_TESTS=0
     - <<: *ios
       osx_image: xcode8.3
       env: CONAN_APPLE_CLANG_VERSIONS=8.1 CONAN_BUILD=1 CONAN_BASE_PROFILE="`pwd`/conan/ios_profile" CONAN_RUN_TESTS=0
