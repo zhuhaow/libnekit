@@ -81,7 +81,7 @@ matrix:
           project:
             name: "zhuhaow/libnekit"
           notification_email: zhuhaow@gmail.com
-          build_command: "make && make test"
+          build_command: "make"
           branch_pattern: coverity_scan
           build_command_prepend: >
             cov-configure --comptype gcc --compiler `which gcc-${GCC_VERSION}`;
