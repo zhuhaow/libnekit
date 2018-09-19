@@ -44,9 +44,6 @@ if(COVERAGE)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -coverage")
 endif()
 
-target_compile_options(nekit PRIVATE $<$<CONFIG:DEBUG>:-g -O0>) 
-target_compile_options(nekit PRIVATE $<$<CONFIG:RELEASE>:-O3>)
-
 set(DEPENDENCY_ROOT "${PROJECT_SOURCE_DIR}/deps/${PLATFORM}")
 
 target_include_directories(nekit PUBLIC "include")
