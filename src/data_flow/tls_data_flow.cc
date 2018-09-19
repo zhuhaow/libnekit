@@ -29,7 +29,7 @@ TlsDataFlow::TlsDataFlow(std::shared_ptr<utils::Session> session,
                          std::unique_ptr<RemoteDataFlowInterface>&& data_flow)
     : session_{session},
       tunnel_{ctx, crypto::TlsTunnel::Mode::Client},
-      data_flow_{std::move(data_flow)} {};
+      data_flow_{std::move(data_flow)} {}
 
 TlsDataFlow::~TlsDataFlow() {
   read_cancelable_.Cancel();
