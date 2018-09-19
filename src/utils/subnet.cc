@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 #include <cstring>
+#include <iostream>
 
 #include <boost/assert.hpp>
 
@@ -90,6 +91,10 @@ bool Subnet::Contains(const boost::asio::ip::address& address) const {
     auto v6_address_bytes = address.to_v6().to_bytes();
     uint32_t* addr = reinterpret_cast<uint32_t*>(v6_address_bytes.data());
     while (n--) {
+      std::cout << "---------------------------------" << std::endl;
+      std::cout << std::hex << "mask: " << *mask << " addr: " << *addr
+                << " network: " << *network << std::endl;
+      std::cout << "---------------------------------" << std::endl;
       if ((*mask++ & *addr++) != *network++) {
         return false;
       }
