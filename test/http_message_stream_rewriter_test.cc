@@ -30,7 +30,7 @@
 
 #include "nekit/utils/http_message_stream_rewriter.h"
 
-#define MAX_CONTINUES_MESSAGE 10
+#define MAX_CONTINUES_MESSAGE 3
 
 using namespace nekit::utils;
 using ::testing::_;
