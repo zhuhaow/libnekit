@@ -13,7 +13,7 @@ env:
     - CONAN_STABLE_BRANCH_PATTERN: "release/*"
     - CONAN_UPLOAD_ONLY_WHEN_STABLE: 1 # Will only upload when the branch matches "release/*"
     - CONAN_REMOTES: "https://api.bintray.com/conan/bincrafters/public-conan,https://api.bintray.com/conan/zhuhaow/libnekit"
-    - CONAN_BUILD_POLICY: "outdated"
+    - CONAN_BUILD_POLICY: "missing"
     - CONAN_DOCKER_32_IMAGES: "1"
 
 osx: &osx
