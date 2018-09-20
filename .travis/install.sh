@@ -14,7 +14,7 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     fi
 
     pyenv install -s 2.7.10
-    pyenv virtualenv 2.7.10 conan
+    pyenv virtualenv -f 2.7.10 conan
     pyenv rehash
     pyenv activate conan
 fi
