@@ -87,8 +87,14 @@ bool Subnet::Contains(const boost::asio::ip::address& address) const {
     int n = 4;
     uint32_t* mask = mask_data_.get();
     uint32_t* network = network_address_data_.get();
-    auto v6_address_bytes = address.to_v6().to_bytes();
-    uint32_t* addr = reinterpret_cast<uint32_t*>(v6_address_bytes.data());
+
+    // There seems to be a bug only reproducable in GCC 6. The reason is unknown
+    // since I don't find any strict alias issue here. Try workaround this by
+    // copy data first.
+    // https://travis-ci.org/zhuhaow/libnekit/builds/430461210
+    std::array<uint32_t, 4> bytes;
+    memcpy(bytes.data(), address.to_v6().to_bytes().data(), 16);
+    uint32_t* addr = bytes.data();
     while (n--) {
       if ((*mask++ & *addr++) != *network++) {
         return false;

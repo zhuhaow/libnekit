@@ -31,7 +31,10 @@ if (NOT WIN32)
   check_cxx_compiler_flag(-Wextra HAS_WEXTRA)
   target_compile_options(nekit PRIVATE $<$<BOOL:${HAS_WEXTRA}>:-Wextra>)
 
-  check_cxx_compiler_flag(-pedantic HAS_PEDANTIC)
+  check_cxx_compiler_flag(-Wstrict-aliasing HAS_STRICT_ALIASING)
+  target_compile_options(nekit PRIVATE $<$<BOOL:${HAS_STRICT_ALIASING}>:-Wstrict-aliasing>)
+
+  check_cxx_compiler_flag(-Wpedantic HAS_PEDANTIC)
   target_compile_options(nekit PRIVATE $<$<BOOL:${HAS_PEDANTIC}>:-Wpedantic>)
 
   check_cxx_compiler_flag(-Wno-pragma-once-outside-header HAS_PRAGMA_ONCE_WARNING)
