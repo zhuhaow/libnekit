@@ -15,11 +15,11 @@ class LibnekitConan(ConanFile):
     def requirements(self):
         self.requires("OpenSSL/1.1.0g@conan/stable")
 
-        self.requires("libsodium/1.0.16@bincrafters/stable")
+        self.requires("libsodium/1.0.18@bincrafters/stable")
 
         self.requires("libmaxminddb/1.3.2@zhuhaow/stable")
 
-        self.requires("boost/1.68.0@libnekit/stable")
+        self.requires("boost/1.71.0@conan/stable")
 
         exclude_module = [
             "math",
@@ -34,7 +34,6 @@ class LibnekitConan(ConanFile):
             "random",
             "mpi",
             "serialization",
-            "signals",
             "coroutine",
             "fiber",
             "context",
@@ -55,25 +54,24 @@ class LibnekitConan(ConanFile):
         if tools.get_env("CONAN_RUN_TESTS", True):
             self.requires("gtest/1.8.1@bincrafters/stable")
 
-
     def _cmake(self):
         cmake = CMake(self)
         if tools.get_env("CONAN_RUN_TESTS", True):
-            cmake.definitions["NE_ENABLE_TEST"]="ON"
+            cmake.definitions["NE_ENABLE_TEST"] = "ON"
         else:
-            cmake.definitions["NE_ENABLE_TEST"]="OFF"
+            cmake.definitions["NE_ENABLE_TEST"] = "OFF"
         return cmake
 
     def build(self):
         cmake = self._cmake()
-        cmake.configure(source_folder="libnekit")
+        cmake.configure(source_folder=".")
         cmake.build()
         if tools.get_env("CONAN_RUN_TESTS", True):
             with tools.environment_append({"CTEST_OUTPUT_ON_FAILURE": "1"}):
                 cmake.test()
 
     def package(self):
-        cmake = self._cmake();
+        cmake = self._cmake()
         cmake.install()
 
     def package_info(self):

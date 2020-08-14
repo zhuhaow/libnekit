@@ -2,7 +2,7 @@
 clint = "*"
 plumbum = "*"
 requests = "*"
-conan = ">=1.7.3"
+conan = ">=1.28"
 
 [requires]
 python_version = "3"

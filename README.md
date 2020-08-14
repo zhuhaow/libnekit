@@ -2,10 +2,9 @@
 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/50682cd3b084494f8d0ddb09fda139ab)](https://www.codacy.com/app/zhuhaow/libnekit?utm_source=github.com&utm_medium=referral&utm_content=zhuhaow/libnekit&utm_campaign=badger) [![Build Status](https://travis-ci.org/zhuhaow/libnekit.svg?branch=master)](https://travis-ci.org/zhuhaow/libnekit) [![Build status](https://ci.appveyor.com/api/projects/status/03jy4k9c8etur68u?svg=true)](https://ci.appveyor.com/project/zhuhaow/libnekit) [![codecov](https://codecov.io/gh/zhuhaow/libnekit/branch/master/graph/badge.svg)](https://codecov.io/gh/zhuhaow/libnekit)
 
+libnekit is a cross-platform version of [NEKit](https://github.com/zhuhaow/NEKit) written in C++ to make building applications which **route or analyze network traffic** quick and simple. libnekit is built with security, efficiency and flexibility in mind.
 
-libnekit is a cross-platform version of [NEKit](https://github.com/zhuhaow/NEKit) written in C++ to make building applications which **route or analyze network traffic** quick and simple. libnekit is built with security, efficiency and flexibility in mind. 
-
-Every connection is abstracted as a data flow chain (actually, two inter-connected chains) where data can be transformed at every hop. Data flow chain can be composed arbitrarily to provide flexibility for any scenario. 
+Every connection is abstracted as a data flow chain (actually, two inter-connected chains) where data can be transformed at every hop. Data flow chain can be composed arbitrarily to provide flexibility for any scenario.
 
 For example, you can put a HTTP debug data flow between some data flows where the data is plain text HTTP request and response. You then analyze the data and pass the data to the next hop intact, or rewrite the header adding `DNT: 1` to every request and hope the websites behave, or whatever you want.
 
@@ -15,68 +14,46 @@ Since libnekit is still in its early stage, many things tend to change. There wi
 
 Things supported now:
 
-* Data flow chain to transform and analyze data with composition
-* Efficient buffer implementation
-* Define data handling logic by pre-defined or customized rules.
-* Highly interfaced with dependency injection. You can provide you own implementation for basically everything including DNS resolver, data flow hop, rule, connection acceptor, etc.
-* HTTP, SOCKS5 support (as client and server)
-* Wrapper for many encryption and authentication algorithms for secured transportation
-* HTTP stream rewriter for parsing and rewrite HTTP header as data stream in place
+- Data flow chain to transform and analyze data with composition
+- Efficient buffer implementation
+- Define data handling logic by pre-defined or customized rules.
+- Highly interfaced with dependency injection. You can provide you own implementation for basically everything including DNS resolver, data flow hop, rule, connection acceptor, etc.
+- HTTP, SOCKS5 support (as client and server)
+- Wrapper for many encryption and authentication algorithms for secured transportation
+- HTTP stream rewriter for parsing and rewrite HTTP header as data stream in place
 
 Things will be added or changed, ordered by priority:
 
-* [x] TLS support (as client)
-* [x] Minor API refinement
-* [x] Build for Windows 
-* [ ] Better error handling
-* [ ] More detailed log
-* [ ] Class level doc
-* [ ] Use Conan as dependency management system
-* [ ] Build for Android
-* [ ] TLS support (as server, MITM)
-* [ ] UDP support
-* [ ] Python/Lua binding (not sure which one yet, please advise)
-* [ ] Raw DNS request/response parsing
-* [ ] IP stack support
-
-
+- [x] TLS support (as client)
+- [x] Minor API refinement
+- [x] Build for Windows
+- [ ] Better error handling
+- [ ] More detailed log
+- [ ] Class level doc
+- [ ] Use Conan as dependency management system
+- [ ] Build for Android
+- [ ] TLS support (as server, MITM)
+- [ ] UDP support
+- [ ] Python/Lua binding (not sure which one yet, please advise)
+- [ ] Raw DNS request/response parsing
+- [ ] IP stack support
 
 ## Compilation
 
-### Build Dependencies
-Though libnekit itself has no platform dependent code, you still have to make sure its dependencies build on the target platform.
+### With Conan
 
-libnekit depends on Boost, OpenSSL, libsodium and maxminddb. 
+It is highly recommended to use libnekit with [Conan](https://conan.io).
 
-Only Boost is required. But currently the CMake script requires all dependencies present.
-
-libnekit provides a script to build all the dependencies automatically and iOS(`ios`), OSX(`mac`) and linux x86/x64(`linux`) are supported as of now. Windows, Android and linux ARM will also be supported later.
-
-Build the dependencies requires Python 3 and non-antique CMake, install pipenv first then (choose the correct `PLATFORM`):
-
-```
-pipenv run scripts/build_deps.py PLATFORM
-```
-
-The script will download all dependencies source codes and compile them.
-
-### Compile libnekit
-
-*It's very likely you don't have to compile libnekit independently, check next subsection.*
-
-After all dependencies are successfully built, use CMake to configure and build the project (choose correct platform):
+Please refer the details of Conan docs for details.
 
 ```zsh
-mkdir build && cd build
-cmake .. -DCMAKE_TOOLCHAIN_FILE=~/Projects/libnekit/cmake/toolchain/PLATFORM.cmake -DPLATFORM=PLATFORM
-cmake --build . -- -j2
+pip install conan
+conan remote add -f bincrafters https://api.bintray.com/conan/bincrafters/public-conan
+conan remote add -f libnekit https://api.bintray.com/conan/zhuhaow/libnekit
 ```
 
-libnekit is built but not installed yet. If you want to distribute it, you need to copy all header files from `include/`, dependencies from `deps/PLATFORM/` and `libnekit.a` to the proper place.
-
-I may add an `install` target later. But since libnekit requires Boost, the distribution would be too large. 
-
 ### Use libnekit in Your Project
+
 If you project is built with CMake, then it should be very simple and straight forward, just add the root folder of libnekit to your project and configure it with the proper toolchain file. If you use your own toolchain config file, it's very likely libnekit will just compile with it so you don't need to change anything.
 
 If you are not using CMake, then use CMake generator to generate a compatible project with the toolchain you are working with.
@@ -85,7 +62,7 @@ If you are not using CMake, then use CMake generator to generate a compatible pr
 
 ### How it Works
 
-The idea is simple. 
+The idea is simple.
 
 Everything begins with an implementation of `ListenerInterface` where `LocalDataInterface` is created when something happens, such as a new connection is accepted from a listening socket. But it does not have to be a typical TCP listener/acceptor, think of it as an event subscriber which reacts with generating `LocalDataInterface`.
 
@@ -93,7 +70,7 @@ The `LocalDataInterface` does whatever is needed to get enough meta information 
 
 ### `Instance`
 
-`Instance` is a run loop on a single thread. That's it. If that sounds confusing, think about how many threads you want to deal with. If you don't know, then you need just one thread which means you just create one instance of `Instance` and stick with it. Otherwise, you need to create one instance for each thread. 
+`Instance` is a run loop on a single thread. That's it. If that sounds confusing, think about how many threads you want to deal with. If you don't know, then you need just one thread which means you just create one instance of `Instance` and stick with it. Otherwise, you need to create one instance for each thread.
 
 Theoretically, it is possible to run one instance in several threads simultaneously, but that's too error-prone. It would be hard to understand every subtleties in libnekit in order to get the class involved thread-safe. So just follow this simple principle here, one thread per `Instance`.
 
@@ -103,13 +80,13 @@ An `Instance` can have many `ProxyManager`s, where each `ProxyManager` has a set
 
 ### Decide How to Resolve Domain
 
-Each `ProxyManager` has one and only one DNS resolver. 
+Each `ProxyManager` has one and only one DNS resolver.
 
 This seems like a unnecessary limit (and it is), but libnekit tries to be as efficient and secure as possible so there will be no resolution unless required.
 
-This cause DNS resolution may happen in too many possible places that we have to provide a resolver for everything that may want to resolve the domain. 
+This cause DNS resolution may happen in too many possible places that we have to provide a resolver for everything that may want to resolve the domain.
 
-In order to avoid that, resolution should only happen by using an `Endpoint`, which requires us to set a resolver for the `Endpoint` if we want to resolve it. libnekit will do it for you whenever possible automatically, but it won't be able to know which resolver to use if there are multiple choices. 
+In order to avoid that, resolution should only happen by using an `Endpoint`, which requires us to set a resolver for the `Endpoint` if we want to resolve it. libnekit will do it for you whenever possible automatically, but it won't be able to know which resolver to use if there are multiple choices.
 
 So the final rule is, `ProxyManager` has only one resolver and everything inside it will use this resolver.
 
@@ -275,12 +252,12 @@ int main() {
 
   return 0;
 }
-
 ```
 
 ## Extend libnekit
 
 ### Handle Data by `DataFlowInterface`
+
 Data flow is the core of libnekit. Let's take a look at how data flow is handled in libnekit first.
 
 Below is the outline of `DataFlowInterface`.
@@ -300,11 +277,11 @@ virtual const FlowStateMachine& StateMachine() const = 0;
 virtual DataFlowInterface* NextHop() const = 0;
 ```
 
-The thing we want to archive with `DataFlowInterface` is straight forward. We can read from and write to data flow. Each data flow has a `FlowStateMachine` which encapsulates the state of the flow. The data flow is chained as `NextHop()` will get us the next hop. 
+The thing we want to archive with `DataFlowInterface` is straight forward. We can read from and write to data flow. Each data flow has a `FlowStateMachine` which encapsulates the state of the flow. The data flow is chained as `NextHop()` will get us the next hop.
 
-So to create a data flow, let's say, a data flow that communicates with a remote HTTP server, we can have a HTTP proxy data flow which has a TCP socket data flow as the next hop. When we write to the HTTP proxy data flow, it delegates the write request to the underlying transmission TCP socket. 
+So to create a data flow, let's say, a data flow that communicates with a remote HTTP server, we can have a HTTP proxy data flow which has a TCP socket data flow as the next hop. When we write to the HTTP proxy data flow, it delegates the write request to the underlying transmission TCP socket.
 
-This brings great flexibility and allows you to basically do anything you want with the data without interfering with anythings else. 
+This brings great flexibility and allows you to basically do anything you want with the data without interfering with anythings else.
 
 Let's get back to the interface definition and take a closer look at the seemingly daunting definition of read method.
 
@@ -312,7 +289,7 @@ Let's get back to the interface definition and take a closer look at the seeming
 virtual utils::Cancelable Read(utils::Buffer&&, DataEventHandler) = 0;
 ```
 
-We pass in a buffer and a handler, since almost everything in libnekit is asynchronous, we shouldn't expect the method will block until it really gets something. Instead, we give an event handler which will be called when there is some data read into the buffer. The `DataEventHandler` which is defined as `std::function<void(utils::Buffer&&, utils::Error)>` is simply a lambda which takes a buffer filled with data and an error code. We should check the if there is any error before we process the data. 
+We pass in a buffer and a handler, since almost everything in libnekit is asynchronous, we shouldn't expect the method will block until it really gets something. Instead, we give an event handler which will be called when there is some data read into the buffer. The `DataEventHandler` which is defined as `std::function<void(utils::Buffer&&, utils::Error)>` is simply a lambda which takes a buffer filled with data and an error code. We should check the if there is any error before we process the data.
 
 The only thing left unclear is `utils::Cancelable`, which is a little tricky.
 
@@ -322,7 +299,7 @@ You should get hold of how those libraries implementing event loop works first. 
 
 The [doc of Boost Asio](https://www.boost.org/doc/libs/1_67_0/doc/html/boost_asio/overview.html) provides a clear overview of how it works (which happens to be what libnekit is based on) and everyone should read it first before working with libnekit.
 
-Now, as you have read and understood how asio works, let's have a quick recap and think about how the handler we provide is called. 
+Now, as you have read and understood how asio works, let's have a quick recap and think about how the handler we provide is called.
 
 It's very tempting to write a data flow that handle data encryption (with a FPE algorithm which keeps and ciphertext and plaintext and same length, like most block cipher) as this (only the read part):
 
@@ -357,16 +334,16 @@ class SecuredDataFlow {
 
 Everything seems fine, except for one, what if we decide we no longer need the socket? For example, this data flow is reading data from remote but our local application encountered an error when processing the stream and can't not proceed. It makes little sense to keep the socket (data flow) available, but can we just release it immediately?
 
-As per the doc of Asio, when the socket is destructed it will "cancel any outstanding asynchronous operations associated with the socket", we should be able to just do it, and let boost cancel the pending read request if there is one. 
+As per the doc of Asio, when the socket is destructed it will "cancel any outstanding asynchronous operations associated with the socket", we should be able to just do it, and let boost cancel the pending read request if there is one.
 
-Think. When the kernel notifies the `io_context` that there is data available to read (on *nix) or the buffer is filled with data (on Windows), asio will put the callback handler we provide to a Completion Event Queue. The logic of observing event and executing callback are decoupled by utilizing this queue. There are several things that are probmatic:
+Think. When the kernel notifies the `io_context` that there is data available to read (on \*nix) or the buffer is filled with data (on Windows), asio will put the callback handler we provide to a Completion Event Queue. The logic of observing event and executing callback are decoupled by utilizing this queue. There are several things that are probmatic:
 
 1. As we say event observation and callback execution is decoupled, we are actually saying Asio provides a very simple model for a multi thread application. Several thread can fetch task from the queue and execute them concurrently as long as the queue is thread-safe and the handler does not share anything not thread-safe. However, `uint8_t read_buffer_[1024]` is obviously not thread-safe, as kernel is filling data into the buffer, another thread may be trying to release the `SecuredDataFlow`! (Cancellation in proactor model is really a little too complicate so we should try to avoid thinking about it.)
 2. Another thing is a little more of an implementation choice: when a handler is pushed into the queue, there is no way to cancel it in Asio. If handler is pushed into the queue, then `SecuredDataFlow` is released, the handler won't know anything about it. When an execution thread fetch the handler from the queue, and call it, it can't dereference `this`.
 
 This tells us two things. First, the buffer's lifetime should exceeds the handler. Second, the handler needs to know the validity of `this` and any other pointers it captures.
 
-Usually, this is done by using `std::shared_ptr` and `std::weak_ptr`, the handler capture the shared pointer so the lifetime of the data flow exceeds the handler. It works, apart from the hassle that you have to inherit from  `std::enable_shared_from_this` and enforce that this class can only be managed with shared pointer, even if you never share it semantically. Also, working with `std::weak_ptr` is really too cumbersome that you probably want to avoid it as much as possible.
+Usually, this is done by using `std::shared_ptr` and `std::weak_ptr`, the handler capture the shared pointer so the lifetime of the data flow exceeds the handler. It works, apart from the hassle that you have to inherit from `std::enable_shared_from_this` and enforce that this class can only be managed with shared pointer, even if you never share it semantically. Also, working with `std::weak_ptr` is really too cumbersome that you probably want to avoid it as much as possible.
 
 Let's take a look at what is in the handler, usually, the handler capture the logic to proceed, which means it should also capture some shared (or weak) pointer of some data flows and other instances, as long as the handler exists, all of the instances will exist (or the memory will not be released, if you are using weak pointer, since you surely will use `make_shared`), albeit not needed.
 
@@ -391,7 +368,7 @@ class Cancelable {
 };
 ```
 
-If we want to cancel the handler, we just call the `Cancel()` method on the returned `utils::Cancelable`. The data flow will first check if the **captured** `utils::Cancelable` is cancelled or not. 
+If we want to cancel the handler, we just call the `Cancel()` method on the returned `utils::Cancelable`. The data flow will first check if the **captured** `utils::Cancelable` is cancelled or not.
 
 Usually, the destructor of a data flow will explicitly cancel all the `utils::Cancelable` returned by the next data flow hop, so the handler won't be called.
 
@@ -399,13 +376,13 @@ You can find more examples in `tcp_socket.cc`.
 
 ### Manipulate Data with Minimal Copy
 
-Suppose we pass data by a plain memory block between the data flow chain, and some flow wants to encrypt the data with some authentication header in the front, it has to copy the whole block into an other new block or `memmove` it. Consider, however, that `iovec` is widely supported on nowadays OS, we can actually put the header in a standalone buffer and send the two buffers to the kernel in one call. 
+Suppose we pass data by a plain memory block between the data flow chain, and some flow wants to encrypt the data with some authentication header in the front, it has to copy the whole block into an other new block or `memmove` it. Consider, however, that `iovec` is widely supported on nowadays OS, we can actually put the header in a standalone buffer and send the two buffers to the kernel in one call.
 
 `utils::Buffer` is created for this scenario (and some others). Internally, `Buffer` is a linked list of `Buf`s which is just a memory block. You can copy the data in and out as if the `Buffer` is a monolithic block. You can insert and remove space from any offset and `Buffer` will try to make the necessary copy minimal.
 
 ### Forward Data with `Tunnel`
 
-`Tunnel` (just as what it does in NEKit) forwards data back and forth between local and remote. The data `Tunnel` gets should be the raw data that you expect to transmit. 
+`Tunnel` (just as what it does in NEKit) forwards data back and forth between local and remote. The data `Tunnel` gets should be the raw data that you expect to transmit.
 
 `Tunnel` begins with an instance of `LocalDataFlowInterface` where a newly accepted local (concrete or abstract) connection, it calls the `Open()` method where the local data flow would fill in the necessary connect information into the `utils::Session` bond to this connection.
 
@@ -415,16 +392,15 @@ Then the `Tunnel` forwards data back and forth between "local" and "remote" unti
 
 `ProxyManager` will handle all of this for you so you don't have to write anything.
 
-
 ### State Transition of `DataFlow`
 
 In order to know what to do when an event is triggered, we need to know the state of the data flow.
 
-If you are familiar with the state transition of TCP, states of `DataFlow` should be a piece of cake. 
+If you are familiar with the state transition of TCP, states of `DataFlow` should be a piece of cake.
 
 If you are not, you should at least get a general idea of it. But don't worry, `DataFlow` uses `FlowStateMachine` to handle states for you. All you have to do is tell the `FlowStateMachine` what you want to do next. Internally, `FlowStateMachine` uses `assert` to make sure all the operations you are about to do are valid, so you will know if you have done anything right when debugging.
 
-Below is the state diagram of data flows in libnekit: 
+Below is the state diagram of data flows in libnekit:
 
 ```text
                   ┌────────────┐
@@ -478,7 +454,7 @@ Below is the state diagram of data flows in libnekit:
 └────────────┘    └────────────┘
 ```
 
-It's a very simple DAG with single possible transition sequence (putting aside `Errored`). 
+It's a very simple DAG with single possible transition sequence (putting aside `Errored`).
 
 Any flow begins with `Init`, and get into the `Establishing` state when it is getting ready for forwarding data. When in `Established` state, you can read or write data as long as there is not already a read or write request hasn't finished yet. When any one of the sides (read or write) is closed, or requested to be closed, the data flow transits into `Closing` state and ends with `Closed` state when both read and write are closed. Any error would put the data flow into `Errored` state.
 
@@ -488,11 +464,9 @@ There are more helper methods provided by `FlowStateMachine` to help you decide 
 
 The rule of thumb is: asynchronous methods don't throw, while synchronous ones may. (As of now, no method throws yet. But you should expect the error will be thrown instead of passed by method call.)
 
-Throw exception from a callback handler does not make too much sense since the whole call stack is already gone. We can do very little about the error other than ignore it or terminate the application. However, I find throw exception significantly simplify the method signature though I don't like that C++ does not enforce labeling the "throwness" of method. 
+Throw exception from a callback handler does not make too much sense since the whole call stack is already gone. We can do very little about the error other than ignore it or terminate the application. However, I find throw exception significantly simplify the method signature though I don't like that C++ does not enforce labeling the "throwness" of method.
 
 libnekit will use exception whenever possible. All exceptions from libnekit should be a subclass of `utils::Error`.
-
-
 
 ## License
 
